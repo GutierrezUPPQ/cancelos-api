@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CancelOS — Torre de Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#020b18;--panel:#040f1f;--border:#0d2137;--dim:#0a1a2e;
+  --critico:#ef4444;--alto:#f97316;--medio:#eab308;--bajo:#22c55e;
+  --text:#e2e8f0;--muted:#4a6484;--accent:#0ea5e9;
+}
+html,body{width:100%;height:100%;background:var(--navy);color:var(--text);font-family:'Barlow',sans-serif;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(14,165,233,0.025) 2px,rgba(14,165,233,0.025) 4px);pointer-events:none}
+body::after{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(#0d2137 1px,transparent 1px),linear-gradient(90deg,#0d2137 1px,transparent 1px);background-size:40px 40px;opacity:0.3;pointer-events:none}
+.wrap{position:relative;z-index:1;height:100vh;display:grid;grid-template-rows:72px 1fr 48px}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:linear-gradient(90deg,#020b18,#040f1f,#020b18);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanH 4s linear infinite}
+@keyframes scanH{0%,100%{opacity:.3}50%{opacity:1}}
+.logo{display:flex;align-items:center;gap:14px}
+.logo-icon{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#0369a1,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:22px;animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 20px rgba(14,165,233,.3)}50%{box-shadow:0 0 30px rgba(14,165,233,.7)}}
+.logo-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:4px}
+.logo-title span{color:var(--accent)}
+.logo-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:3px;margin-top:2px}
+.header-center{position:absolute;left:50%;transform:translateX(-50%);text-align:center}
+.header-date{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px}
+.header-time{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900;letter-spacing:6px;line-height:1}
+.kpi-strip{display:flex;gap:12px;align-items:center}
+.kpi{text-align:center;padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--dim);min-width:72px}
+.kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;line-height:1}
+.kpi-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+main{display:grid;grid-template-columns:1fr 260px;overflow:hidden}
+.tabla-wrap{padding:14px 14px 14px 20px;overflow:hidden;display:flex;flex-direction:column}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:3px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+table{width:100%;border-collapse:collapse}
+thead th{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);animation:rowIn .4s ease forwards;opacity:0;transition:background .2s}
+tbody tr:hover{background:var(--dim)}
+@keyframes rowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+td{padding:9px 10px;font-size:13px;white-space:nowrap}
+.badge{display:inline-block;padding:3px 8px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px}
+.bCRITICO{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.bALTO{background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)}
+.bMEDIO{background:rgba(234,179,8,.15);color:#eab308;border:1px solid rgba(234,179,8,.3)}
+.bBAJO{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+.bPROGRAMADA{background:rgba(14,165,233,.1);color:#0ea5e9;border:1px solid rgba(14,165,233,.2)}
+.bSUSPENDIDA{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.bREALIZADA{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.bREPROGRAMADA{background:rgba(234,179,8,.1);color:#eab308;border:1px solid rgba(234,179,8,.2)}
+.score-wrap{display:flex;align-items:center;gap:6px}
+.bar-bg{width:50px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px}
+tr.rCRITICO td:first-child{border-left:3px solid var(--critico)}
+tr.rALTO td:first-child{border-left:3px solid var(--alto)}
+tr.rMEDIO td:first-child{border-left:3px solid var(--medio)}
+tr.rBAJO td:first-child{border-left:3px solid var(--bajo)}
+.panel{border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;background:var(--panel)}
+.alert-box{border-radius:6px;padding:10px 12px;border-left:3px solid;margin-bottom:8px}
+.alert-box.c{border-color:var(--critico);background:rgba(239,68,68,.08);animation:alertP 2s ease-in-out infinite}
+.alert-box.a{border-color:var(--alto);background:rgba(249,115,22,.08)}
+@keyframes alertP{0%,100%{opacity:.85}50%{opacity:1}}
+.alert-id{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:3px}
+.alert-name{font-size:12px;font-weight:700;margin-bottom:2px}
+.alert-act{font-size:10px;color:var(--muted);line-height:1.4}
+.mini{background:var(--dim);border:1px solid var(--border);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.mini-l{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px}
+.mini-v{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900}
+.tag-pab{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);background:rgba(14,165,233,.08);padding:2px 5px;border-radius:3px}
+footer{display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--panel);border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;animation:blink 1.5s infinite}
+.dot.verde{background:var(--bajo)}
+.dot.rojo{background:var(--critico)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.empty{text-align:center;padding:50px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;line-height:2}
+.config-banner{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:8px;padding:16px 20px;margin:20px;font-family:'Share Tech Mono',monospace;font-size:11px;color:#eab308;line-height:2;text-align:center}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--navy)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚕</div>
+    <div>
+      <div class="logo-title">CANCEL<span>OS</span> <span style="font-size:13px;color:#4a6484">IA v4</span></div>
+      <div class="logo-sub">HOSPITAL DE QUILPUÉ · TORRE DE CONTROL PREQUIRÚRGICO</div>
+    </div>
+  </div>
+  <div class="header-center">
+    <div class="header-date" id="fecha">—</div>
+    <div class="header-time" id="hora">00:00:00</div>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-val" id="k0" style="color:var(--accent)">0</div><div class="kpi-lbl">PROGRAMADOS</div></div>
+    <div class="kpi"><div class="kpi-val" id="k1" style="color:var(--critico)">0</div><div class="kpi-lbl">CRÍTICO</div></div>
+    <div class="kpi"><div class="kpi-val" id="k2" style="color:var(--alto)">0</div><div class="kpi-lbl">ALTO</div></div>
+    <div class="kpi"><div class="kpi-val" id="k3" style="color:var(--medio)">0</div><div class="kpi-lbl">SUSPENDIDOS</div></div>
+    <div class="kpi"><div class="kpi-val" id="k4" style="color:var(--bajo)">0</div><div class="kpi-lbl">REALIZADOS</div></div>
+  </div>
+</header>
+
+<main>
+  <div class="tabla-wrap">
+    <div class="sec-title">── TABLA QUIRÚRGICA DEL DÍA</div>
+    <table>
+      <thead><tr>
+        <th>ID</th><th>PACIENTE</th><th>PROCEDIMIENTO</th>
+        <th>CIRUJANO</th><th>ANEST.</th><th>ASA</th><th>PAB.</th><th>HORA</th>
+        <th>RIESGO IA</th><th>NIVEL</th><th>ESTADO</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="sec-title">── ALERTAS ACTIVAS</div>
+    <div id="alertas"></div>
+    <div class="sec-title">── PABELLONES</div>
+    <div id="pabs"></div>
+    <div class="sec-title">── CONEXIÓN</div>
+    <div id="conn-status" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted)">Conectando...</div>
+  </div>
+</main>
+
+<footer>
+  <div><span class="dot verde" id="status-dot"></span><span id="status-txt">CARGANDO DATOS...</span></div>
+  <div>SISTEMA IA DE GESTIÓN PREQUIRÚRGICA · TODOS LOS DERECHOS RESERVADOS</div>
+  <div>COORDINADOR PBM · <span style="color:var(--accent)">CANCELOS IA v4</span></div>
+</footer>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIGURACIÓN — PEGA AQUÍ TU URL DE WEB APP
+// ══════════════════════════════════════════════════════
+const SHEET_URL = '/casos';
+// Ejemplo: 'https://script.google.com/macros/s/AKfycb.../exec'
+
+// ══════════════════════════════════════════════════════
+// DATOS DE DEMO (se usan si no hay URL configurada)
+// ══════════════════════════════════════════════════════
+const DEMO = [
+  {id:'CX-001',paciente:'González, M.', procedimiento:'Colecistectomía lap.',  cirujano:'Dr. Pérez',  anestesiologo:'Dr. Gutiérrez',asa:'ASA III',pabellon:'PAB 1',hora_cx:'08:00',riesgo_ia:77,nivel_riesgo:'ALTO',    estado:'PROGRAMADA', accion_ia:'LLAMAR HOY: cirujano+UCI+anticoag'},
+  {id:'CX-002',paciente:'Martínez, J.', procedimiento:'Hernioplastía inguinal',cirujano:'Dr. Silva',  anestesiologo:'Dr. Gutiérrez',asa:'ASA II', pabellon:'PAB 2',hora_cx:'08:30',riesgo_ia:18,nivel_riesgo:'BAJO',    estado:'PROGRAMADA', accion_ia:'CHECKLIST ESTÁNDAR'},
+  {id:'CX-003',paciente:'Rodríguez, A.',procedimiento:'Artroplastía cadera',   cirujano:'Dr. Mora',   anestesiologo:'Dr. Gutiérrez',asa:'ASA IV', pabellon:'PAB 1',hora_cx:'09:00',riesgo_ia:95,nivel_riesgo:'CRITICO', estado:'SUSPENDIDA',  accion_ia:'SUSPENDER: reagendar con eval. completa'},
+  {id:'CX-004',paciente:'López, C.',    procedimiento:'Tiroidectomía total',   cirujano:'Dr. Fuentes',anestesiologo:'Dr. Gutiérrez',asa:'ASA II', pabellon:'PAB 3',hora_cx:'09:00',riesgo_ia:32,nivel_riesgo:'MEDIO',   estado:'PROGRAMADA', accion_ia:'REVISAR 24-48h: gates+exámenes'},
+  {id:'CX-005',paciente:'Soto, P.',     procedimiento:'Colecistectomía lap.',  cirujano:'Dr. Pérez',  anestesiologo:'Dr. Gutiérrez',asa:'ASA I',  pabellon:'PAB 2',hora_cx:'10:00',riesgo_ia:8, nivel_riesgo:'BAJO',    estado:'REALIZADA',   accion_ia:'CHECKLIST ESTÁNDAR'},
+  {id:'CX-006',paciente:'Vargas, R.',   procedimiento:'Bypass gástrico',       cirujano:'Dr. Castro', anestesiologo:'Dr. Gutiérrez',asa:'ASA III',pabellon:'PAB 1',hora_cx:'11:00',riesgo_ia:61,nivel_riesgo:'ALTO',    estado:'PROGRAMADA', accion_ia:'LLAMAR HOY: cirujano+pabellón'},
+  {id:'CX-007',paciente:'Muñoz, L.',    procedimiento:'RTU prostática',        cirujano:'Dr. Navas',  anestesiologo:'Dr. Gutiérrez',asa:'ASA III',pabellon:'PAB 3',hora_cx:'11:30',riesgo_ia:44,nivel_riesgo:'MEDIO',   estado:'PROGRAMADA', accion_ia:'REVISAR 24-48h: consentimiento'},
+];
+
+const COLOR = {CRITICO:'var(--critico)',ALTO:'var(--alto)',MEDIO:'var(--medio)',BAJO:'var(--bajo)'};
+const ORD   = {CRITICO:0,ALTO:1,MEDIO:2,BAJO:3};
+
+// ─── RELOJ ───────────────────────────────────────────
+function reloj() {
+  const n = new Date();
+  document.getElementById('hora').textContent =
+    n.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('fecha').textContent =
+    n.toLocaleDateString('es-CL',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase();
+}
+setInterval(reloj,1000); reloj();
+
+// ─── RENDER ──────────────────────────────────────────
+function render(casos, fuente) {
+  casos.sort((a,b)=>(ORD[a.nivel_riesgo]||3)-(ORD[b.nivel_riesgo]||3));
+
+  const tbody = document.getElementById('tbody');
+
+  if (!casos.length) {
+    tbody.innerHTML = `<tr><td colspan="11">
+      <div class="empty">📋 SIN CASOS REGISTRADOS<br>
+      <span style="font-size:9px">Ingresa casos en la hoja CASOS de tu Google Sheets</span></div>
+    </td></tr>`;
+  } else {
+    tbody.innerHTML = casos.map((c,i) => {
+      const niv = c.nivel_riesgo || 'BAJO';
+      const est = (c.estado||'PROGRAMADA').replace(' ','');
+      const col = COLOR[niv]||'var(--muted)';
+      return `<tr class="r${niv}" style="animation-delay:${i*.06}s">
+        <td><span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent)">${c.id}</span></td>
+        <td><strong>${c.paciente||'—'}</strong></td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;color:#94a3b8">${c.procedimiento||'—'}</td>
+        <td style="color:var(--muted);font-size:12px">${c.cirujano||'—'}</td>
+        <td style="color:var(--muted);font-size:12px">${(c.anestesiologo||'—').replace('Dr. Gutiérrez','Dr. G.')}</td>
+        <td><span style="font-family:'Share Tech Mono',monospace;font-size:11px">${c.asa||'—'}</span></td>
+        <td><span class="tag-pab">${c.pabellon||'—'}</span></td>
+        <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent)">${c.hora_cx||'—'}</td>
+        <td><div class="score-wrap">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:${col};min-width:28px">${c.riesgo_ia||0}</span>
+          <div class="bar-bg"><div class="bar-fill" style="width:${c.riesgo_ia||0}%;background:${col}"></div></div>
+        </div></td>
+        <td><span class="badge b${niv}">${niv}</span></td>
+        <td><span class="badge b${est}">${c.estado||'PROGRAMADA'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // KPIs
+  document.getElementById('k0').textContent = casos.filter(c=>['PROGRAMADA','REPROGRAMADA'].includes(c.estado)).length;
+  document.getElementById('k1').textContent = casos.filter(c=>c.nivel_riesgo==='CRITICO').length;
+  document.getElementById('k2').textContent = casos.filter(c=>c.nivel_riesgo==='ALTO').length;
+  document.getElementById('k3').textContent = casos.filter(c=>c.estado==='SUSPENDIDA').length;
+  document.getElementById('k4').textContent = casos.filter(c=>c.estado==='REALIZADA').length;
+
+  // Alertas
+  const al = casos.filter(c=>(c.nivel_riesgo==='CRITICO'||c.nivel_riesgo==='ALTO')&&c.estado==='PROGRAMADA');
+  document.getElementById('alertas').innerHTML = al.length
+    ? al.map(c=>`<div class="alert-box ${c.nivel_riesgo==='CRITICO'?'c':'a'}">
+        <div class="alert-id">${c.id} · ${c.asa} · ${c.pabellon||'—'}</div>
+        <div class="alert-name">${c.paciente}</div>
+        <div style="font-size:11px;color:${COLOR[c.nivel_riesgo]};font-weight:700;margin:2px 0">
+          Score ${c.riesgo_ia}/100 · ${c.nivel_riesgo}
+        </div>
+        <div class="alert-act">${c.accion_ia||''}</div>
+      </div>`).join('')
+    : `<div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--bajo);text-align:center;padding:12px">
+        ✓ SIN ALERTAS ACTIVAS
+      </div>`;
+
+  // Pabellones
+  const pm = {};
+  casos.forEach(c=>{
+    const p = c.pabellon||'Sin pab.';
+    if(!pm[p]) pm[p]={t:0,r:0,cr:0};
+    pm[p].t++;
+    if(c.estado==='REALIZADA') pm[p].r++;
+    if(c.nivel_riesgo==='CRITICO') pm[p].cr++;
+  });
+  document.getElementById('pabs').innerHTML = Object.entries(pm)
+    .map(([p,d])=>`<div class="mini">
+      <div><div class="mini-l">${p}</div>
+      <div style="font-size:9px;color:var(--muted)">${d.r}/${d.t} realizados${d.cr>0?' · ⚠️ '+d.cr+' CRÍTICO':''}</div></div>
+      <div class="mini-v" style="color:${d.cr>0?'var(--critico)':'var(--bajo)'}">${d.t}</div>
+    </div>`).join('');
+
+  // Estado conexión
+  const ahora = new Date().toLocaleTimeString('es-CL');
+  document.getElementById('conn-status').innerHTML =
+    `<div style="color:${fuente==='sheets'?'var(--bajo)':'var(--medio)'}">
+      ${fuente==='sheets'?'● SHEETS EN VIVO':'● MODO DEMO'}
+    </div>
+    <div style="margin-top:4px">Última act: ${ahora}</div>
+    <div style="margin-top:4px">${casos.length} casos cargados</div>`;
+
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-txt');
+  if (fuente==='sheets') {
+    dot.className='dot verde';
+    txt.textContent='DATOS EN VIVO DESDE GOOGLE SHEETS · Actualiza cada 60s';
+  } else {
+    dot.className='dot rojo';
+    txt.textContent='MODO DEMO · Configura SHEET_URL para datos reales';
+  }
+}
+
+// ─── CARGAR DATOS ────────────────────────────────────
+async function cargar() {
+  if (!SHEET_URL || SHEET_URL === 'https://script.google.com/macros/s/AKfycbzpAeHGzppGEByyobGkQLLIbtKAjVzWPK2Jp3lE-7aLLBCM3Wav6c6ZHXzvKkcqVPwF/exec') {
+    render(DEMO, 'demo');
+    return;
+  }
+  try {
+    const r = await fetch(SHEET_URL, { redirect:'follow' });
+    const data = await r.json();
+    if (data && data.casos && data.casos.length >= 0) {
+      render(data.casos, 'sheets');
+    } else {
+      render(DEMO, 'demo');
+    }
+  } catch(e) {
+    console.warn('No se pudo conectar con Sheets:', e);
+    render(DEMO, 'demo');
+  }
+}
+
+cargar();
+setInterval(cargar, 60000); // refresca cada minuto
+</script>
+</body>
+</html>
