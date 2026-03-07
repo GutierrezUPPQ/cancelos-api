@@ -209,3 +209,21 @@ def endpoint_completo(body: dict):
         pred=score_prediccion({**body,"asa_num":asa_n})
         return {"id_caso":body.get("id_caso",""),"score":sc,"prediccion":pred}
     except Exception as e: raise Exception(str(e))
+
+# ═══════════════════════════════════════════════
+# PROXY ENDPOINT — Railway llama a Google Sheets
+# El browser llama a Railway, no a Google directamente
+# ═══════════════════════════════════════════════
+import urllib.request
+
+SHEETS_URL = "https://script.google.com/macros/s/AKfycbzpAeHGzppGEByyobGkQLLIbtKAjVzWPK2Jp3lE-7aLLBCM3Wav6c6ZHXzvKkcqVPwF/exec"
+
+@app.get("/casos")
+def get_casos():
+    try:
+        req = urllib.request.Request(SHEETS_URL, headers={"User-Agent": "CancelOS/4.0"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read().decode())
+            return data
+    except Exception as e:
+        return {"casos": [], "error": str(e), "timestamp": str(date.today()), "hospital": "Hospital de Quilpue"}
