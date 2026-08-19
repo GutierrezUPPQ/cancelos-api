@@ -14,21 +14,23 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ═══════════════════════════════════════════════
 # SERVIR TORRE DE CONTROL
 # ═══════════════════════════════════════════════
-@app.get("/torre", response_class=HTMLResponse)
-def torre():
-    path = os.path.join(os.path.dirname(__file__), "index.html")
+def _html(nombre, fallback):
+    path = os.path.join(os.path.dirname(__file__), nombre)
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>Torre de Control - archivo index.html no encontrado</h1>"
+            contenido = f.read()
+    else:
+        contenido = fallback
+    # no-store: el navegador siempre pide la version vigente tras cada deploy
+    return HTMLResponse(contenido, headers={"Cache-Control": "no-store"})
+
+@app.get("/torre", response_class=HTMLResponse)
+def torre():
+    return _html("index.html", "<h1>Torre de Control - archivo index.html no encontrado</h1>")
 
 @app.get("/cma-app", response_class=HTMLResponse)
 def cma_app():
-    path = os.path.join(os.path.dirname(__file__), "cma.html")
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>Modulo CMA - archivo cma.html no encontrado</h1>"
+    return _html("cma.html", "<h1>Modulo CMA - archivo cma.html no encontrado</h1>")
 
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
