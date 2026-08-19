@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from datetime import date, timedelta
-import os, json
+from datetime import date, datetime, timedelta
+import os, json, threading, urllib.request
 
 app = FastAPI(title="CancelOS IA v4 API", version="4.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -454,7 +454,47 @@ TIPOS_EVENTO_CMA = ["caso_cma","alta_mismo_dia","pernoctacion_no_planificada","c
                     "reconsulta_7d","readmision_30d","reoperacion_30d",
                     "seguimiento_24h_ok","seguimiento_24h_fallido","qor15_deterioro"]
 CAPAS_FALLA = ["seleccion","proceso","no_prevenible"]  # 9.11.1: toda pernoctacion no planificada se clasifica en 3 capas
-EVENTOS_CMA = []
+
+# Persistencia: cada evento se anexa a disco (sobrevive reinicios; un redeploy
+# de Railway borra el disco, por eso el respaldo opcional a Google Sheets via
+# CMA_SHEETS_WEBHOOK). La ficha clinica sigue siendo la fuente primaria (O.5).
+EVENTOS_FILE = os.path.join(os.path.dirname(__file__), "eventos_cma.jsonl")
+_ev_lock = threading.Lock()
+
+def _cargar_eventos():
+    evs = []
+    try:
+        with open(EVENTOS_FILE, encoding="utf-8") as f:
+            for linea in f:
+                linea = linea.strip()
+                if linea:
+                    try: evs.append(json.loads(linea))
+                    except Exception: pass
+    except FileNotFoundError:
+        pass
+    return evs
+
+def _guardar_evento(e):
+    try:
+        with _ev_lock, open(EVENTOS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+        return True
+    except Exception:
+        return False
+
+def _enviar_sheets(e):
+    # Respaldo durable en la planilla del equipo (Apps Script doPost, ver PROTOCOLO_CMA.md)
+    url = os.environ.get("CMA_SHEETS_WEBHOOK", "")
+    if not url: return None
+    try:
+        req = urllib.request.Request(url, data=json.dumps(e, ensure_ascii=False).encode("utf-8"),
+                                     headers={"Content-Type": "application/json", "User-Agent": "CancelOS/4.3"})
+        with urllib.request.urlopen(req, timeout=8) as r: r.read()
+        return True
+    except Exception:
+        return False
+
+EVENTOS_CMA = _cargar_eventos()
 
 # Referencias externas (BADS/GIRFT): comparativas, NUNCA metas locales automaticas (Anexo I).
 REFERENCIAS_CMA = {
@@ -528,7 +568,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.2.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.3.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):
@@ -601,15 +641,23 @@ def endpoint_cma_qor15(body: dict):
 
 @app.post("/cma/evento")
 def endpoint_cma_evento(body: dict):
+    pin = os.environ.get("CMA_PIN", "")
+    if pin and str(body.get("pin","")) != pin:
+        return {"error": "PIN del equipo CMA requerido o incorrecto", "pin_requerido": True}
     tipo = str(body.get("tipo_evento",""))
     if tipo not in TIPOS_EVENTO_CMA:
         return {"error": f"tipo_evento invalido: '{tipo}'", "tipos_validos": TIPOS_EVENTO_CMA}
-    evento = {"id_caso": body.get("id_caso",""), "tipo_evento": tipo, "detalle": str(body.get("detalle","")), "fecha": str(date.today())}
+    ahora = datetime.now()
+    evento = {"id_caso": body.get("id_caso",""), "tipo_evento": tipo, "detalle": str(body.get("detalle","")),
+              "autor": str(body.get("autor","")), "fecha": str(ahora.date()), "hora": ahora.strftime("%H:%M:%S")}
     if tipo == "pernoctacion_no_planificada":
         evento["capa"] = str(body.get("capa",""))       # seleccion / proceso / no_prevenible
         evento["accion"] = str(body.get("accion",""))   # accion concreta con responsable y plazo
     EVENTOS_CMA.append(evento)
-    return {"registrado": evento, "eventos_en_memoria": len(EVENTOS_CMA)}
+    out = {"registrado": evento, "eventos_registrados": len(EVENTOS_CMA), "persistido_en_disco": _guardar_evento(evento)}
+    sheets = _enviar_sheets(evento)
+    if sheets is not None: out["respaldado_en_sheets"] = sheets
+    return out
 
 @app.get("/cma/indicadores")
 def endpoint_cma_indicadores(total_casos: int = 0):

@@ -238,6 +238,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
       <label class="f">ID CASO / EPISODIO<input type="text" id="m_id" placeholder="EP-001"></label>
       <label class="f">TIPO DE EVENTO<select id="m_tipo"></select></label>
       <label class="f">DETALLE (OPCIONAL)<input type="text" id="m_det" placeholder="breve descripción"></label>
+      <label class="f">REGISTRADO POR (INICIALES · ROL)<input type="text" id="m_autor" placeholder="ej: CG · Anestesiología"></label>
     </div>
     <div id="m_pernoc" style="display:none;margin-top:10px">
       <div class="grid">
@@ -255,7 +256,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     </div>
     <button class="btn sec" onclick="verIndicadores()">VER TABLERO</button>
     <div class="res" id="t_res"></div>
-    <div class="hint">El registro vive en memoria del servidor y se reinicia con cada deploy: la ficha clínica es la fuente primaria. Para el análisis mensual del comité, usar el lote completo vía <span class="mono">POST /cma/mejora</span>.</div>
+    <div class="hint">Los eventos se guardan en el disco del servidor y, si está configurado <span class="mono">CMA_SHEETS_WEBHOOK</span>, se respaldan además en la planilla Google Sheets del equipo. La ficha clínica sigue siendo la fuente primaria (Anexo O.5). Para el análisis mensual del comité, usar el lote completo vía <span class="mono">POST /cma/mejora</span>.</div>
   </div>
 </section>
 
@@ -471,14 +472,27 @@ selTipo.addEventListener('change', () => {
   document.getElementById('m_pernoc').style.display = selTipo.value === 'pernoctacion_no_planificada' ? 'block' : 'none';
 });
 
-async function registrarEvento() {
-  const d = {id_caso: val('m_id'), tipo_evento: val('m_tipo'), detalle: val('m_det')};
+async function registrarEvento(reintento) {
+  const d = {id_caso: val('m_id'), tipo_evento: val('m_tipo'), detalle: val('m_det'), autor: val('m_autor'),
+             pin: localStorage.getItem('cma_pin') || ''};
   if (d.tipo_evento === 'pernoctacion_no_planificada') { d.capa = val('m_capa'); d.accion = val('m_acc'); }
   try {
     const r = await post('/cma/evento', d);
-    document.getElementById('m_res').innerHTML = r.error
-      ? `<div class="err">⚠ ${esc(r.error)}</div>`
-      : `<div class="banner bAZUL"><div class="t">REGISTRADO</div><div class="a">${esc(r.registrado.tipo_evento)} · ${esc(r.registrado.id_caso || 'sin ID')} · ${r.eventos_en_memoria} eventos en memoria</div></div>`;
+    if (r.pin_requerido && !reintento) {
+      const p = prompt('Ingresa el PIN del equipo CMA:');
+      if (p !== null) { localStorage.setItem('cma_pin', p); return registrarEvento(true); }
+    }
+    if (r.error) {
+      if (r.pin_requerido) localStorage.removeItem('cma_pin');
+      document.getElementById('m_res').innerHTML = `<div class="err">⚠ ${esc(r.error)}</div>`;
+      return;
+    }
+    const resp = [`${r.eventos_registrados} eventos registrados`,
+                  r.persistido_en_disco ? 'guardado en disco' : '⚠ NO se pudo guardar en disco',
+                  r.respaldado_en_sheets === true ? 'respaldado en Sheets' : r.respaldado_en_sheets === false ? '⚠ Sheets no respondió' : null
+                 ].filter(Boolean).join(' · ');
+    document.getElementById('m_res').innerHTML =
+      `<div class="banner bAZUL"><div class="t">REGISTRADO</div><div class="a">${esc(r.registrado.tipo_evento)} · ${esc(r.registrado.id_caso || 'sin ID')} · ${esc(r.registrado.hora)} · ${resp}</div></div>`;
   } catch(e) { fallo('m_res', e); }
 }
 

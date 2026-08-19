@@ -86,9 +86,42 @@ POST /cma/mejora
 }
 ```
 
-## Nota sobre persistencia
+## Persistencia y despliegue como página web
 
-El registro `/cma/evento` vive en memoria y se reinicia con cada deploy. La ficha
-clínica institucional es la fuente clínica primaria (Anexo O.5); este registro es
-un instrumento operacional. Para el análisis mensual del Comité CMA usar
-`POST /cma/mejora` con el lote exportado de la fuente institucional.
+La aplicación (`/cma-app`) es una página web servida por esta misma API: se abre
+desde cualquier celular o computador con la URL de Railway, sin instalar nada.
+
+**Persistencia de eventos** (`POST /cma/evento`), en tres capas:
+
+1. **Disco del servidor** (`eventos_cma.jsonl`): automática, sobrevive reinicios.
+   Un *redeploy* de Railway reemplaza el disco — por eso existe la capa 2.
+2. **Respaldo en Google Sheets** (recomendado): definir la variable de entorno
+   `CMA_SHEETS_WEBHOOK` en Railway con la URL de un Apps Script de la planilla
+   del equipo. Cada evento se anexa como fila; los datos quedan en una planilla
+   que el equipo administra y ve directamente. Código del Apps Script
+   (Extensiones → Apps Script → Implementar → Aplicación web, acceso "Cualquier
+   usuario", y pegar la URL `/exec` en la variable):
+
+   ```javascript
+   function doPost(e) {
+     var ss = SpreadsheetApp.getActiveSpreadsheet();
+     var hoja = ss.getSheetByName("EVENTOS_CMA") || ss.insertSheet("EVENTOS_CMA");
+     if (hoja.getLastRow() === 0)
+       hoja.appendRow(["timestamp","fecha","hora","id_caso","tipo_evento","detalle","capa","accion","autor"]);
+     var d = JSON.parse(e.postData.contents);
+     hoja.appendRow([new Date(), d.fecha||"", d.hora||"", d.id_caso||"", d.tipo_evento||"",
+                     d.detalle||"", d.capa||"", d.accion||"", d.autor||""]);
+     return ContentService.createTextOutput(JSON.stringify({ok:true}))
+            .setMimeType(ContentService.MimeType.JSON);
+   }
+   ```
+3. **La ficha clínica** sigue siendo la fuente clínica primaria (Anexo O.5); este
+   registro es un instrumento operacional. Para el análisis mensual del Comité
+   usar `POST /cma/mejora` con el lote completo.
+
+**Control de acceso**: definir la variable de entorno `CMA_PIN` en Railway activa
+un PIN de equipo para registrar eventos (la página lo pide una sola vez y lo
+recuerda en el dispositivo). Las calculadoras quedan abiertas: no guardan datos.
+Cada evento registra además autor (iniciales · rol), fecha y hora, conforme a la
+trazabilidad del Anexo O.1. **No ingresar nombre ni RUT del paciente: usar solo
+el identificador de episodio** (seudonimización, Anexo O.5).
