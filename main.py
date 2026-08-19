@@ -175,11 +175,128 @@ def score_pbm(d):
     return {"id_caso":d.get("id_caso",""),"grado_anemia":grado,"volemia_estimada_ml":round(volemia),"perdida_pct":perdida_pct,"unidades_ahorradas":ahorradas,"ahorro_clp":ahorradas*250000,"recomendacion":{"SEVERA":"Optimizacion urgente: Fe IV + EPO + considerar posponer","MODERADA":"Fe IV + EPO si >4 semanas. Acido tranexamico intraop.","LEVE":"Fe oral/IV segun ferritina. Evaluar posponer si Hb<10 en cx mayor.","SIN ANEMIA":"Sin anemia. Acido tranexamico segun tipo de cirugia.","":"Sin datos de hemoglobina"}.get(grado,"")}
 
 # ═══════════════════════════════════════════════
+# MODULO CMA - CIRUGIA MAYOR AMBULATORIA
+# Protocolo + loop de mejora continua (ciclo PDCA)
+# Ver PROTOCOLO_CMA.md
+# ═══════════════════════════════════════════════
+def score_cma_elegibilidad(d):
+    asa      = str(d.get("asa","ASA II"))
+    asa3_est = bool(d.get("asa3_estable", False))
+    edad     = int(d.get("edad", 0))
+    imc      = float(d.get("imc", 25) or 25)
+    sb       = int(d.get("stop_bang", 0))
+    cpap     = bool(d.get("usa_cpap", False))
+    anti     = bool(d.get("anticoag", False))
+    hb       = float(d.get("hb_preop", 0) or 0)
+    dur      = int(d.get("duracion_min", 0))
+    acomp    = bool(d.get("acompanante_adulto", True))
+    traslado = int(d.get("tiempo_traslado_min", 0) or 0)
+    fono     = bool(d.get("telefono_contacto", True))
+    dm_ins   = bool(d.get("dm_insulina", False))
+
+    exclusiones, observaciones = [], []
+    # Criterios de exclusion (NO APTO)
+    if asa in ("ASA IV","ASA V"): exclusiones.append(f"{asa}: no candidato a cirugia ambulatoria")
+    if asa == "ASA III" and not asa3_est: exclusiones.append("ASA III descompensado: optimizar antes de agendar")
+    if not acomp: exclusiones.append("Sin adulto responsable para las primeras 24h post alta")
+    if not fono: exclusiones.append("Sin telefono de contacto para seguimiento")
+    if sb >= 5 and not cpap: exclusiones.append("STOP-BANG >=5 sin CPAP: riesgo SAOS severo")
+    if imc >= 40 and sb >= 3: exclusiones.append("IMC >=40 con sospecha SAOS")
+    if hb > 0 and hb < 10: exclusiones.append(f"Hb {hb} g/dL: optimizar anemia antes de agendar (ver /pbm)")
+    if dur > 120: exclusiones.append("Duracion estimada >120 min: excede estandar CMA")
+
+    # Criterios con observacion (APTO CON OBSERVACIONES)
+    if asa == "ASA III" and asa3_est: observaciones.append("ASA III estable: requiere evaluacion anestesica presencial previa")
+    if edad >= 80: observaciones.append("Edad >=80: evaluar fragilidad y red de apoyo domiciliario")
+    if 3 <= sb < 5: observaciones.append("STOP-BANG 3-4: recuperacion prolongada con oximetria antes del alta")
+    if sb >= 5 and cpap: observaciones.append("SAOS severo con CPAP: traer equipo el dia de la cirugia")
+    if 35 <= imc < 40: observaciones.append("IMC 35-39: preferir tecnica regional/TIVA, evitar opioides de larga accion")
+    if anti: observaciones.append("Anticoagulado: definir plan de suspension con /anticoag antes de agendar")
+    if dm_ins: observaciones.append("DM insulinorequirente: agendar primera hora + esquema de ayuno protocolizado")
+    if traslado > 60: observaciones.append("Traslado >60 min: entregar plan escrito de contacto y reconsulta")
+    if 90 < dur <= 120: observaciones.append("Duracion 90-120 min: confirmar cupo de recuperacion extendida")
+
+    estado = "NO APTO" if exclusiones else "APTO CON OBSERVACIONES" if observaciones else "APTO"
+    acciones = {
+        "NO APTO":               "Reagendar como cirugia con hospitalizacion o resolver exclusiones y reevaluar",
+        "APTO CON OBSERVACIONES":"Agendar CMA cumpliendo las observaciones antes del dia quirurgico",
+        "APTO":                  "Agendar CMA: checklist estandar + educacion de alta + confirmacion telefonica previa"
+    }
+    return {
+        "id_caso":       d.get("id_caso",""),
+        "estado_cma":    estado,
+        "exclusiones":   exclusiones,
+        "observaciones": observaciones,
+        "accion":        acciones[estado]
+    }
+
+def score_cma_alta(d):
+    # PADSS modificado (Chung): 5 items de 0-2. Alta con total >=9 y signos vitales = 2.
+    def item(k): return max(0, min(2, int(d.get(k, 0) or 0)))
+    items = {k: item(k) for k in ("signos_vitales","deambulacion","nvpo","dolor","sangrado")}
+    total = sum(items.values())
+    apto = total >= 9 and items["signos_vitales"] == 2
+    pendientes = [k for k,v in items.items() if v < 2]
+    return {
+        "id_caso":    d.get("id_caso",""),
+        "padss":      items,
+        "total":      total,
+        "apto_alta":  apto,
+        "pendientes": pendientes,
+        "accion":     "ALTA: entregar indicaciones escritas + telefono de contacto + control 24h" if apto
+                      else "NO ALTA: reevaluar en 30-60 min. Si no mejora, activar ingreso no planificado"
+    }
+
+# Loop de mejora: eventos -> indicadores vs meta -> acciones PDCA
+TIPOS_EVENTO_CMA = ["caso_cma","ingreso_no_planificado","suspension_mismo_dia","reconsulta_72h","alta_fallida","nvpo_severo","dolor_no_controlado","sangrado_reoperacion"]
+METAS_CMA = {  # % maximo aceptable sobre el total de casos CMA
+    "ingreso_no_planificado": 2.0,
+    "suspension_mismo_dia":   5.0,
+    "reconsulta_72h":         3.0,
+    "alta_fallida":           3.0,
+    "nvpo_severo":            5.0,
+    "dolor_no_controlado":    5.0,
+    "sangrado_reoperacion":   1.0
+}
+ACCIONES_PDCA = {
+    "ingreso_no_planificado": "Auditar cada caso: si la causa es seleccion, endurecer criterios de /cma/elegibilidad (ASA, SAOS, duracion)",
+    "suspension_mismo_dia":   "Reforzar gates 72h/24h y confirmacion telefonica el dia previo",
+    "reconsulta_72h":         "Reforzar educacion al alta e implementar llamada de seguimiento a las 24h",
+    "alta_fallida":           "Revisar tecnica anestesica (preferir corta accion/TIVA) y aplicacion estricta de PADSS",
+    "nvpo_severo":            "Aplicar profilaxis segun score NVPO de /prediccion en todo caso con riesgo >=30",
+    "dolor_no_controlado":    "Protocolizar analgesia multimodal intraoperatoria + receta de rescate al alta",
+    "sangrado_reoperacion":   "Revisar plan de suspension de anticoagulantes (/anticoag) y hemostasia por equipo quirurgico"
+}
+EVENTOS_CMA = []  # registro en memoria: se reinicia con cada deploy; persistir en planilla para analisis historico
+
+def indicadores_cma(eventos, total_override=0):
+    conteo = {t: 0 for t in TIPOS_EVENTO_CMA}
+    for e in eventos:
+        t = str(e.get("tipo_evento",""))
+        if t in conteo: conteo[t] += 1
+    total = int(total_override) or conteo["caso_cma"]
+    indicadores, fuera_de_meta = {}, []
+    for t, meta in METAS_CMA.items():
+        tasa = round(conteo[t] / total * 100, 1) if total > 0 else 0.0
+        cumple = tasa <= meta
+        indicadores[t] = {"casos": conteo[t], "tasa_pct": tasa, "meta_pct": meta, "estado": "CUMPLE" if cumple else "FUERA DE META"}
+        if not cumple: fuera_de_meta.append(t)
+    plan_de_accion = [{"indicador": t, "accion": ACCIONES_PDCA[t]} for t in fuera_de_meta]
+    return {
+        "total_casos_cma": total,
+        "indicadores":     indicadores,
+        "fuera_de_meta":   fuera_de_meta,
+        "plan_de_accion":  plan_de_accion,
+        "ciclo_pdca":      "ACTUAR: aplicar plan de accion y reevaluar en el proximo ciclo" if fuera_de_meta
+                           else "VERIFICAR: todos los indicadores en meta, mantener protocolo vigente"
+    }
+
+# ═══════════════════════════════════════════════
 # ENDPOINTS
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.0.0","status":"operativo","torre":"/torre","docs":"/docs","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.1.0","status":"operativo","torre":"/torre","docs":"/docs","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/alta","/cma/evento","/cma/indicadores","/cma/mejora"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):
@@ -208,6 +325,36 @@ def endpoint_completo(body: dict):
         asa_n={"ASA I":1,"ASA II":2,"ASA III":3,"ASA IV":4,"ASA V":5}.get(str(body.get("asa","")),2)
         pred=score_prediccion({**body,"asa_num":asa_n})
         return {"id_caso":body.get("id_caso",""),"score":sc,"prediccion":pred}
+    except Exception as e: raise Exception(str(e))
+
+@app.post("/cma/elegibilidad")
+def endpoint_cma_elegibilidad(body: dict):
+    try: return score_cma_elegibilidad(body)
+    except Exception as e: raise Exception(str(e))
+
+@app.post("/cma/alta")
+def endpoint_cma_alta(body: dict):
+    try: return score_cma_alta(body)
+    except Exception as e: raise Exception(str(e))
+
+@app.post("/cma/evento")
+def endpoint_cma_evento(body: dict):
+    tipo = str(body.get("tipo_evento",""))
+    if tipo not in TIPOS_EVENTO_CMA:
+        return {"error": f"tipo_evento invalido: '{tipo}'", "tipos_validos": TIPOS_EVENTO_CMA}
+    evento = {"id_caso": body.get("id_caso",""), "tipo_evento": tipo, "detalle": str(body.get("detalle","")), "fecha": str(date.today())}
+    EVENTOS_CMA.append(evento)
+    return {"registrado": evento, "eventos_en_memoria": len(EVENTOS_CMA)}
+
+@app.get("/cma/indicadores")
+def endpoint_cma_indicadores(total_casos: int = 0):
+    try: return indicadores_cma(EVENTOS_CMA, total_casos)
+    except Exception as e: raise Exception(str(e))
+
+@app.post("/cma/mejora")
+def endpoint_cma_mejora(body: dict):
+    # Version sin estado del loop: recibe el lote completo (ej. exportado de la planilla)
+    try: return indicadores_cma(body.get("eventos", []) or [], int(body.get("total_casos", 0) or 0))
     except Exception as e: raise Exception(str(e))
 
 # ═══════════════════════════════════════════════
