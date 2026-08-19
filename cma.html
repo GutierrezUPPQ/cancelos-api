@@ -72,6 +72,16 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top}
 .mono{font-family:'Share Tech Mono',monospace;font-size:11px}
 .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px}
 .err{color:var(--rojo);font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:10px}
+label.f{position:relative;padding-right:24px}
+.hbtn{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:1px solid var(--accent);background:rgba(14,165,233,.12);color:var(--accent);font-family:'Barlow',sans-serif;font-size:12px;font-weight:800;cursor:pointer;line-height:1;padding:0}
+label.f>.hbtn{position:absolute;top:-2px;right:0}
+label.c>.hbtn{margin-left:auto}
+label.c{flex-wrap:wrap}
+.hbox{display:none;width:100%;background:rgba(14,165,233,.06);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:12.5px;line-height:1.6;color:#b8c6d4;letter-spacing:0;text-transform:none;font-weight:400;margin-top:6px}
+.hbox.on{display:block}
+.hbox b{color:var(--text)}
+.hbox .sbq{display:flex;align-items:center;gap:9px;padding:3px 0;color:var(--text)}
+.hbox .sbq input{width:16px;height:16px;accent-color:var(--accent)}
 footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-align:center;padding:26px 10px;line-height:2}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--navy)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
@@ -105,56 +115,67 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <section id="eleg" class="on">
   <div class="card">
     <div class="grid">
-      <label class="f">ID CASO / EPISODIO<input type="text" id="e_id" placeholder="EP-001"></label>
-      <label class="f">EDAD (AÑOS)<input type="number" id="e_edad" min="0" max="120"></label>
-      <label class="f">ASA<select id="e_asa"><option>ASA I</option><option selected>ASA II</option><option>ASA III</option><option>ASA IV</option><option>ASA V</option></select></label>
-      <label class="f">CFS (OBLIGATORIO ≥65)<select id="e_cfs"><option value="">— no registrado —</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
-      <label class="f">IMC (KG/M²)<input type="number" id="e_imc" step="0.1" min="10" max="90"></label>
-      <label class="f">HBA1C (%)<input type="number" id="e_hba1c" step="0.1" min="3" max="20" placeholder="si diabético"></label>
-      <label class="f">STOP-BANG (0–8)<input type="number" id="e_sb" min="0" max="8" value="0"></label>
-      <label class="f">CPAP<select id="e_cpap"><option value="no_aplica">No aplica</option><option value="adherente">Adherente documentado</option><option value="variable">Adherencia variable</option><option value="sin_cpap">SAHOS sin CPAP / abandonado</option></select></label>
-      <label class="f">OPIOIDE ESPERADO<select id="e_opio"><option value="ninguno">Ninguno (regional pura)</option><option value="bajo" selected>Bajo</option><option value="moderado_alto">Moderado – alto</option></select></label>
-      <label class="f">ANESTESIA PREVISTA<select id="e_anest"><option value="local_regional">Local / regional</option><option value="general_breve" selected>General breve</option><option value="general_prolongada">General prolongada</option></select></label>
-      <label class="f">VIGILANCIA POSTOP.<select id="e_vigil"><option value="prevista">Prevista disponible</option><option value="reforzada">Reforzada disponible</option><option value="insuficiente">Superior a capacidad local</option></select></label>
-      <label class="f">GLP-1<select id="e_glp1"><option value="">No usa</option><option value="bajo">Riesgo bajo</option><option value="intermedio">Riesgo intermedio</option><option value="alto">Riesgo alto</option></select></label>
-      <label class="f">EDAD POSTMENSTRUAL (SEM · lactantes)<input type="number" id="e_epm" min="20" max="120" placeholder="solo ex prematuros"></label>
-      <label class="f">DURACIÓN ESTIMADA (MIN)<input type="number" id="e_dur" min="0" max="600" value="60"></label>
+      <label class="f" data-h="id">ID CASO / EPISODIO<input type="text" id="e_id" placeholder="EP-001"></label>
+      <label class="f" data-h="edad">EDAD (AÑOS)<input type="number" id="e_edad" min="0" max="120"></label>
+      <label class="f" data-h="asa">ASA<select id="e_asa"><option>ASA I</option><option selected>ASA II</option><option>ASA III</option><option>ASA IV</option><option>ASA V</option></select></label>
+      <label class="f" data-h="cfs">CFS (OBLIGATORIO ≥65)<select id="e_cfs">
+        <option value="">— no registrado —</option>
+        <option value="1">1 · Muy en forma: robusto, activo, ejercita regularmente</option>
+        <option value="2">2 · En forma: sin enfermedad activa, activo ocasional</option>
+        <option value="3">3 · Manejando bien: problemas controlados, poco activo</option>
+        <option value="4">4 · Vulnerable: sin dependencia, pero síntomas lo limitan / "lento"</option>
+        <option value="5">5 · Levemente frágil: ayuda en finanzas, transporte, casa, fármacos</option>
+        <option value="6">6 · Moderadamente frágil: ayuda fuera de casa, escaleras, baño</option>
+        <option value="7">7 · Severamente frágil: dependiente para cuidado personal</option>
+        <option value="8">8 · Muy severamente frágil: dependiente total</option>
+        <option value="9">9 · Enfermo terminal (expectativa &lt; 6 meses)</option>
+      </select></label>
+      <label class="f" data-h="imc">IMC (KG/M²)<input type="number" id="e_imc" step="0.1" min="10" max="90"></label>
+      <label class="f" data-h="hba1c">HBA1C (%)<input type="number" id="e_hba1c" step="0.1" min="3" max="20" placeholder="si diabético"></label>
+      <label class="f" data-h="sb">STOP-BANG (0–8)<input type="number" id="e_sb" min="0" max="8" value="0"></label>
+      <label class="f" data-h="cpap">CPAP<select id="e_cpap"><option value="no_aplica">No aplica</option><option value="adherente">Adherente documentado</option><option value="variable">Adherencia variable</option><option value="sin_cpap">SAHOS sin CPAP / abandonado</option></select></label>
+      <label class="f" data-h="opio">OPIOIDE ESPERADO<select id="e_opio"><option value="ninguno">Ninguno (regional pura)</option><option value="bajo" selected>Bajo</option><option value="moderado_alto">Moderado – alto</option></select></label>
+      <label class="f" data-h="anest">ANESTESIA PREVISTA<select id="e_anest"><option value="local_regional">Local / regional</option><option value="general_breve" selected>General breve</option><option value="general_prolongada">General prolongada</option></select></label>
+      <label class="f" data-h="vigil">VIGILANCIA POSTOP.<select id="e_vigil"><option value="prevista">Prevista disponible</option><option value="reforzada">Reforzada disponible</option><option value="insuficiente">Superior a capacidad local</option></select></label>
+      <label class="f" data-h="glp1">GLP-1<select id="e_glp1"><option value="">No usa</option><option value="bajo">Riesgo bajo</option><option value="intermedio">Riesgo intermedio</option><option value="alto">Riesgo alto</option></select></label>
+      <label class="f" data-h="epm">EDAD POSTMENSTRUAL (SEM · lactantes)<input type="number" id="e_epm" min="20" max="120" placeholder="solo ex prematuros"></label>
+      <label class="f" data-h="dur">DURACIÓN ESTIMADA (MIN)<input type="number" id="e_dur" min="0" max="600" value="60"></label>
     </div>
     <div class="sec-title">── CONDICIÓN CLÍNICA</div>
     <div class="grid stack">
-      <label class="c"><input type="checkbox" id="e_a3e"> ASA III estable y compensado</label>
-      <label class="c"><input type="checkbox" id="e_a3p"> ASA III con plan escrito vigente</label>
-      <label class="c"><input type="checkbox" id="e_desc"> Descompensación aguda / cambio reciente</label>
-      <label class="c"><input type="checkbox" id="e_anti"> Anticoagulación</label>
-      <label class="c"><input type="checkbox" id="e_dapt"> Doble antiagregación</label>
-      <label class="c"><input type="checkbox" id="e_emb"> Embarazo</label>
+      <label class="c" data-h="a3e"><input type="checkbox" id="e_a3e"> ASA III estable y compensado</label>
+      <label class="c" data-h="a3p"><input type="checkbox" id="e_a3p"> ASA III con plan escrito vigente</label>
+      <label class="c" data-h="desc"><input type="checkbox" id="e_desc"> Descompensación aguda / cambio reciente</label>
+      <label class="c" data-h="anti"><input type="checkbox" id="e_anti"> Anticoagulación</label>
+      <label class="c" data-h="dapt"><input type="checkbox" id="e_dapt"> Doble antiagregación</label>
+      <label class="c" data-h="emb"><input type="checkbox" id="e_emb"> Embarazo</label>
     </div>
     <div class="sec-title">── DIMENSIÓN QUIRÚRGICA</div>
     <div class="grid stack">
-      <label class="c"><input type="checkbox" id="e_cart" checked> Prestación en cartera ACTIVA con paquete vigente</label>
-      <label class="c"><input type="checkbox" id="e_sang"> Riesgo de sangrado o dolor que exige plan específico</label>
-      <label class="c"><input type="checkbox" id="e_impl"> Implante o dispositivo que condiciona el alta</label>
-      <label class="c"><input type="checkbox" id="e_va"> Riesgo de compromiso de vía aérea posoperatorio</label>
-      <label class="c"><input type="checkbox" id="e_exce"> Cuidados que la sede no puede entregar</label>
+      <label class="c" data-h="cart"><input type="checkbox" id="e_cart" checked> Prestación en cartera ACTIVA con paquete vigente</label>
+      <label class="c" data-h="sang"><input type="checkbox" id="e_sang"> Riesgo de sangrado o dolor que exige plan específico</label>
+      <label class="c" data-h="impl"><input type="checkbox" id="e_impl"> Implante o dispositivo que condiciona el alta</label>
+      <label class="c" data-h="va"><input type="checkbox" id="e_va"> Riesgo de compromiso de vía aérea posoperatorio</label>
+      <label class="c" data-h="exce"><input type="checkbox" id="e_exce"> Cuidados que la sede no puede entregar</label>
     </div>
     <div class="sec-title">── DIMENSIÓN SOCIAL</div>
     <div class="grid">
-      <label class="f">ACOMPAÑANTE ADULTO 24 H<select id="e_acomp"><option value="confirmado">Confirmado</option><option value="sin_confirmar">Identificado, sin confirmar</option><option value="no">No disponible</option></select></label>
-      <label class="f">COMPRENSIÓN DEL PLAN<select id="e_compr"><option value="ok">Adecuada (teach-back)</option><option value="con_apoyo">Barrera con apoyo disponible</option><option value="imposible">Imposible aun con apoyo</option></select></label>
+      <label class="f" data-h="acomp">ACOMPAÑANTE ADULTO 24 H<select id="e_acomp"><option value="confirmado">Confirmado</option><option value="sin_confirmar">Identificado, sin confirmar</option><option value="no">No disponible</option></select></label>
+      <label class="f" data-h="compr">COMPRENSIÓN DEL PLAN<select id="e_compr"><option value="ok">Adecuada (teach-back)</option><option value="con_apoyo">Barrera con apoyo disponible</option><option value="imposible">Imposible aun con apoyo</option></select></label>
     </div>
     <div class="grid stack" style="margin-top:8px">
-      <label class="c"><input type="checkbox" id="e_trans" checked> Transporte seguro asegurado</label>
-      <label class="c"><input type="checkbox" id="e_fono" checked> Teléfono operativo 48 h</label>
-      <label class="c"><input type="checkbox" id="e_dist"> Domicilio distante (requiere plan de contingencia)</label>
+      <label class="c" data-h="trans"><input type="checkbox" id="e_trans" checked> Transporte seguro asegurado</label>
+      <label class="c" data-h="fono"><input type="checkbox" id="e_fono" checked> Teléfono operativo 48 h</label>
+      <label class="c" data-h="dist"><input type="checkbox" id="e_dist"> Domicilio distante (requiere plan de contingencia)</label>
     </div>
     <div class="sec-title">── DIMENSIÓN LOGÍSTICA</div>
     <div class="grid stack">
-      <label class="c"><input type="checkbox" id="e_f12" checked> Capacidad de Fase I y II en la jornada</label>
-      <label class="c"><input type="checkbox" id="e_resc" checked> Red de rescate operativa (cama / traslado)</label>
-      <label class="c"><input type="checkbox" id="e_insu" checked> Insumos, instrumental e implantes confirmados</label>
-      <label class="c"><input type="checkbox" id="e_falt"> Falta un recurso crítico</label>
-      <label class="c"><input type="checkbox" id="e_hora"> Término proyectado fuera del horario seguro</label>
-      <label class="c"><input type="checkbox" id="e_ajus"> Capacidad ajustada (reordenar tabla)</label>
+      <label class="c" data-h="f12"><input type="checkbox" id="e_f12" checked> Capacidad de Fase I y II en la jornada</label>
+      <label class="c" data-h="resc"><input type="checkbox" id="e_resc" checked> Red de rescate operativa (cama / traslado)</label>
+      <label class="c" data-h="insu"><input type="checkbox" id="e_insu" checked> Insumos, instrumental e implantes confirmados</label>
+      <label class="c" data-h="falt"><input type="checkbox" id="e_falt"> Falta un recurso crítico</label>
+      <label class="c" data-h="hora"><input type="checkbox" id="e_hora"> Término proyectado fuera del horario seguro</label>
+      <label class="c" data-h="ajus"><input type="checkbox" id="e_ajus"> Capacidad ajustada (reordenar tabla)</label>
     </div>
     <button class="btn" onclick="evaluarElegibilidad()">EVALUAR 4 DIMENSIONES</button>
     <div class="res" id="e_res"></div>
@@ -222,8 +243,8 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
   <div class="card">
     <div class="sec-title">── QOR-15E · CALIDAD DE RECUPERACIÓN (BASAL PREOP Y 24 H · PASS ≥118 · MCID 6)</div>
     <div class="grid">
-      <label class="f">TOTAL ACTUAL (0–150)<input type="number" id="q_total" min="0" max="150"></label>
-      <label class="f">BASAL PREOPERATORIO (OPCIONAL)<input type="number" id="q_basal" min="0" max="150"></label>
+      <label class="f" data-h="qtotal">TOTAL ACTUAL (0–150)<input type="number" id="q_total" min="0" max="150"></label>
+      <label class="f" data-h="qbasal">BASAL PREOPERATORIO (OPCIONAL)<input type="number" id="q_basal" min="0" max="150"></label>
     </div>
     <button class="btn" onclick="evaluarQor()">INTERPRETAR QOR-15E</button>
     <div class="res" id="q_res"></div>
@@ -236,13 +257,13 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <div class="sec-title">── REGISTRAR CASO O EVENTO (ETAPA 9 · CADA CASO DEJA UN DATO)</div>
     <div class="grid">
       <label class="f">ID CASO / EPISODIO<input type="text" id="m_id" placeholder="EP-001"></label>
-      <label class="f">TIPO DE EVENTO<select id="m_tipo"></select></label>
+      <label class="f" data-h="tipo">TIPO DE EVENTO<select id="m_tipo"></select></label>
       <label class="f">DETALLE (OPCIONAL)<input type="text" id="m_det" placeholder="breve descripción"></label>
       <label class="f">REGISTRADO POR (INICIALES · ROL)<input type="text" id="m_autor" placeholder="ej: CG · Anestesiología"></label>
     </div>
     <div id="m_pernoc" style="display:none;margin-top:10px">
       <div class="grid">
-        <label class="f">CAPA DE FALLA (9.11.1)<select id="m_capa"><option value="">— sin clasificar aún —</option><option value="seleccion">1 · Falla de selección</option><option value="proceso">2 · Falla de proceso</option><option value="no_prevenible">3 · No prevenible</option></select></label>
+        <label class="f" data-h="capa">CAPA DE FALLA (9.11.1)<select id="m_capa"><option value="">— sin clasificar aún —</option><option value="seleccion">1 · Falla de selección</option><option value="proceso">2 · Falla de proceso</option><option value="no_prevenible">3 · No prevenible</option></select></label>
         <label class="f">ACCIÓN CONCRETA (RESPONSABLE + PLAZO)<input type="text" id="m_acc" placeholder="qué se ajusta, quién y cuándo"></label>
       </div>
     </div>
@@ -286,6 +307,62 @@ const num = id => { const v = document.getElementById(id).value; return v === ''
 const chk = id => document.getElementById(id).checked;
 const val = id => document.getElementById(id).value;
 const fallo = (el, e) => { document.getElementById(el).innerHTML = `<div class="err">⚠ ERROR DE CONEXIÓN CON EL MOTOR: ${esc(e.message)}</div>`; };
+
+// ─── AYUDAS AUTO-EXPLICATIVAS (botón "?") ───
+const SB_PREGUNTAS = [
+  ['S','¿Ronca fuerte (audible a través de una puerta cerrada)?'],
+  ['T','¿Cansancio, fatiga o somnolencia durante el día?'],
+  ['O','¿Alguien observó que deja de respirar al dormir?'],
+  ['P','¿Hipertensión arterial (o en tratamiento)?'],
+  ['B','¿IMC mayor a 35 kg/m²?'],
+  ['A','¿Edad mayor a 50 años?'],
+  ['N','¿Circunferencia de cuello mayor a 40 cm?'],
+  ['G','¿Sexo masculino?'],
+];
+const HELP = {
+  id: 'Identificador del <b>episodio</b> (episode_id). <b>Nunca escribas nombre ni RUT del paciente</b>: la página vive en internet y el protocolo exige seudonimización (Anexo O.5). El cruce código–paciente queda solo en la ficha clínica.',
+  edad: 'La edad por sí sola <b>no excluye</b> de CMA: deciden la fragilidad (CFS) y la comorbilidad. Desde los 65 años el CFS es obligatorio.',
+  asa: 'Estado físico de la American Society of Anesthesiologists.<br><b>I</b> sano · <b>II</b> enfermedad leve controlada (HTA o DM compensada, asma controlada) · <b>III</b> enfermedad grave (marca abajo si está estable y con plan) · <b>IV</b> amenaza vital constante · <b>V</b> moribundo. ASA III estable puede ser CMA; IV–V quedan fuera de la ruta electiva.',
+  cfs: 'Escala Clínica de Fragilidad (Rockwood 1–9). Elige la descripción que mejor calza con las <b>2 semanas previas</b>, no con el día de hoy. Obligatoria en ≥65 años. CFS 4–5 van al Policlínico; ≥6 no es apto para CMA.',
+  imc: 'Peso (kg) ÷ estatura al cuadrado (m²). Ej: 90 kg y 1,70 m → 90 ÷ 2,89 = 31. <b>&lt;35</b> apto con comorbilidad optimizada · <b>35–40</b> amarillo · <b>40–50</b> amarillo de alto riesgo · <b>≥50</b> fuera de la ruta local.',
+  hba1c: 'Solo en diabéticos, con examen de los últimos 3 meses. <b>&lt;8%</b> seguir · <b>8–8,9%</b> revisión y optimización · <b>≥9%</b> evaluación prioritaria. Nunca contraindica por sí sola.',
+  sb: '<b>Cribado de apnea del sueño.</b> Marca las que apliquen y el puntaje se calcula solo:' +
+      SB_PREGUNTAS.map(([l, q]) => `<span class="sbq"><input type="checkbox" class="sbc"> <b>${l}</b> ${q}</span>`).join('') +
+      '0–2 bajo · 3–4 intermedio (Policlínico) · 5–8 alto. El puntaje aislado no excluye: alimenta la matriz SAHOS.',
+  cpap: 'Si el paciente tiene SAHOS diagnosticado: ¿usa su CPAP todas las noches (adherente), a veces (variable) o no lo usa? Si es adherente, debe <b>traer su equipo el día de la cirugía</b>.',
+  opio: 'Según el plan analgésico previsto para este procedimiento: <b>ninguno</b> = anestesia/analgesia regional pura · <b>bajo</b> = opioides mínimos de rescate · <b>moderado-alto</b> = opioides sistémicos probables. A más opioide, más riesgo en SAHOS.',
+  anest: 'Técnica prevista para este caso. La local/regional es la más favorable para SAHOS; la general prolongada es la menos favorable.',
+  vigil: '¿La recuperación de HOY puede vigilar a este paciente como lo necesita? <b>Prevista</b> = vigilancia estándar disponible · <b>reforzada</b> = puede ofrecer monitorización extendida/oximetría · <b>insuficiente</b> = lo que necesita supera la capacidad local.',
+  glp1: 'Semaglutida (Ozempic®/Wegovy®), liraglutida, dulaglutida, tirzepatida... No se suspenden de forma universal. <b>Bajo</b>: dosis estable, sin síntomas digestivos · <b>Intermedio</b>: en escalamiento, dosis alta o síntomas leves · <b>Alto</b>: síntomas digestivos significativos o sospecha de estómago lleno.',
+  epm: 'Solo lactantes ex prematuros (&lt;37 semanas al nacer). Edad postmenstrual = <b>edad gestacional al nacer + semanas de vida</b>. Ej: nació de 32 sem y tiene 20 sem de vida → 52. Bajo 60 requiere evaluación pediátrico-anestésica resolutiva.',
+  dur: 'Tiempo total estimado del procedimiento. <b>&gt;120 min no excluye</b>: exige paquete y franja horaria adecuadas para que la recuperación termine dentro del horario seguro.',
+  a3e: 'Marca solo si la enfermedad grave está clínicamente estable y compensada (ej: ICC NYHA I–II, EPOC estable, cardiopatía isquémica estable). Con cambio reciente, NO marcar.',
+  a3p: 'Existe un plan escrito y vigente para su enfermedad de base (habitualmente la nota resolutiva del Policlínico). ASA III estable + plan escrito = puede avanzar en verde.',
+  desc: 'Crisis hiperglicémica, ICC descompensada, ACV o infarto recientes, infección activa... Cualquier descompensación aguda saca al paciente de la ruta CMA hasta resolverse.',
+  anti: 'Warfarina, acenocumarol, apixabán, rivaroxabán, dabigatrán. No excluye, pero exige <b>plan individual de suspensión y reinicio</b> antes de declarar CASO LISTO.',
+  dapt: 'Aspirina + clopidogrel/ticagrelor/prasugrel (habitualmente por stent). Exige plan con el especialista antes de avanzar; nunca suspender por cuenta propia.',
+  emb: 'El embarazo exige evaluación individual y decisión documentada (ACOG). La lactancia NO detiene: se reanuda al estar alerta, sin desechar leche.',
+  cart: 'El procedimiento figura en el <b>registro maestro de la cartera en estado ACTIVA</b> (Anexo N), con paquete aprobado para esta sede. Que "siempre se haya hecho" no habilita.',
+  sang: 'Por el tipo de cirugía se anticipa sangrado o dolor mayor al habitual: no excluye, pero el paquete debe traer plan específico (hemostasia, analgesia regional, rescate).',
+  impl: 'Malla, prótesis, catéter, fijación u otro dispositivo cuyo control condiciona cuándo puede irse: planificar el alta en torno a él.',
+  va: 'Riesgo de que la vía aérea se comprometa DESPUÉS de la cirugía (edema, sangrado cervical, vía aérea compartida). Esto sí es rojo: no es CMA electiva.',
+  exce: 'El posoperatorio previsible necesita algo que esta sede no puede dar (monitorización avanzada, analgesia parenteral sostenida...). Se programa otra modalidad desde el inicio.',
+  acomp: 'Adulto responsable que acompañe al paciente las <b>primeras 24 horas</b> en el domicilio, con nombre y teléfono. Es el requisito social irrenunciable: sin él no hay alta CMA, sin excepciones improvisadas.',
+  compr: '¿El paciente o su acompañante comprenden las indicaciones? Verificar con <b>teach-back</b>: que lo expliquen con sus palabras. Con barrera idiomática, habilitar intérprete o apoyo.',
+  trans: 'Vehículo y conductor definidos para el regreso. El paciente no puede conducir ni irse solo en transporte público tras anestesia o sedación.',
+  fono: 'Teléfono operativo durante 48 h para la llamada de seguimiento. Sin forma de contacto, la dimensión social queda roja.',
+  dist: 'Si el domicilio está lejos (referencia local: &gt;60 min del hospital), no excluye, pero exige plan de contingencia escrito: a dónde acudir y a quién llamar.',
+  f12: 'La jornada de HOY tiene cupo real en recuperación inmediata (Fase I) y mediata (Fase II) para recibir a este paciente.',
+  resc: 'Cama de respaldo o acuerdo de traslado operativo para esta jornada, con unidad receptora definida. Sin red de rescate no se programa CMA.',
+  insu: 'Insumos, instrumental, implantes e imágenes del paquete confirmados. Si algo está pendiente, desmarcar: queda amarillo con dueño y plazo antes del día −1.',
+  falt: 'Falta un recurso sin el cual el caso no puede hacerse con seguridad (equipo, fármaco crítico, esterilización...). Esto es rojo: no se inicia.',
+  hora: 'La hora de término proyectada + la recuperación esperada exceden el horario seguro de la unidad, sin cama aceptada. El caso no se inicia así.',
+  ajus: 'La capacidad alcanza pero justa: obliga a reordenar la tabla (los casos de recuperación prolongada van temprano, nunca al final).',
+  qtotal: 'Suma de los 15 ítems del cuestionario QoR-15E (cada uno 0–10; los de dolor, náuseas y ánimo puntúan invertido: 10 = nada). <b>≥118 = recuperación aceptable (PASS)</b>.',
+  qbasal: 'El QoR-15E aplicado ANTES de la cirugía. Permite calcular el cambio: una caída de <b>6 puntos o más</b> a las 24 h es deterioro clínicamente importante (MCID).',
+  tipo: '<b>Registra todo caso CMA operado</b> (es el denominador de las tasas) y cada evento: pernoctación no planificada (se quedó hospitalizado), suspensión del día 0, reconsulta a urgencias en 7 días, readmisión/reoperación a 30 días, resultado del llamado de 24 h, PAUSA CMA, rescates y eventos adversos.',
+  capa: 'Toda pernoctación no planificada se clasifica (9.11.1): <b>1 · Selección</b> = comorbilidad, fragilidad, SAHOS o entorno subestimados al elegir al paciente · <b>2 · Proceso</b> = falla del circuito (horario, receta tardía, falta de acompañante, capacidad) · <b>3 · No prevenible</b> = complicación impredecible pese a selección y proceso correctos. El objetivo es ajustar el sistema, no buscar culpables.',
+};
 
 // ─── ELEGIBILIDAD ───
 const NOMBRE_DIM = {clinico_anestesica:'CLÍNICO-ANESTÉSICA', quirurgica:'QUIRÚRGICA', social:'SOCIAL', logistica:'LOGÍSTICA'};
@@ -336,20 +413,33 @@ async function evaluarElegibilidad() {
 
 // ─── CASO LISTO ───
 const ELEMENTOS = [
-  ['indicacion_modalidad','1 · Indicación quirúrgica corroborada y modalidad definida'],
-  ['criterios_cma','2 · Cuatro dimensiones resueltas, sin roja ni amarilla clínico-anestésica abierta'],
-  ['epa_nota_resolutiva','3 · EPA vigente + nota resolutiva del Policlínico si hubo zona amarilla'],
-  ['optimizacion_pbm','4 · Optimización ejecutada, incluida compuerta PBM cuando aplique'],
-  ['plan_farmacologico','5 · Plan farmacológico individual, único, escrito y entregado'],
-  ['examenes_interpretados','6 · Exámenes indicados revisados e interpretados, sin pendientes'],
-  ['consentimiento_cma','7 · Consentimiento con intención de alta el mismo día y posible conversión'],
-  ['acompanante_transporte','8 · Acompañante adulto 24 h confirmado y transporte seguro'],
-  ['educacion_teachback','9 · Educación entregada con teach-back documentado'],
-  ['logistica_paquete','10 · Requisitos logísticos del paquete confirmados (Anexo L)'],
-  ['red_rescate','11 · Red de rescate de la jornada verificada (Anexos K y M.6)'],
+  ['indicacion_modalidad','1 · Indicación quirúrgica corroborada y modalidad definida',
+   'El cirujano confirmó diagnóstico, procedimiento, sitio y lateralidad, y declaró la intención CMA. Queda en el <b>formulario G-B</b> (compuerta H1).'],
+  ['criterios_cma','2 · Cuatro dimensiones resueltas, sin roja ni amarilla clínico-anestésica abierta',
+   'El semáforo de la pestaña Elegibilidad salió sin rojas, y toda amarilla clínica ya tiene nota resolutiva. Si hay una amarilla clínica abierta, NO marques esta casilla.'],
+  ['epa_nota_resolutiva','3 · EPA vigente + nota resolutiva del Policlínico si hubo zona amarilla',
+   'Evaluación preanestésica al día (preferente 1–30 días; máx. 120 sin cambios). Si hubo duda clínica, la <b>nota resolutiva G-D</b> del Policlínico debe existir y estar vigente.'],
+  ['optimizacion_pbm','4 · Optimización ejecutada, incluida compuerta PBM cuando aplique',
+   'Anemia, hemostasia y comorbilidades optimizadas según lo indicado. Si el paciente tenía anemia, la compuerta PBM (Anexo J) debe estar cerrada.'],
+  ['plan_farmacologico','5 · Plan farmacológico individual, único, escrito y entregado',
+   'Un solo documento con qué tomar, qué suspender y cuándo reiniciar (anticoagulantes, SGLT-2, GLP-1, insulina...), fechado, atribuible y <b>entregado al paciente</b>.'],
+  ['examenes_interpretados','6 · Exámenes indicados revisados e interpretados, sin pendientes',
+   'Solo exámenes por indicación clínica (no de rutina). Todos revisados e interpretados: nada pendiente que pueda cambiar aptitud, técnica o recuperación.'],
+  ['consentimiento_cma','7 · Consentimiento con intención de alta el mismo día y posible conversión',
+   'Firmado, e incluye explícitamente: alta el mismo día, posibilidad de conversión o pernoctación, rol del acompañante y continuidad posalta. En pediatría: representante legal y asentimiento.'],
+  ['acompanante_transporte','8 · Acompañante adulto 24 h confirmado y transporte seguro',
+   'Adulto responsable identificado con nombre y teléfono, comprometido por 24 h, y transporte asegurado. Queda en el <b>acta G-A</b>. Requisito irrenunciable.'],
+  ['educacion_teachback','9 · Educación entregada con teach-back documentado',
+   '<b>Teach-back</b> = el paciente o su acompañante explican con sus propias palabras el ayuno, medicamentos, señales de alarma y qué traer. Si no puede explicarlo, la educación no está completa.'],
+  ['logistica_paquete','10 · Requisitos logísticos del paquete confirmados (Anexo L)',
+   'Insumos, instrumental, implantes e imágenes del paquete del procedimiento disponibles, y franja horaria compatible con la recuperación esperada.'],
+  ['red_rescate','11 · Red de rescate de la jornada verificada (Anexos K y M.6)',
+   'Cama de respaldo o acuerdo de traslado confirmado <b>para esta jornada</b>, con unidad receptora y responsables. No basta con que exista en el papel.'],
 ];
-document.getElementById('l_items').innerHTML = ELEMENTOS.map(([k, t]) =>
-  `<label class="c"><input type="checkbox" id="l_${k}"> ${t}</label>`).join('');
+document.getElementById('l_items').innerHTML = ELEMENTOS.map(([k, t, h]) => {
+  HELP['l_' + k] = h;
+  return `<label class="c" data-h="l_${k}"><input type="checkbox" id="l_${k}"> ${t}</label>`;
+}).join('');
 
 async function evaluarCasoListo() {
   const d = {id_caso: val('l_id')};
@@ -366,16 +456,25 @@ async function evaluarCasoListo() {
 
 // ─── GATE 0 ───
 const GATE0 = [
-  ['identidad_sitio_consentimiento','Identidad, procedimiento, sitio, lateralidad, consentimiento y marcación'],
-  ['ayuno_plan_individual','Ayuno cumplido según plan individual (6 h / 2 h) · última dosis registrada'],
-  ['sin_cambio_clinico','Sin cambio clínico, farmacológico ni social desde el día −1'],
-  ['caso_listo_vigente','CASO LISTO vigente · ninguna duda antigua sin nota resolutiva'],
-  ['acompanante_confirmado','Acompañante presente o con llegada segura confirmada · transporte'],
-  ['capacidad_rescate','Capacidad de Fase I y II y red de rescate de la jornada confirmadas'],
-  ['sign_in','Sign-IN de la lista OMS ejecutado (Anexo F)'],
+  ['identidad_sitio_consentimiento','Identidad, procedimiento, sitio, lateralidad, consentimiento y marcación',
+   'Verificados contra ficha y brazalete, con el paciente despierto. El sitio quirúrgico marcado por el cirujano en presencia del paciente.'],
+  ['ayuno_plan_individual','Ayuno cumplido según plan individual (6 h / 2 h) · última dosis registrada',
+   'Sólidos 6 h (comida pesada 8 h) · líquidos claros hasta 2 h. Vale el <b>plan individual escrito</b>, nunca "ayuno desde medianoche" por defecto. Registrar hora de última ingesta y última dosis de fármacos.'],
+  ['sin_cambio_clinico','Sin cambio clínico, farmacológico ni social desde el día −1',
+   'Preguntar dirigidamente: ¿fiebre, tos, descompensación, medicamento nuevo o dosis fuera del plan, cambio de acompañante? Cualquier cambio invalida el CASO LISTO.'],
+  ['caso_listo_vigente','CASO LISTO vigente · ninguna duda antigua sin nota resolutiva',
+   'La declaración existe, está fechada y nadie la invalidó. Una duda que ya existía antes de hoy y quedó sin nota del Policlínico NO se resuelve aquí: el caso queda NO LISTO.'],
+  ['acompanante_confirmado','Acompañante presente o con llegada segura confirmada · transporte',
+   'Identidad y teléfono reconfirmados hoy. Si la llegada segura no está confirmada, se activa PAUSA CMA y <b>no se induce anestesia</b> hasta resolver.'],
+  ['capacidad_rescate','Capacidad de Fase I y II y red de rescate de la jornada confirmadas',
+   'Cupo real en recuperación inmediata y mediata para este caso HOY, y cama de respaldo o acuerdo de traslado operativo en esta jornada.'],
+  ['sign_in','Sign-IN de la lista OMS ejecutado (Anexo F)',
+   'Primer momento de la lista de seguridad: identidad, consentimiento, sitio marcado, alergias, vía aérea y riesgo de aspiración, plan antitrombótico cumplido.'],
 ];
-document.getElementById('g_items').innerHTML = GATE0.map(([k, t]) =>
-  `<label class="c"><input type="checkbox" id="g_${k}"> ${t}</label>`).join('');
+document.getElementById('g_items').innerHTML = GATE0.map(([k, t, h]) => {
+  HELP['g_' + k] = h;
+  return `<label class="c" data-h="g_${k}"><input type="checkbox" id="g_${k}"> ${t}</label>`;
+}).join('');
 
 async function evaluarGate0() {
   const d = {id_caso: val('g_id'), hallazgo_nuevo: chk('g_nuevo')};
@@ -520,6 +619,29 @@ async function verIndicadores() {
     document.getElementById('t_res').innerHTML = h;
   } catch(e) { fallo('t_res', e); }
 }
+
+// ─── INYECTAR BOTONES DE AYUDA "?" ───
+document.querySelectorAll('[data-h]').forEach(el => {
+  const k = el.dataset.h;
+  if (!HELP[k]) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'hbtn'; b.textContent = '?';
+  b.setAttribute('aria-label', 'Ver explicación'); b.setAttribute('aria-expanded', 'false');
+  const box = document.createElement('span');
+  box.className = 'hbox'; box.innerHTML = HELP[k];
+  b.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const on = box.classList.toggle('on');
+    b.setAttribute('aria-expanded', String(on));
+  });
+  if (el.classList.contains('c')) box.addEventListener('click', e => e.preventDefault());
+  el.appendChild(b); el.appendChild(box);
+});
+
+// Calculadora STOP-BANG: las 8 casillas suman el puntaje solas
+document.querySelectorAll('.sbc').forEach(cb => cb.addEventListener('change', () => {
+  document.getElementById('e_sb').value = document.querySelectorAll('.sbc:checked').length;
+}));
 </script>
 </body>
 </html>
