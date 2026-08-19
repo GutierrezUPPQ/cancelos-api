@@ -22,6 +22,14 @@ def torre():
             return f.read()
     return "<h1>Torre de Control - archivo index.html no encontrado</h1>"
 
+@app.get("/cma-app", response_class=HTMLResponse)
+def cma_app():
+    path = os.path.join(os.path.dirname(__file__), "cma.html")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h1>Modulo CMA - archivo cma.html no encontrado</h1>"
+
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
 # ═══════════════════════════════════════════════
@@ -520,7 +528,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.2.0","status":"operativo","torre":"/torre","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.2.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):

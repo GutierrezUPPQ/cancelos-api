@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CancelOS — Módulo CMA</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#020b18;--panel:#040f1f;--border:#0d2137;--dim:#0a1a2e;
+  --rojo:#ef4444;--amar:#eab308;--verde:#22c55e;--alto:#f97316;
+  --text:#e2e8f0;--muted:#4a6484;--accent:#0ea5e9;
+}
+html{background:var(--navy)}
+body{min-height:100vh;background:var(--navy);color:var(--text);font-family:'Barlow',sans-serif}
+body::after{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(#0d2137 1px,transparent 1px),linear-gradient(90deg,#0d2137 1px,transparent 1px);background-size:40px 40px;opacity:.25;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:0 14px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,#0369a1,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:3px}
+.logo-title span{color:var(--accent)}
+.logo-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px}
+a.volver{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:2px}
+.aviso{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;line-height:1.7;padding:10px 4px;border-bottom:1px solid var(--border)}
+nav{display:flex;gap:6px;overflow-x:auto;padding:12px 0;position:sticky;top:0;background:var(--navy);z-index:5;border-bottom:1px solid var(--border)}
+nav button{flex:0 0 auto;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--muted);background:var(--dim);border:1px solid var(--border);border-radius:6px;padding:9px 14px;cursor:pointer}
+nav button.on{color:var(--accent);border-color:var(--accent);background:rgba(14,165,233,.08)}
+section{display:none;padding-top:16px}
+section.on{display:block}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:3px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{background:var(--dim);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;padding:9px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+label.c{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text);padding:8px 10px;background:var(--dim);border:1px solid var(--border);border-radius:6px;cursor:pointer}
+label.c input{width:17px;height:17px;accent-color:var(--accent);flex:0 0 auto}
+.stack{display:grid;gap:8px}
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:3px;background:linear-gradient(135deg,#0369a1,#1d4ed8);border:none;border-radius:6px;color:#fff;padding:12px 26px;cursor:pointer;margin-top:14px}
+.btn.sec{background:var(--dim);border:1px solid var(--border);color:var(--accent)}
+.res{margin-top:14px}
+.banner{border-radius:8px;padding:13px 15px;border-left:4px solid;font-weight:600;margin-bottom:10px}
+.banner .t{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:900;letter-spacing:2px;margin-bottom:3px}
+.banner .a{font-size:13px;font-weight:400;color:var(--text)}
+.bVERDE{border-color:var(--verde);background:rgba(34,197,94,.09);color:var(--verde)}
+.bAMAR{border-color:var(--amar);background:rgba(234,179,8,.09);color:var(--amar)}
+.bROJO{border-color:var(--rojo);background:rgba(239,68,68,.09);color:var(--rojo)}
+.bAZUL{border-color:var(--accent);background:rgba(14,165,233,.09);color:var(--accent)}
+.dims{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.dim{background:var(--dim);border:1px solid var(--border);border-radius:8px;padding:11px}
+.dim h4{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.chip{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;padding:2px 9px;border-radius:4px}
+.cVERDE{background:rgba(34,197,94,.15);color:var(--verde);border:1px solid rgba(34,197,94,.35)}
+.cAMARILLO{background:rgba(234,179,8,.15);color:var(--amar);border:1px solid rgba(234,179,8,.35)}
+.cROJO{background:rgba(239,68,68,.15);color:var(--rojo);border:1px solid rgba(239,68,68,.35)}
+.dim ul{list-style:none;display:grid;gap:5px}
+.dim li{font-size:12px;line-height:1.45;padding-left:12px;position:relative;color:#b8c6d4}
+.dim li::before{content:'';position:absolute;left:0;top:6px;width:6px;height:6px;border-radius:50%}
+.dim li.hVERDE::before{background:var(--verde)}
+.dim li.hAMARILLO::before{background:var(--amar)}
+.dim li.hROJO::before{background:var(--rojo)}
+.faltantes li{font-size:13px;color:#f5c6c3;padding:4px 0 4px 14px;position:relative}
+.faltantes li::before{content:'✕';position:absolute;left:0;color:var(--rojo);font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-align:left;padding:7px 9px;border-bottom:1px solid var(--border)}
+td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl{overflow-x:auto}
+.num{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:900}
+.mono{font-family:'Share Tech Mono',monospace;font-size:11px}
+.hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px}
+.err{color:var(--rojo);font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:10px}
+footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-align:center;padding:26px 10px;line-height:2}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--navy)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚕</div>
+    <div>
+      <div class="logo-title">CANCEL<span>OS</span> · MÓDULO CMA</div>
+      <div class="logo-sub">SERIE PSQ-CMA v2.0 · HOSPITAL DE QUILPUÉ</div>
+    </div>
+  </div>
+  <a class="volver" href="/torre">← TORRE DE CONTROL</a>
+</header>
+<div class="aviso">APOYO A LA DECISIÓN CLÍNICA (SECCIÓN 9.11.5): NO SUSTITUYE EL JUICIO CLÍNICO NI GENERA EXCLUSIÓN AUTOMÁTICA · LA FICHA CLÍNICA ES LA FUENTE PRIMARIA · LOS CASOS DE ALTO RIESGO GENERAN REVISIÓN HUMANA</div>
+
+<nav id="tabs">
+  <button data-t="eleg" class="on">1–2 ELEGIBILIDAD</button>
+  <button data-t="listo">3 CASO LISTO</button>
+  <button data-t="gate0">4 GATE 0</button>
+  <button data-t="recu">6–7 RECUPERACIÓN</button>
+  <button data-t="escalas">ESCALAS</button>
+  <button data-t="mejora">9 MEJORA</button>
+</nav>
+
+<!-- ═══════════ ELEGIBILIDAD ═══════════ -->
+<section id="eleg" class="on">
+  <div class="card">
+    <div class="grid">
+      <label class="f">ID CASO / EPISODIO<input type="text" id="e_id" placeholder="EP-001"></label>
+      <label class="f">EDAD (AÑOS)<input type="number" id="e_edad" min="0" max="120"></label>
+      <label class="f">ASA<select id="e_asa"><option>ASA I</option><option selected>ASA II</option><option>ASA III</option><option>ASA IV</option><option>ASA V</option></select></label>
+      <label class="f">CFS (OBLIGATORIO ≥65)<select id="e_cfs"><option value="">— no registrado —</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
+      <label class="f">IMC (KG/M²)<input type="number" id="e_imc" step="0.1" min="10" max="90"></label>
+      <label class="f">HBA1C (%)<input type="number" id="e_hba1c" step="0.1" min="3" max="20" placeholder="si diabético"></label>
+      <label class="f">STOP-BANG (0–8)<input type="number" id="e_sb" min="0" max="8" value="0"></label>
+      <label class="f">CPAP<select id="e_cpap"><option value="no_aplica">No aplica</option><option value="adherente">Adherente documentado</option><option value="variable">Adherencia variable</option><option value="sin_cpap">SAHOS sin CPAP / abandonado</option></select></label>
+      <label class="f">OPIOIDE ESPERADO<select id="e_opio"><option value="ninguno">Ninguno (regional pura)</option><option value="bajo" selected>Bajo</option><option value="moderado_alto">Moderado – alto</option></select></label>
+      <label class="f">ANESTESIA PREVISTA<select id="e_anest"><option value="local_regional">Local / regional</option><option value="general_breve" selected>General breve</option><option value="general_prolongada">General prolongada</option></select></label>
+      <label class="f">VIGILANCIA POSTOP.<select id="e_vigil"><option value="prevista">Prevista disponible</option><option value="reforzada">Reforzada disponible</option><option value="insuficiente">Superior a capacidad local</option></select></label>
+      <label class="f">GLP-1<select id="e_glp1"><option value="">No usa</option><option value="bajo">Riesgo bajo</option><option value="intermedio">Riesgo intermedio</option><option value="alto">Riesgo alto</option></select></label>
+      <label class="f">EDAD POSTMENSTRUAL (SEM · lactantes)<input type="number" id="e_epm" min="20" max="120" placeholder="solo ex prematuros"></label>
+      <label class="f">DURACIÓN ESTIMADA (MIN)<input type="number" id="e_dur" min="0" max="600" value="60"></label>
+    </div>
+    <div class="sec-title">── CONDICIÓN CLÍNICA</div>
+    <div class="grid stack">
+      <label class="c"><input type="checkbox" id="e_a3e"> ASA III estable y compensado</label>
+      <label class="c"><input type="checkbox" id="e_a3p"> ASA III con plan escrito vigente</label>
+      <label class="c"><input type="checkbox" id="e_desc"> Descompensación aguda / cambio reciente</label>
+      <label class="c"><input type="checkbox" id="e_anti"> Anticoagulación</label>
+      <label class="c"><input type="checkbox" id="e_dapt"> Doble antiagregación</label>
+      <label class="c"><input type="checkbox" id="e_emb"> Embarazo</label>
+    </div>
+    <div class="sec-title">── DIMENSIÓN QUIRÚRGICA</div>
+    <div class="grid stack">
+      <label class="c"><input type="checkbox" id="e_cart" checked> Prestación en cartera ACTIVA con paquete vigente</label>
+      <label class="c"><input type="checkbox" id="e_sang"> Riesgo de sangrado o dolor que exige plan específico</label>
+      <label class="c"><input type="checkbox" id="e_impl"> Implante o dispositivo que condiciona el alta</label>
+      <label class="c"><input type="checkbox" id="e_va"> Riesgo de compromiso de vía aérea posoperatorio</label>
+      <label class="c"><input type="checkbox" id="e_exce"> Cuidados que la sede no puede entregar</label>
+    </div>
+    <div class="sec-title">── DIMENSIÓN SOCIAL</div>
+    <div class="grid">
+      <label class="f">ACOMPAÑANTE ADULTO 24 H<select id="e_acomp"><option value="confirmado">Confirmado</option><option value="sin_confirmar">Identificado, sin confirmar</option><option value="no">No disponible</option></select></label>
+      <label class="f">COMPRENSIÓN DEL PLAN<select id="e_compr"><option value="ok">Adecuada (teach-back)</option><option value="con_apoyo">Barrera con apoyo disponible</option><option value="imposible">Imposible aun con apoyo</option></select></label>
+    </div>
+    <div class="grid stack" style="margin-top:8px">
+      <label class="c"><input type="checkbox" id="e_trans" checked> Transporte seguro asegurado</label>
+      <label class="c"><input type="checkbox" id="e_fono" checked> Teléfono operativo 48 h</label>
+      <label class="c"><input type="checkbox" id="e_dist"> Domicilio distante (requiere plan de contingencia)</label>
+    </div>
+    <div class="sec-title">── DIMENSIÓN LOGÍSTICA</div>
+    <div class="grid stack">
+      <label class="c"><input type="checkbox" id="e_f12" checked> Capacidad de Fase I y II en la jornada</label>
+      <label class="c"><input type="checkbox" id="e_resc" checked> Red de rescate operativa (cama / traslado)</label>
+      <label class="c"><input type="checkbox" id="e_insu" checked> Insumos, instrumental e implantes confirmados</label>
+      <label class="c"><input type="checkbox" id="e_falt"> Falta un recurso crítico</label>
+      <label class="c"><input type="checkbox" id="e_hora"> Término proyectado fuera del horario seguro</label>
+      <label class="c"><input type="checkbox" id="e_ajus"> Capacidad ajustada (reordenar tabla)</label>
+    </div>
+    <button class="btn" onclick="evaluarElegibilidad()">EVALUAR 4 DIMENSIONES</button>
+    <div class="res" id="e_res"></div>
+  </div>
+</section>
+
+<!-- ═══════════ CASO LISTO ═══════════ -->
+<section id="listo">
+  <div class="card">
+    <label class="f" style="max-width:260px">ID CASO / EPISODIO<input type="text" id="l_id" placeholder="EP-001"></label>
+    <div class="sec-title">── LOS 11 ELEMENTOS (SECCIÓN 9.5.8) — FALTA UNO = NO LISTO</div>
+    <div class="stack" id="l_items"></div>
+    <button class="btn" onclick="evaluarCasoListo()">VERIFICAR CASO LISTO</button>
+    <div class="res" id="l_res"></div>
+  </div>
+</section>
+
+<!-- ═══════════ GATE 0 ═══════════ -->
+<section id="gate0">
+  <div class="card">
+    <label class="f" style="max-width:260px">ID CASO / EPISODIO<input type="text" id="g_id" placeholder="EP-001"></label>
+    <div class="sec-title">── VERIFICAR ANTES DE INDUCIR (9.6.1) — G-C</div>
+    <div class="stack" id="g_items"></div>
+    <label class="c" style="margin-top:10px"><input type="checkbox" id="g_nuevo"> El bloqueador es un hallazgo NUEVO de hoy (no una duda antigua)</label>
+    <button class="btn" onclick="evaluarGate0()">CERRAR GATE 0</button>
+    <div class="res" id="g_res"></div>
+  </div>
+</section>
+
+<!-- ═══════════ RECUPERACIÓN ═══════════ -->
+<section id="recu">
+  <div class="card">
+    <div class="sec-title">── FASE I · ALDRETE (TRÁNSITO CON ≥9 SOSTENIDO 15 MIN, NINGÚN PARÁMETRO EN 0)</div>
+    <div class="grid" id="a_items"></div>
+    <label class="c" style="margin-top:10px"><input type="checkbox" id="a_sost"> Puntaje sostenido ≥ 15 minutos</label>
+    <button class="btn" onclick="evaluarAldrete()">EVALUAR FASE I</button>
+    <div class="res" id="a_res"></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── FASE II · PADSS / PED-PADSS (ALTA CON ≥9, SV = 2, NINGÚN DOMINIO EN 0)</div>
+    <div class="grid" id="p_items"></div>
+    <div class="grid stack" style="margin-top:8px">
+      <label class="c"><input type="checkbox" id="p_ped"> Paciente pediátrico (Ped-PADSS)</label>
+      <label class="c"><input type="checkbox" id="p_acomp"> Acompañante adulto presente</label>
+    </div>
+    <button class="btn" onclick="evaluarPadss()">EVALUAR CRITERIOS DE ALTA</button>
+    <div class="res" id="p_res"></div>
+    <div class="hint">El alta exige además los 8 deberes documentados (9.9.3) y la doble llave. Nunca alta sin acompañante ni con un dominio en 0.</div>
+  </div>
+</section>
+
+<!-- ═══════════ ESCALAS ═══════════ -->
+<section id="escalas">
+  <div class="card">
+    <div class="sec-title">── APFEL · RIESGO NVPO (SE APLICA EN LA EPA, SE EJECUTA EN ETAPA 5)</div>
+    <div class="grid stack">
+      <label class="c"><input type="checkbox" id="ap_f"> Sexo femenino</label>
+      <label class="c"><input type="checkbox" id="ap_nf"> No fumador</label>
+      <label class="c"><input type="checkbox" id="ap_ant"> Antecedente de NVPO o cinetosis</label>
+      <label class="c"><input type="checkbox" id="ap_op"> Uso esperado de opioides postoperatorios</label>
+    </div>
+    <button class="btn" onclick="evaluarApfel()">CALCULAR APFEL</button>
+    <div class="res" id="ap_res"></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── QOR-15E · CALIDAD DE RECUPERACIÓN (BASAL PREOP Y 24 H · PASS ≥118 · MCID 6)</div>
+    <div class="grid">
+      <label class="f">TOTAL ACTUAL (0–150)<input type="number" id="q_total" min="0" max="150"></label>
+      <label class="f">BASAL PREOPERATORIO (OPCIONAL)<input type="number" id="q_basal" min="0" max="150"></label>
+    </div>
+    <button class="btn" onclick="evaluarQor()">INTERPRETAR QOR-15E</button>
+    <div class="res" id="q_res"></div>
+  </div>
+</section>
+
+<!-- ═══════════ MEJORA ═══════════ -->
+<section id="mejora">
+  <div class="card">
+    <div class="sec-title">── REGISTRAR CASO O EVENTO (ETAPA 9 · CADA CASO DEJA UN DATO)</div>
+    <div class="grid">
+      <label class="f">ID CASO / EPISODIO<input type="text" id="m_id" placeholder="EP-001"></label>
+      <label class="f">TIPO DE EVENTO<select id="m_tipo"></select></label>
+      <label class="f">DETALLE (OPCIONAL)<input type="text" id="m_det" placeholder="breve descripción"></label>
+    </div>
+    <div id="m_pernoc" style="display:none;margin-top:10px">
+      <div class="grid">
+        <label class="f">CAPA DE FALLA (9.11.1)<select id="m_capa"><option value="">— sin clasificar aún —</option><option value="seleccion">1 · Falla de selección</option><option value="proceso">2 · Falla de proceso</option><option value="no_prevenible">3 · No prevenible</option></select></label>
+        <label class="f">ACCIÓN CONCRETA (RESPONSABLE + PLAZO)<input type="text" id="m_acc" placeholder="qué se ajusta, quién y cuándo"></label>
+      </div>
+    </div>
+    <button class="btn" onclick="registrarEvento()">REGISTRAR</button>
+    <div class="res" id="m_res"></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── TABLERO DE INDICADORES · REFERENCIAS BADS/GIRFT (NO METAS)</div>
+    <div class="grid">
+      <label class="f">TOTAL CASOS CMA (DENOMINADOR · OPCIONAL)<input type="number" id="t_total" min="0" placeholder="usa los caso_cma registrados"></label>
+    </div>
+    <button class="btn sec" onclick="verIndicadores()">VER TABLERO</button>
+    <div class="res" id="t_res"></div>
+    <div class="hint">El registro vive en memoria del servidor y se reinicia con cada deploy: la ficha clínica es la fuente primaria. Para el análisis mensual del comité, usar el lote completo vía <span class="mono">POST /cma/mejora</span>.</div>
+  </div>
+</section>
+
+<footer>
+  MÓDULO CMA · MOTOR PSQ-CMA v2.0 · APOYO A LA DECISIÓN — LA DECISIÓN FINAL ES DEL EQUIPO TRATANTE<br>
+  CUALQUIER INTEGRANTE DEL EQUIPO PUEDE DECLARAR PAUSA CMA · NINGUNA PRESIÓN DE CUPO LA ANULA
+</footer>
+</div>
+
+<script>
+// ─── NAVEGACIÓN ───
+document.getElementById('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('section').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  document.getElementById(b.dataset.t).classList.add('on');
+});
+
+async function post(url, body) {
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = id => { const v = document.getElementById(id).value; return v === '' ? null : Number(v); };
+const chk = id => document.getElementById(id).checked;
+const val = id => document.getElementById(id).value;
+const fallo = (el, e) => { document.getElementById(el).innerHTML = `<div class="err">⚠ ERROR DE CONEXIÓN CON EL MOTOR: ${esc(e.message)}</div>`; };
+
+// ─── ELEGIBILIDAD ───
+const NOMBRE_DIM = {clinico_anestesica:'CLÍNICO-ANESTÉSICA', quirurgica:'QUIRÚRGICA', social:'SOCIAL', logistica:'LOGÍSTICA'};
+const BANNER_DISP = {'AVANZA':'bVERDE','ZONA AMARILLA CLINICO-ANESTESICA':'bAMAR','AMARILLO NO CLINICO':'bAMAR','NO ES CMA ELECTIVA':'bROJO'};
+
+async function evaluarElegibilidad() {
+  const d = {
+    id_caso: val('e_id'), asa: val('e_asa'),
+    asa3_estable: chk('e_a3e'), asa3_plan_escrito: chk('e_a3p'), descompensacion_aguda: chk('e_desc'),
+    stop_bang: num('e_sb') ?? 0, cpap: val('e_cpap'), opioide_esperado: val('e_opio'),
+    tipo_anestesia_cma: val('e_anest'), vigilancia_postop: val('e_vigil'),
+    anticoag: chk('e_anti'), doble_antiagregacion: chk('e_dapt'), embarazo: chk('e_emb'),
+    glp1_riesgo: val('e_glp1'),
+    en_cartera_activa: chk('e_cart'), riesgo_sangrado_dolor: chk('e_sang'),
+    implante_condiciona_alta: chk('e_impl'), riesgo_via_aerea_postop: chk('e_va'), cuidados_exceden_sede: chk('e_exce'),
+    acompanante_24h: val('e_acomp'), comprension: val('e_compr'),
+    transporte_seguro: chk('e_trans'), telefono_operativo: chk('e_fono'), domicilio_distante: chk('e_dist'),
+    capacidad_fase_1_2: chk('e_f12'), red_rescate_operativa: chk('e_resc'), insumos_confirmados: chk('e_insu'),
+    falta_recurso_critico: chk('e_falt'), termino_fuera_horario_seguro: chk('e_hora'), capacidad_ajustada: chk('e_ajus'),
+  };
+  const edad = num('e_edad'); if (edad !== null) d.edad = edad;
+  const cfs = num('e_cfs');  if (cfs  !== null) d.cfs = cfs;
+  const imc = num('e_imc');  if (imc  !== null) d.imc = imc;
+  const hb  = num('e_hba1c');if (hb   !== null) d.hba1c = hb;
+  const epm = num('e_epm');  if (epm  !== null) d.edad_postmenstrual_sem = epm;
+  const dur = num('e_dur');  if (dur  !== null) d.duracion_min = dur;
+  try {
+    const r = await post('/cma/elegibilidad', d);
+    let h = `<div class="banner ${BANNER_DISP[r.disposicion]||'bAZUL'}"><div class="t">${esc(r.disposicion)}</div><div class="a">${esc(r.accion)}</div></div><div class="dims">`;
+    for (const [k, v] of Object.entries(r.dimensiones)) {
+      h += `<div class="dim"><h4>${NOMBRE_DIM[k]||k}<span class="chip c${v.color}">${v.color}</span></h4><ul>`;
+      h += v.hallazgos.length
+        ? v.hallazgos.map(x => `<li class="h${x.color}">${esc(x.motivo)}</li>`).join('')
+        : '<li class="hVERDE">Sin hallazgos: verde</li>';
+      h += '</ul></div>';
+    }
+    h += '</div>';
+    if (r.matriz_sahos) {
+      const m = r.matriz_sahos;
+      h += `<div class="dim" style="margin-top:10px"><h4>MATRIZ SAHOS (5 DOMINIOS)<span class="chip c${m.resultado}">${m.resultado}</span></h4><ul>`;
+      h += Object.entries(m.dominios).map(([k,c]) => `<li class="h${c}">${k.replace('_','-').toUpperCase()}: ${c}</li>`).join('');
+      h += `<li style="padding-left:0;margin-top:4px">${esc(m.conducta)}</li></ul></div>`;
+    }
+    h += `<div class="hint">${esc(r.regla)}</div>`;
+    document.getElementById('e_res').innerHTML = h;
+  } catch(e) { fallo('e_res', e); }
+}
+
+// ─── CASO LISTO ───
+const ELEMENTOS = [
+  ['indicacion_modalidad','1 · Indicación quirúrgica corroborada y modalidad definida'],
+  ['criterios_cma','2 · Cuatro dimensiones resueltas, sin roja ni amarilla clínico-anestésica abierta'],
+  ['epa_nota_resolutiva','3 · EPA vigente + nota resolutiva del Policlínico si hubo zona amarilla'],
+  ['optimizacion_pbm','4 · Optimización ejecutada, incluida compuerta PBM cuando aplique'],
+  ['plan_farmacologico','5 · Plan farmacológico individual, único, escrito y entregado'],
+  ['examenes_interpretados','6 · Exámenes indicados revisados e interpretados, sin pendientes'],
+  ['consentimiento_cma','7 · Consentimiento con intención de alta el mismo día y posible conversión'],
+  ['acompanante_transporte','8 · Acompañante adulto 24 h confirmado y transporte seguro'],
+  ['educacion_teachback','9 · Educación entregada con teach-back documentado'],
+  ['logistica_paquete','10 · Requisitos logísticos del paquete confirmados (Anexo L)'],
+  ['red_rescate','11 · Red de rescate de la jornada verificada (Anexos K y M.6)'],
+];
+document.getElementById('l_items').innerHTML = ELEMENTOS.map(([k, t]) =>
+  `<label class="c"><input type="checkbox" id="l_${k}"> ${t}</label>`).join('');
+
+async function evaluarCasoListo() {
+  const d = {id_caso: val('l_id')};
+  ELEMENTOS.forEach(([k]) => d[k] = chk('l_' + k));
+  try {
+    const r = await post('/cma/caso-listo', d);
+    const ok = r.estado === 'CASO LISTO';
+    document.getElementById('l_res').innerHTML =
+      `<div class="banner ${ok?'bVERDE':'bROJO'}"><div class="t">${esc(r.estado)}</div><div class="a">${esc(r.accion)}</div></div>` +
+      (r.faltantes.length ? `<ul class="faltantes">${r.faltantes.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>` : '') +
+      `<div class="hint">${esc(r.nota)}</div>`;
+  } catch(e) { fallo('l_res', e); }
+}
+
+// ─── GATE 0 ───
+const GATE0 = [
+  ['identidad_sitio_consentimiento','Identidad, procedimiento, sitio, lateralidad, consentimiento y marcación'],
+  ['ayuno_plan_individual','Ayuno cumplido según plan individual (6 h / 2 h) · última dosis registrada'],
+  ['sin_cambio_clinico','Sin cambio clínico, farmacológico ni social desde el día −1'],
+  ['caso_listo_vigente','CASO LISTO vigente · ninguna duda antigua sin nota resolutiva'],
+  ['acompanante_confirmado','Acompañante presente o con llegada segura confirmada · transporte'],
+  ['capacidad_rescate','Capacidad de Fase I y II y red de rescate de la jornada confirmadas'],
+  ['sign_in','Sign-IN de la lista OMS ejecutado (Anexo F)'],
+];
+document.getElementById('g_items').innerHTML = GATE0.map(([k, t]) =>
+  `<label class="c"><input type="checkbox" id="g_${k}"> ${t}</label>`).join('');
+
+async function evaluarGate0() {
+  const d = {id_caso: val('g_id'), hallazgo_nuevo: chk('g_nuevo')};
+  GATE0.forEach(([k]) => d[k] = chk('g_' + k));
+  try {
+    const r = await post('/cma/gate0', d);
+    const ok = r.resultado === 'GATE 0 CERRADO';
+    document.getElementById('g_res').innerHTML =
+      `<div class="banner ${ok?'bVERDE':'bROJO'}"><div class="t">${esc(r.resultado)}</div><div class="a">${esc(r.accion)}</div></div>` +
+      (r.bloqueadores.length ? `<ul class="faltantes">${r.bloqueadores.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : '') +
+      (r.decide ? `<div class="banner bAMAR" style="margin-top:8px"><div class="a">DECIDE: ${esc(r.decide)}</div></div>` : '');
+  } catch(e) { fallo('g_res', e); }
+}
+
+// ─── ALDRETE ───
+const ALDRETE = [
+  ['actividad','ACTIVIDAD MOTORA',['0 · Incapaz','1 · Mueve 2 extremidades','2 · Mueve 4 extremidades']],
+  ['respiracion','RESPIRACIÓN',['0 · Apnea','1 · Disnea / superficial','2 · Profunda, tose libre']],
+  ['circulacion','CIRCULACIÓN (PA VS BASAL)',['0 · Desviación ≥ 50 %','1 · Desviación 20–49 %','2 · Desviación ≤ 20 %']],
+  ['conciencia','CONCIENCIA',['0 · No responde','1 · Al llamado','2 · Despierto']],
+  ['spo2','SPO₂',['0 · < 90 % aún con O₂','1 · ≥ 90 % con O₂','2 · ≥ 92 % aire ambiente']],
+];
+const selScore = (pre, items) => items.map(([k, t, ops]) =>
+  `<label class="f">${t}<select id="${pre}_${k}">${ops.map((o,i)=>`<option value="${i}" ${i===2?'selected':''}>${o}</option>`).join('')}</select></label>`).join('');
+document.getElementById('a_items').innerHTML = selScore('a', ALDRETE);
+
+async function evaluarAldrete() {
+  const d = {sostenido_15min: chk('a_sost')};
+  ALDRETE.forEach(([k]) => d[k] = Number(val('a_' + k)));
+  try {
+    const r = await post('/cma/aldrete', d);
+    document.getElementById('a_res').innerHTML =
+      `<div class="banner ${r.pasa_fase_2?'bVERDE':'bROJO'}"><div class="t">ALDRETE ${r.total}/10 — ${r.pasa_fase_2?'PASA A FASE II':'NO AVANZA'}</div><div class="a">${esc(r.accion)}</div></div>` +
+      (r.motivo_no_avance.length ? `<ul class="faltantes">${r.motivo_no_avance.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>` : '');
+  } catch(e) { fallo('a_res', e); }
+}
+
+// ─── PADSS ───
+const PADSS = [
+  ['signos_vitales','SIGNOS VITALES',['0 · > 40 % basal','1 · 20–40 %','2 · < 20 % basal']],
+  ['deambulacion','DEAMBULACIÓN',['0 · No se levanta','1 · Con asistencia','2 · Estable sin mareo']],
+  ['nvpo','NÁUSEA / VÓMITO',['0 · Severa','1 · Moderada tratada','2 · Mínima / ausente']],
+  ['dolor','DOLOR',['0 · Severo','1 · Moderado, cede VO','2 · Mínimo VO']],
+  ['sangrado','SANGRADO QUIRÚRGICO',['0 · Severo / reintervención','1 · Moderado, refuerzo','2 · Mínimo, apósito limpio']],
+];
+document.getElementById('p_items').innerHTML = selScore('p', PADSS);
+
+async function evaluarPadss() {
+  const d = {pediatrico: chk('p_ped'), acompanante_presente: chk('p_acomp')};
+  PADSS.forEach(([k]) => d[k] = Number(val('p_' + k)));
+  try {
+    const r = await post('/cma/padss', d);
+    document.getElementById('p_res').innerHTML =
+      `<div class="banner ${r.apto_alta?'bVERDE':'bROJO'}"><div class="t">${r.escala} ${r.total}/10 — ${r.apto_alta?'CUMPLE CRITERIOS':'BLOQUEO DE ALTA'}</div><div class="a">${esc(r.accion)}</div></div>` +
+      (r.bloqueos.length ? `<ul class="faltantes">${r.bloqueos.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : '');
+  } catch(e) { fallo('p_res', e); }
+}
+
+// ─── APFEL ───
+async function evaluarApfel() {
+  try {
+    const r = await post('/cma/apfel', {sexo_femenino: chk('ap_f'), no_fumador: chk('ap_nf'), antecedente_nvpo: chk('ap_ant'), opioides_postop: chk('ap_op')});
+    const cls = r.apfel >= 3 ? 'bROJO' : r.apfel === 2 ? 'bAMAR' : 'bVERDE';
+    document.getElementById('ap_res').innerHTML =
+      `<div class="banner ${cls}"><div class="t">APFEL ${r.apfel}/4 · RIESGO NVPO ${esc(r.riesgo_nvpo)}</div><div class="a">${esc(r.profilaxis)}</div></div><div class="hint">${esc(r.nota)}</div>`;
+  } catch(e) { fallo('ap_res', e); }
+}
+
+// ─── QOR-15E ───
+async function evaluarQor() {
+  const d = {total: num('q_total') ?? 0};
+  const b = num('q_basal'); if (b !== null) d.basal = b;
+  try {
+    const r = await post('/cma/qor15', d);
+    const cls = r.deterioro_mcid ? 'bROJO' : r.pass_118 ? 'bVERDE' : 'bAMAR';
+    document.getElementById('q_res').innerHTML =
+      `<div class="banner ${cls}"><div class="t">QOR-15E ${r.total}/150${r.delta !== undefined ? ' · Δ ' + r.delta : ''}</div><div class="a">${esc(r.interpretacion)}</div></div>`;
+  } catch(e) { fallo('q_res', e); }
+}
+
+// ─── MEJORA ───
+const TIPOS = [
+  ['caso_cma','Caso CMA realizado (denominador)'],['alta_mismo_dia','Alta física el mismo día (K2)'],
+  ['pernoctacion_no_planificada','Pernoctación no planificada'],['conversion_hospitalizacion','Conversión a hospitalización'],
+  ['suspension_dia0','Suspensión del día 0 (K7)'],['pausa_cma','PAUSA CMA declarada'],
+  ['rescate_activado','Rescate activado'],['evento_adverso','Evento adverso (K13)'],
+  ['reconsulta_7d','Reconsulta no programada 7 d (K16)'],['readmision_30d','Readmisión 30 d (K17)'],
+  ['reoperacion_30d','Reoperación 30 d (K17)'],['seguimiento_24h_ok','Seguimiento 24 h contactado (K18)'],
+  ['seguimiento_24h_fallido','Seguimiento 24 h fallido (K18)'],['qor15_deterioro','QoR-15E con deterioro MCID (K19)'],
+];
+const selTipo = document.getElementById('m_tipo');
+selTipo.innerHTML = TIPOS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+selTipo.addEventListener('change', () => {
+  document.getElementById('m_pernoc').style.display = selTipo.value === 'pernoctacion_no_planificada' ? 'block' : 'none';
+});
+
+async function registrarEvento() {
+  const d = {id_caso: val('m_id'), tipo_evento: val('m_tipo'), detalle: val('m_det')};
+  if (d.tipo_evento === 'pernoctacion_no_planificada') { d.capa = val('m_capa'); d.accion = val('m_acc'); }
+  try {
+    const r = await post('/cma/evento', d);
+    document.getElementById('m_res').innerHTML = r.error
+      ? `<div class="err">⚠ ${esc(r.error)}</div>`
+      : `<div class="banner bAZUL"><div class="t">REGISTRADO</div><div class="a">${esc(r.registrado.tipo_evento)} · ${esc(r.registrado.id_caso || 'sin ID')} · ${r.eventos_en_memoria} eventos en memoria</div></div>`;
+  } catch(e) { fallo('m_res', e); }
+}
+
+async function verIndicadores() {
+  const t = num('t_total');
+  try {
+    const r = await fetch('/cma/indicadores' + (t !== null ? `?total_casos=${t}` : '')).then(x => x.json());
+    let h = `<div class="banner ${r.plan_de_accion.length ? 'bAMAR' : (r.total_casos_cma ? 'bVERDE' : 'bAZUL')}"><div class="t">${r.total_casos_cma ?? 'SIN'} CASOS CMA</div><div class="a">${esc(r.ciclo)}</div></div>`;
+    h += `<div class="tbl"><table><tr><th>INDICADOR</th><th>CASOS</th><th>TASA</th><th>REFERENCIA</th><th>ESTADO</th></tr>`;
+    for (const [k, v] of Object.entries(r.indicadores)) {
+      const cls = v.estado === 'DENTRO DE REFERENCIA' ? 'cVERDE' : v.estado === 'SOBRE REFERENCIA' ? 'cROJO' : 'cAMARILLO';
+      h += `<tr><td>${k.replace(/_/g,' ')}</td><td class="num">${v.casos}</td><td class="num">${v.tasa_pct ?? '—'}${v.tasa_pct != null ? ' %' : ''}</td><td class="mono">${v.referencia_pct != null ? '≤ ' + v.referencia_pct + ' % · ' + v.referencia_fuente : '—'}</td><td><span class="chip ${cls}">${esc(v.estado)}</span></td></tr>`;
+    }
+    h += `</table></div>`;
+    h += `<div class="sec-title">── ANÁLISIS DE FALLA (3 CAPAS · 9.11.1)</div>
+      <div class="grid"><div class="dim"><h4>SELECCIÓN<span class="num">${r.analisis_falla_9111.clasificadas.seleccion}</span></h4></div>
+      <div class="dim"><h4>PROCESO<span class="num">${r.analisis_falla_9111.clasificadas.proceso}</span></h4></div>
+      <div class="dim"><h4>NO PREVENIBLE<span class="num">${r.analisis_falla_9111.clasificadas.no_prevenible}</span></h4></div>
+      <div class="dim"><h4>SIN CLASIFICAR<span class="num" style="color:${r.analisis_falla_9111.sin_clasificar ? 'var(--rojo)' : 'var(--verde)'}">${r.analisis_falla_9111.sin_clasificar}</span></h4></div></div>`;
+    if (r.plan_de_accion.length) {
+      h += `<div class="sec-title">── PLAN DE ACCIÓN</div><ul class="faltantes">` +
+        r.plan_de_accion.map(p => `<li><strong>${p.indicador.replace(/_/g,' ')}:</strong> ${esc(p.accion)}</li>`).join('') + '</ul>';
+    }
+    h += `<div class="hint">K2 alta mismo día: ${r.alta_mismo_dia_k2.casos} (${r.alta_mismo_dia_k2.tasa_pct ?? '—'} %) · K13: ${r.seguridad_k13.eventos_adversos} EA, ${r.seguridad_k13.rescates} rescates, ${r.seguridad_k13.pausas_cma} pausas · K18 cobertura 24 h: ${r.continuidad_24h_k18.cobertura_pct ?? '—'} % · K19 deterioros QoR: ${r.qor15_deterioros_k19}</div>`;
+    document.getElementById('t_res').innerHTML = h;
+  } catch(e) { fallo('t_res', e); }
+}
+</script>
+</body>
+</html>
