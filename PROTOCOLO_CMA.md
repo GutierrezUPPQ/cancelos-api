@@ -1,124 +1,94 @@
-# Protocolo CMA — Cirugía Mayor Ambulatoria
+# Motor digital CMA — serie PSQ-CMA
 
-**CancelOS IA v4 · Hospital de Quilpué**
+**CancelOS IA v4 · Hospital de Quilpué · Servicio de Salud Viña del Mar–Quillota–Petorca**
 
-Módulo de apoyo a la decisión para el circuito de Cirugía Mayor Ambulatoria, con un
-**loop de mejora continua (ciclo PDCA)** que cierra el circuito: los resultados de cada
-caso alimentan indicadores que generan acciones de ajuste del propio protocolo.
+Este módulo implementa como API la lógica de decisión de la serie documental
+**PSQ-CMA 00–04 v2.0 (agosto 2026)** del Protocolo de Cirugía Mayor Ambulatoria:
 
-> ⚠️ Este módulo **apoya** la decisión clínica, no la reemplaza. La indicación final de
-> ambulatorización y de alta es siempre del equipo tratante.
+| Código | Documento | Qué implementa este motor |
+|---|---|---|
+| PSQ-CMA-00 | Guía rápida | Los tres algoritmos de decisión (candidato / Gate 0 / alta) |
+| PSQ-CMA-01 | Norma clínica | Semáforo de 4 dimensiones (9.3–9.4), CASO LISTO (9.5.8), Gate 0 (9.6), Aldrete/PADSS (9.8), análisis de falla en 3 capas (9.11.1) |
+| PSQ-CMA-02 | Herramientas | STOP-BANG + matriz SAHOS (Anexo A), CFS (B), Apfel (C), QoR-15E (D) |
+| PSQ-CMA-03 | Gobernanza | Subconjunto computable de indicadores K (Anexo I), reglas de calidad de datos (O) |
+
+> ⚠️ Conforme a la sección 9.11.5 de la norma: estas herramientas **apoyan** la
+> priorización y el registro; requieren gobernanza, validación local y revisión
+> humana. **Nunca sustituyen el juicio clínico ni generan exclusión automática.**
+> Los casos de alto riesgo generan revisión humana, no exclusión.
 
 ---
 
-## 1. El loop de mejora (ciclo PDCA)
+## Endpoints por etapa del viaje del paciente
 
-```
-   PLANIFICAR                 HACER                  VERIFICAR              ACTUAR
-┌──────────────────┐   ┌──────────────────┐   ┌────────────────────┐   ┌──────────────────┐
-│ Elegibilidad     │──▶│ Cirugía + Alta   │──▶│ Registro de        │──▶│ Plan de acción   │
-│ /cma/elegibilidad│   │ PADSS /cma/alta  │   │ eventos            │   │ ajusta criterios │
-└──────────────────┘   └──────────────────┘   │ /cma/evento        │   │ del protocolo    │
-        ▲              └────────────────────┘   └──────────────────┘
-        │                                              │ /cma/indicadores        │
-        └──────────────────────────────────────────────┴─────────────────────────┘
-```
+| Etapa | Endpoint | Qué hace |
+|---|---|---|
+| 1–2 · Selección | `POST /cma/elegibilidad` | Semáforo de 4 dimensiones (clínico-anestésica, quirúrgica, social, logística). Devuelve color y hallazgos por dimensión, matriz SAHOS cuando aplica, y disposición: `AVANZA` / `ZONA AMARILLA CLINICO-ANESTESICA` (→ Policlínico, NO LISTO) / `AMARILLO NO CLINICO` (→ dueño RACI) / `NO ES CMA ELECTIVA` |
+| 2 · Escalas | `POST /cma/apfel` | Riesgo NVPO y profilaxis según 9.7.4 |
+| 3 · Preparación | `POST /cma/caso-listo` | Los 11 elementos de la sección 9.5.8. Falta uno = NO LISTO |
+| 4 · Día 0 | `POST /cma/gate0` | Checklist Gate 0 (9.6.1). Bloqueador → PAUSA CMA; distingue hallazgo nuevo (decide anestesiólogo del caso) de duda antigua (NO LISTO) |
+| 6 · Fase I | `POST /cma/aldrete` | Aldrete ≥ 9 sostenido 15 min, ningún parámetro en 0 |
+| 6–7 · Fase II | `POST /cma/padss` (alias `/cma/alta`) | PADSS/Ped-PADSS ≥ 9, signos vitales = 2, ningún dominio en 0, acompañante presente |
+| 7–8 · PROM | `POST /cma/qor15` | QoR-15E: total /150, PASS ≥ 118, MCID Δ ≤ −6 vs basal |
+| 8–9 · Registro | `POST /cma/evento` | Registra caso o evento (taxonomía abajo) |
+| 9 · Mejora | `GET /cma/indicadores` · `POST /cma/mejora` | Tablero con subconjunto K computable, análisis de falla en 3 capas y plan de acción |
 
-1. **Planificar** — selección del paciente con `/cma/elegibilidad`.
-2. **Hacer** — cirugía y alta con criterios objetivos PADSS (`/cma/alta`).
-3. **Verificar** — registrar cada caso y cada evento adverso (`/cma/evento`);
-   revisar el tablero `/cma/indicadores` en el comité (sugerido: mensual).
-4. **Actuar** — aplicar el `plan_de_accion` que entrega la API para cada indicador
-   fuera de meta, ajustar el protocolo y reevaluar en el ciclo siguiente.
+## Reglas del protocolo que el motor respeta
 
-## 2. Elegibilidad — `POST /cma/elegibilidad`
+- **Ningún valor aislado decide por sí solo**: ASA, STOP-BANG, HbA1c, IMC y duración
+  operan como disparadores de evaluación, no como exclusiones automáticas.
+- **Excepciones institucionales declaradas** (rojas): CFS ≥ 6 e IMC ≥ 50.
+- **Zona amarilla clínico-anestésica** → derivación al Policlínico de Anestesiología;
+  el caso queda NO LISTO hasta nota resolutiva (G-D). Amarillos no clínicos → dueño RACI.
+- **Matriz SAHOS de 5 dominios** (STOP-BANG, CPAP, opioide, anestesia, vigilancia):
+  el rojo prevalece pero no excluye automáticamente — decide Policlínico + capacidad.
+- **El alta es por criterios, no por reloj**: doble llave, ningún dominio en 0,
+  nunca sin acompañante presente.
+- **Un dato ausente nunca se interpreta como cero**: sin denominador, los indicadores
+  reportan `SIN DATOS`, no 0 %.
+- **Las referencias externas (BADS/GIRFT) son comparativas, no metas locales
+  automáticas** (Anexo I): las metas se aprueban después de tener línea base.
 
-Devuelve `APTO`, `APTO CON OBSERVACIONES` o `NO APTO`, con los motivos explícitos.
+## Taxonomía de eventos (Etapa 9)
 
-**Exclusiones (NO APTO):** ASA IV–V · ASA III descompensado · sin adulto responsable
-24 h · sin teléfono de contacto · STOP-BANG ≥5 sin CPAP · IMC ≥40 con sospecha de SAOS ·
-Hb <10 g/dL (optimizar por PBM) · duración estimada >120 min.
+`caso_cma` · `alta_mismo_dia` · `pernoctacion_no_planificada` (con `capa`:
+`seleccion`/`proceso`/`no_prevenible` y `accion` concreta) · `conversion_hospitalizacion`
+· `suspension_dia0` · `pausa_cma` · `rescate_activado` · `evento_adverso` ·
+`reconsulta_7d` · `readmision_30d` · `reoperacion_30d` · `seguimiento_24h_ok` ·
+`seguimiento_24h_fallido` · `qor15_deterioro`
 
-**Observaciones (APTO CON OBSERVACIONES):** ASA III estable · edad ≥80 · STOP-BANG 3–4 ·
-SAOS con CPAP (traer equipo) · IMC 35–39 · anticoagulado (plan con `/anticoag`) ·
-DM insulinorrequirente · traslado >60 min · duración 90–120 min.
+Cada pernoctación no planificada sin clasificar en sus 3 capas aparece como acción
+pendiente en el plan — el loop no se cierra hasta clasificarla y asignarle una
+acción concreta con responsable y plazo (9.11.1).
+
+## Ejemplos
 
 ```json
+POST /cma/elegibilidad
 {
-  "id_caso": "CMA-001", "asa": "ASA II", "edad": 67, "imc": 31,
-  "stop_bang": 3, "anticoag": false, "hb_preop": 12.5,
-  "duracion_min": 60, "acompanante_adulto": true,
-  "telefono_contacto": true, "tiempo_traslado_min": 25
+  "id_caso": "EP-001", "asa": "ASA III", "asa3_estable": true, "asa3_plan_escrito": true,
+  "edad": 68, "cfs": 3, "imc": 36, "stop_bang": 4, "cpap": "adherente",
+  "opioide_esperado": "ninguno", "tipo_anestesia_cma": "local_regional",
+  "vigilancia_postop": "prevista", "hba1c": 7.2, "en_cartera_activa": true,
+  "duracion_min": 75, "acompanante_24h": "confirmado", "transporte_seguro": true,
+  "telefono_operativo": true, "red_rescate_operativa": true, "capacidad_fase_1_2": true
 }
 ```
 
-## 3. Alta — `POST /cma/alta` (PADSS modificado)
-
-Cinco ítems de 0–2: `signos_vitales`, `deambulacion`, `nvpo`, `dolor`, `sangrado`.
-**Alta con total ≥9 y signos vitales = 2.** Si no cumple, reevaluar en 30–60 min;
-si no mejora, activar ingreso no planificado (y registrarlo como evento).
-
-## 4. Registro de eventos — `POST /cma/evento`
-
-Registrar **todos los casos** (`caso_cma`) y cada evento adverso:
-
-| `tipo_evento` | Qué registra |
-|---|---|
-| `caso_cma` | Todo caso CMA operado (denominador de las tasas) |
-| `ingreso_no_planificado` | Paciente ambulatorio que quedó hospitalizado |
-| `suspension_mismo_dia` | Suspensión el día quirúrgico |
-| `reconsulta_72h` | Consulta a urgencias dentro de 72 h |
-| `alta_fallida` | No cumplió PADSS y no se fue de alta el mismo día |
-| `nvpo_severo` | Náuseas/vómitos que retrasan el alta |
-| `dolor_no_controlado` | Dolor que retrasa el alta o motiva reconsulta |
-| `sangrado_reoperacion` | Sangrado que requiere reintervención |
-
 ```json
-{ "id_caso": "CMA-001", "tipo_evento": "caso_cma", "detalle": "colecistectomia lap" }
-```
-
-> El registro en memoria se reinicia con cada deploy. Para el análisis histórico,
-> registrar también en la planilla y usar `/cma/mejora` con el lote exportado.
-
-## 5. Indicadores y plan de acción — `GET /cma/indicadores` · `POST /cma/mejora`
-
-Metas (máximo aceptable sobre el total de casos CMA):
-
-| Indicador | Meta |
-|---|---|
-| Ingreso no planificado | ≤ 2 % |
-| Suspensión mismo día | ≤ 5 % |
-| Reconsulta 72 h | ≤ 3 % |
-| Alta fallida | ≤ 3 % |
-| NVPO severo | ≤ 5 % |
-| Dolor no controlado | ≤ 5 % |
-| Sangrado con reoperación | ≤ 1 % |
-
-Cada indicador **fuera de meta** genera una acción concreta en `plan_de_accion`
-(p. ej., ingreso no planificado alto → auditar casos y endurecer elegibilidad;
-NVPO alto → profilaxis según score de `/prediccion` en riesgo ≥30). Las metas y
-acciones viven en `METAS_CMA` y `ACCIONES_PDCA` en `main.py`: **ajustarlas es parte
-del propio loop de mejora** — cada ciclo del comité puede recalibrarlas según los
-resultados locales.
-
-`POST /cma/mejora` hace el mismo cálculo sin depender de la memoria del servidor:
-
-```json
+POST /cma/mejora
 {
   "total_casos": 120,
   "eventos": [
-    { "id_caso": "CMA-014", "tipo_evento": "ingreso_no_planificado" },
-    { "id_caso": "CMA-022", "tipo_evento": "nvpo_severo" }
+    {"id_caso":"EP-014","tipo_evento":"pernoctacion_no_planificada","capa":"proceso","accion":"receta antes del egreso"},
+    {"id_caso":"EP-022","tipo_evento":"reconsulta_7d"}
   ]
 }
 ```
 
-## 6. Rutina sugerida del comité CMA
+## Nota sobre persistencia
 
-1. **Mensual:** revisar `/cma/indicadores` (o `/cma/mejora` con la planilla del mes).
-2. Auditar caso a caso los eventos de los indicadores fuera de meta.
-3. Aplicar el plan de acción y dejarlo escrito en acta.
-4. Si un criterio de elegibilidad demuestra estar mal calibrado, modificarlo en
-   `score_cma_elegibilidad` y registrar la fecha del cambio.
-5. Comparar el ciclo siguiente contra el anterior: el loop está funcionando cuando
-   las tasas convergen hacia la meta después de cada ajuste.
+El registro `/cma/evento` vive en memoria y se reinicia con cada deploy. La ficha
+clínica institucional es la fuente clínica primaria (Anexo O.5); este registro es
+un instrumento operacional. Para el análisis mensual del Comité CMA usar
+`POST /cma/mejora` con el lote exportado de la fuente institucional.
