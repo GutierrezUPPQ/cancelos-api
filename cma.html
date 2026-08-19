@@ -88,6 +88,7 @@ td{padding:9px;border-bottom:1px solid var(--border);vertical-align:top}
 .mono{font-family:'Share Tech Mono',monospace;font-size:11px}
 .hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px}
 .err{color:var(--rojo);font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:10px}
+.lnk{background:none;border:none;color:var(--accent);font-family:'Barlow',sans-serif;font-size:12.5px;text-align:left;cursor:pointer;padding:2px 0;text-decoration:underline;letter-spacing:0}
 .hbtn{flex:0 0 auto;width:21px;height:21px;border-radius:50%;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-family:'Barlow',sans-serif;font-size:12px;font-weight:800;cursor:pointer;line-height:1;padding:0}
 label.f>.hbtn{position:absolute;top:-2px;right:0}
 label.c>.hbtn{margin-left:auto}
@@ -117,15 +118,16 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <button type="button" id="themeBtn" class="tbtn" aria-label="Cambiar tema claro/oscuro">🌙</button>
   </div>
 </header>
-<div class="aviso">APOYO A LA DECISIÓN CLÍNICA (SECCIÓN 9.11.5): NO SUSTITUYE EL JUICIO CLÍNICO NI GENERA EXCLUSIÓN AUTOMÁTICA · LA FICHA CLÍNICA ES LA FUENTE PRIMARIA · LOS CASOS DE ALTO RIESGO GENERAN REVISIÓN HUMANA</div>
+<div class="aviso">ESTA PÁGINA AYUDA A DECIDIR, PERO NO DECIDE: EL JUICIO CLÍNICO DEL EQUIPO SIEMPRE MANDA · NINGÚN RESULTADO EXCLUYE AUTOMÁTICAMENTE A UN PACIENTE · LA FICHA CLÍNICA SIGUE SIENDO EL REGISTRO OFICIAL</div>
 
 <nav id="tabs">
-  <button data-t="eleg" class="on">1–2 ELEGIBILIDAD</button>
-  <button data-t="listo">3 CASO LISTO</button>
-  <button data-t="gate0">4 GATE 0</button>
-  <button data-t="recu">6–7 RECUPERACIÓN</button>
-  <button data-t="escalas">ESCALAS</button>
-  <button data-t="mejora">9 MEJORA</button>
+  <button data-t="eleg" class="on">¿ES CANDIDATO?</button>
+  <button data-t="listo">CASO LISTO</button>
+  <button data-t="gate0">DÍA 0 · CONTROL FINAL</button>
+  <button data-t="recu">RECUPERACIÓN Y ALTA</button>
+  <button data-t="escalas">CALCULADORAS</button>
+  <button data-t="mejora">REGISTRO Y MEJORA</button>
+  <button data-t="guia">GUÍA</button>
 </nav>
 
 <!-- ═══════════ ELEGIBILIDAD ═══════════ -->
@@ -135,7 +137,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
       <label class="f" data-h="id">ID CASO / EPISODIO<input type="text" id="e_id" placeholder="EP-001"></label>
       <label class="f" data-h="edad">EDAD (AÑOS)<input type="number" id="e_edad" min="0" max="120"></label>
       <label class="f" data-h="asa">ASA<select id="e_asa"><option>ASA I</option><option selected>ASA II</option><option>ASA III</option><option>ASA IV</option><option>ASA V</option></select></label>
-      <label class="f" data-h="cfs">CFS (OBLIGATORIO ≥65)<select id="e_cfs">
+      <label class="f" data-h="cfs">FRAGILIDAD · CFS (OBLIGATORIA DESDE LOS 65)<select id="e_cfs">
         <option value="">— no registrado —</option>
         <option value="1">1 · Muy en forma: robusto, activo, ejercita regularmente</option>
         <option value="2">2 · En forma: sin enfermedad activa, activo ocasional</option>
@@ -148,17 +150,17 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
         <option value="9">9 · Enfermo terminal (expectativa &lt; 6 meses)</option>
       </select></label>
       <label class="f" data-h="imc">IMC (KG/M²)<input type="number" id="e_imc" step="0.1" min="10" max="90"></label>
-      <label class="f" data-h="hba1c">HBA1C (%)<input type="number" id="e_hba1c" step="0.1" min="3" max="20" placeholder="si diabético"></label>
-      <label class="f" data-h="sb">STOP-BANG (0–8)<input type="number" id="e_sb" min="0" max="8" value="0"></label>
-      <label class="f" data-h="cpap">CPAP<select id="e_cpap"><option value="no_aplica">No aplica</option><option value="adherente">Adherente documentado</option><option value="variable">Adherencia variable</option><option value="sin_cpap">SAHOS sin CPAP / abandonado</option></select></label>
-      <label class="f" data-h="opio">OPIOIDE ESPERADO<select id="e_opio"><option value="ninguno">Ninguno (regional pura)</option><option value="bajo" selected>Bajo</option><option value="moderado_alto">Moderado – alto</option></select></label>
+      <label class="f" data-h="hba1c">HBA1C % · SOLO DIABÉTICOS<input type="number" id="e_hba1c" step="0.1" min="3" max="20" placeholder="último examen"></label>
+      <label class="f" data-h="sb">STOP-BANG · APNEA DEL SUEÑO (0–8)<input type="number" id="e_sb" min="0" max="8" value="0"><button type="button" class="lnk" id="sbAbrir">▾ responder las 8 preguntas aquí</button></label>
+      <label class="f" data-h="cpap">CPAP · EQUIPO PARA LA APNEA<select id="e_cpap"><option value="no_aplica">No aplica</option><option value="adherente">Adherente documentado</option><option value="variable">Adherencia variable</option><option value="sin_cpap">Tiene apnea (SAHOS) y no usa su CPAP</option></select></label>
+      <label class="f" data-h="opio">OPIOIDES PREVISTOS TRAS LA CIRUGÍA<select id="e_opio"><option value="ninguno">Ninguno (regional pura)</option><option value="bajo" selected>Bajo</option><option value="moderado_alto">Moderado – alto</option></select></label>
       <label class="f" data-h="anest">ANESTESIA PREVISTA<select id="e_anest"><option value="local_regional">Local / regional</option><option value="general_breve" selected>General breve</option><option value="general_prolongada">General prolongada</option></select></label>
-      <label class="f" data-h="vigil">VIGILANCIA POSTOP.<select id="e_vigil"><option value="prevista">Prevista disponible</option><option value="reforzada">Reforzada disponible</option><option value="insuficiente">Superior a capacidad local</option></select></label>
-      <label class="f" data-h="glp1">GLP-1<select id="e_glp1"><option value="">No usa</option><option value="bajo">Riesgo bajo</option><option value="intermedio">Riesgo intermedio</option><option value="alto">Riesgo alto</option></select></label>
-      <label class="f" data-h="epm">EDAD POSTMENSTRUAL (SEM · lactantes)<input type="number" id="e_epm" min="20" max="120" placeholder="solo ex prematuros"></label>
+      <label class="f" data-h="vigil">VIGILANCIA TRAS LA CIRUGÍA<select id="e_vigil"><option value="prevista">Prevista disponible</option><option value="reforzada">Reforzada disponible</option><option value="insuficiente">Superior a capacidad local</option></select></label>
+      <label class="f" data-h="glp1">FÁRMACOS GLP-1 (TIPO OZEMPIC)<select id="e_glp1"><option value="">No usa</option><option value="bajo">Riesgo bajo</option><option value="intermedio">Riesgo intermedio</option><option value="alto">Riesgo alto</option></select></label>
+      <label class="f" data-h="epm">BEBÉ EX PREMATURO · EDAD POSTMENSTRUAL (SEMANAS)<input type="number" id="e_epm" min="20" max="120" placeholder="solo ex prematuros"></label>
       <label class="f" data-h="dur">DURACIÓN ESTIMADA (MIN)<input type="number" id="e_dur" min="0" max="600" value="60"></label>
     </div>
-    <div class="sec-title">── CONDICIÓN CLÍNICA</div>
+    <div class="sec-title">── ESTADO CLÍNICO DEL PACIENTE</div>
     <div class="grid stack">
       <label class="c" data-h="a3e"><input type="checkbox" id="e_a3e"> ASA III estable y compensado</label>
       <label class="c" data-h="a3p"><input type="checkbox" id="e_a3p"> ASA III con plan escrito vigente</label>
@@ -167,34 +169,34 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
       <label class="c" data-h="dapt"><input type="checkbox" id="e_dapt"> Doble antiagregación</label>
       <label class="c" data-h="emb"><input type="checkbox" id="e_emb"> Embarazo</label>
     </div>
-    <div class="sec-title">── DIMENSIÓN QUIRÚRGICA</div>
+    <div class="sec-title">── LA CIRUGÍA</div>
     <div class="grid stack">
-      <label class="c" data-h="cart"><input type="checkbox" id="e_cart" checked> Prestación en cartera ACTIVA con paquete vigente</label>
+      <label class="c" data-h="cart"><input type="checkbox" id="e_cart" checked> La cirugía está en la lista aprobada del hospital (cartera ACTIVA)</label>
       <label class="c" data-h="sang"><input type="checkbox" id="e_sang"> Riesgo de sangrado o dolor que exige plan específico</label>
       <label class="c" data-h="impl"><input type="checkbox" id="e_impl"> Implante o dispositivo que condiciona el alta</label>
       <label class="c" data-h="va"><input type="checkbox" id="e_va"> Riesgo de compromiso de vía aérea posoperatorio</label>
       <label class="c" data-h="exce"><input type="checkbox" id="e_exce"> Cuidados que la sede no puede entregar</label>
     </div>
-    <div class="sec-title">── DIMENSIÓN SOCIAL</div>
+    <div class="sec-title">── EL ENTORNO EN CASA</div>
     <div class="grid">
       <label class="f" data-h="acomp">ACOMPAÑANTE ADULTO 24 H<select id="e_acomp"><option value="confirmado">Confirmado</option><option value="sin_confirmar">Identificado, sin confirmar</option><option value="no">No disponible</option></select></label>
-      <label class="f" data-h="compr">COMPRENSIÓN DEL PLAN<select id="e_compr"><option value="ok">Adecuada (teach-back)</option><option value="con_apoyo">Barrera con apoyo disponible</option><option value="imposible">Imposible aun con apoyo</option></select></label>
+      <label class="f" data-h="compr">COMPRENSIÓN DEL PLAN<select id="e_compr"><option value="ok">Adecuada: lo explica con sus palabras (teach-back)</option><option value="con_apoyo">Barrera con apoyo disponible</option><option value="imposible">Imposible aun con apoyo</option></select></label>
     </div>
     <div class="grid stack" style="margin-top:8px">
       <label class="c" data-h="trans"><input type="checkbox" id="e_trans" checked> Transporte seguro asegurado</label>
       <label class="c" data-h="fono"><input type="checkbox" id="e_fono" checked> Teléfono operativo 48 h</label>
-      <label class="c" data-h="dist"><input type="checkbox" id="e_dist"> Domicilio distante (requiere plan de contingencia)</label>
+      <label class="c" data-h="dist"><input type="checkbox" id="e_dist"> Vive lejos: necesita plan escrito de contingencia</label>
     </div>
-    <div class="sec-title">── DIMENSIÓN LOGÍSTICA</div>
+    <div class="sec-title">── LA CAPACIDAD DEL HOSPITAL HOY</div>
     <div class="grid stack">
-      <label class="c" data-h="f12"><input type="checkbox" id="e_f12" checked> Capacidad de Fase I y II en la jornada</label>
-      <label class="c" data-h="resc"><input type="checkbox" id="e_resc" checked> Red de rescate operativa (cama / traslado)</label>
-      <label class="c" data-h="insu"><input type="checkbox" id="e_insu" checked> Insumos, instrumental e implantes confirmados</label>
+      <label class="c" data-h="f12"><input type="checkbox" id="e_f12" checked> Hoy hay cupo en recuperación (Fase I y Fase II)</label>
+      <label class="c" data-h="resc"><input type="checkbox" id="e_resc" checked> Rescate asegurado: cama de respaldo o traslado acordado</label>
+      <label class="c" data-h="insu"><input type="checkbox" id="e_insu" checked> Insumos, instrumental e implantes listos</label>
       <label class="c" data-h="falt"><input type="checkbox" id="e_falt"> Falta un recurso crítico</label>
-      <label class="c" data-h="hora"><input type="checkbox" id="e_hora"> Término proyectado fuera del horario seguro</label>
-      <label class="c" data-h="ajus"><input type="checkbox" id="e_ajus"> Capacidad ajustada (reordenar tabla)</label>
+      <label class="c" data-h="hora"><input type="checkbox" id="e_hora"> La cirugía terminaría fuera del horario seguro</label>
+      <label class="c" data-h="ajus"><input type="checkbox" id="e_ajus"> La capacidad alcanza justo: reordenar las cirugías del día</label>
     </div>
-    <button class="btn" onclick="evaluarElegibilidad()">EVALUAR 4 DIMENSIONES</button>
+    <button class="btn" onclick="evaluarElegibilidad()">EVALUAR AL PACIENTE</button>
     <div class="res" id="e_res"></div>
   </div>
 </section>
@@ -203,7 +205,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <section id="listo">
   <div class="card">
     <label class="f" style="max-width:260px">ID CASO / EPISODIO<input type="text" id="l_id" placeholder="EP-001"></label>
-    <div class="sec-title">── LOS 11 ELEMENTOS (SECCIÓN 9.5.8) — FALTA UNO = NO LISTO</div>
+    <div class="sec-title">── LOS 11 REQUISITOS (SECCIÓN 9.5.8) — SI FALTA UNO, EL CASO NO ESTÁ LISTO</div>
     <div class="stack" id="l_items"></div>
     <button class="btn" onclick="evaluarCasoListo()">VERIFICAR CASO LISTO</button>
     <div class="res" id="l_res"></div>
@@ -214,10 +216,10 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <section id="gate0">
   <div class="card">
     <label class="f" style="max-width:260px">ID CASO / EPISODIO<input type="text" id="g_id" placeholder="EP-001"></label>
-    <div class="sec-title">── VERIFICAR ANTES DE INDUCIR (9.6.1) — G-C</div>
+    <div class="sec-title">── ÚLTIMO CONTROL ANTES DE LA ANESTESIA (9.6.1 · FORMULARIO G-C)</div>
     <div class="stack" id="g_items"></div>
-    <label class="c" style="margin-top:10px"><input type="checkbox" id="g_nuevo"> El bloqueador es un hallazgo NUEVO de hoy (no una duda antigua)</label>
-    <button class="btn" onclick="evaluarGate0()">CERRAR GATE 0</button>
+    <label class="c" style="margin-top:10px"><input type="checkbox" id="g_nuevo"> Lo que impide avanzar apareció HOY (no es una duda que venía de antes)</label>
+    <button class="btn" onclick="evaluarGate0()">COMPLETAR CONTROL FINAL</button>
     <div class="res" id="g_res"></div>
   </div>
 </section>
@@ -225,14 +227,14 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <!-- ═══════════ RECUPERACIÓN ═══════════ -->
 <section id="recu">
   <div class="card">
-    <div class="sec-title">── FASE I · ALDRETE (TRÁNSITO CON ≥9 SOSTENIDO 15 MIN, NINGÚN PARÁMETRO EN 0)</div>
+    <div class="sec-title">── FASE I · ESCALA DE ALDRETE — PASA A FASE II CON 9 O MÁS, MANTENIDO 15 MIN Y SIN DOMINIOS EN 0</div>
     <div class="grid" id="a_items"></div>
     <label class="c" style="margin-top:10px"><input type="checkbox" id="a_sost"> Puntaje sostenido ≥ 15 minutos</label>
     <button class="btn" onclick="evaluarAldrete()">EVALUAR FASE I</button>
     <div class="res" id="a_res"></div>
   </div>
   <div class="card">
-    <div class="sec-title">── FASE II · PADSS / PED-PADSS (ALTA CON ≥9, SV = 2, NINGÚN DOMINIO EN 0)</div>
+    <div class="sec-title">── FASE II · PADSS (ADULTOS) / PED-PADSS (NIÑOS) — ALTA CON 9 O MÁS, SIGNOS VITALES EN 2 Y SIN DOMINIOS EN 0</div>
     <div class="grid" id="p_items"></div>
     <div class="grid stack" style="margin-top:8px">
       <label class="c"><input type="checkbox" id="p_ped"> Paciente pediátrico (Ped-PADSS)</label>
@@ -240,30 +242,38 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     </div>
     <button class="btn" onclick="evaluarPadss()">EVALUAR CRITERIOS DE ALTA</button>
     <div class="res" id="p_res"></div>
-    <div class="hint">El alta exige además los 8 deberes documentados (9.9.3) y la doble llave. Nunca alta sin acompañante ni con un dominio en 0.</div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── LOS 8 REQUISITOS DEL ALTA (9.9.3) — SI FALTA UNO, NO HAY ALTA</div>
+    <div class="stack" id="d8_items"></div>
+    <button class="btn" onclick="evaluarDeberes()">VERIFICAR REQUISITOS DEL ALTA</button>
+    <div class="res" id="d8_res"></div>
   </div>
 </section>
 
 <!-- ═══════════ ESCALAS ═══════════ -->
 <section id="escalas">
   <div class="card">
-    <div class="sec-title">── APFEL · RIESGO NVPO (SE APLICA EN LA EPA, SE EJECUTA EN ETAPA 5)</div>
+    <div class="sec-title">── ESCALA DE APFEL · RIESGO DE NÁUSEAS Y VÓMITOS (SE CALCULA EN LA EVALUACIÓN PREANESTÉSICA)</div>
     <div class="grid stack">
       <label class="c"><input type="checkbox" id="ap_f"> Sexo femenino</label>
       <label class="c"><input type="checkbox" id="ap_nf"> No fumador</label>
-      <label class="c"><input type="checkbox" id="ap_ant"> Antecedente de NVPO o cinetosis</label>
-      <label class="c"><input type="checkbox" id="ap_op"> Uso esperado de opioides postoperatorios</label>
+      <label class="c"><input type="checkbox" id="ap_ant"> Náuseas/vómitos en cirugías previas, o se marea al viajar</label>
+      <label class="c"><input type="checkbox" id="ap_op"> Se esperan opioides después de la cirugía</label>
     </div>
     <button class="btn" onclick="evaluarApfel()">CALCULAR APFEL</button>
     <div class="res" id="ap_res"></div>
   </div>
   <div class="card">
-    <div class="sec-title">── QOR-15E · CALIDAD DE RECUPERACIÓN (BASAL PREOP Y 24 H · PASS ≥118 · MCID 6)</div>
+    <div class="sec-title">── QOR-15E · ¿CÓMO SE ESTÁ RECUPERANDO? (SE TOMA ANTES DE OPERAR Y A LAS 24 H · 118 O MÁS = BUENA RECUPERACIÓN)</div>
+    <div class="sec-title">── LOS 15 ÍTEMS: 0 = MUY MAL · 10 = EXCELENTE — LA SUMA SE CALCULA SOLA</div>
+    <div class="grid" id="q_items"></div>
+    <div class="hint">Respondidos: <b id="q_resp">0</b> de 15 · Suma: <b id="q_suma">0</b>. Si ya tienes el total, escríbelo directo abajo.</div>
     <div class="grid">
-      <label class="f" data-h="qtotal">TOTAL ACTUAL (0–150)<input type="number" id="q_total" min="0" max="150"></label>
-      <label class="f" data-h="qbasal">BASAL PREOPERATORIO (OPCIONAL)<input type="number" id="q_basal" min="0" max="150"></label>
+      <label class="f" data-h="qtotal">PUNTAJE TOTAL (0–150) · O RESPONDE LOS 15 ÍTEMS ARRIBA<input type="number" id="q_total" min="0" max="150"></label>
+      <label class="f" data-h="qbasal">PUNTAJE ANTES DE LA CIRUGÍA (OPCIONAL)<input type="number" id="q_basal" min="0" max="150"></label>
     </div>
-    <button class="btn" onclick="evaluarQor()">INTERPRETAR QOR-15E</button>
+    <button class="btn" onclick="evaluarQor()">CALCULAR RECUPERACIÓN</button>
     <div class="res" id="q_res"></div>
   </div>
 </section>
@@ -271,7 +281,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <!-- ═══════════ MEJORA ═══════════ -->
 <section id="mejora">
   <div class="card">
-    <div class="sec-title">── REGISTRAR CASO O EVENTO (ETAPA 9 · CADA CASO DEJA UN DATO)</div>
+    <div class="sec-title">── REGISTRAR CASO O EVENTO — CADA CASO DEJA UN DATO (ETAPA 9)</div>
     <div class="grid">
       <label class="f">ID CASO / EPISODIO<input type="text" id="m_id" placeholder="EP-001"></label>
       <label class="f" data-h="tipo">TIPO DE EVENTO<select id="m_tipo"></select></label>
@@ -280,7 +290,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     </div>
     <div id="m_pernoc" style="display:none;margin-top:10px">
       <div class="grid">
-        <label class="f" data-h="capa">CAPA DE FALLA (9.11.1)<select id="m_capa"><option value="">— sin clasificar aún —</option><option value="seleccion">1 · Falla de selección</option><option value="proceso">2 · Falla de proceso</option><option value="no_prevenible">3 · No prevenible</option></select></label>
+        <label class="f" data-h="capa">¿DÓNDE ESTUVO LA FALLA? (9.11.1)<select id="m_capa"><option value="">— sin clasificar aún —</option><option value="seleccion">1 · Falla de selección</option><option value="proceso">2 · Falla de proceso</option><option value="no_prevenible">3 · No prevenible</option></select></label>
         <label class="f">ACCIÓN CONCRETA (RESPONSABLE + PLAZO)<input type="text" id="m_acc" placeholder="qué se ajusta, quién y cuándo"></label>
       </div>
     </div>
@@ -288,13 +298,126 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <div class="res" id="m_res"></div>
   </div>
   <div class="card">
-    <div class="sec-title">── TABLERO DE INDICADORES · REFERENCIAS BADS/GIRFT (NO METAS)</div>
+    <div class="sec-title">── TABLERO DE INDICADORES · COMPARADO CON REFERENCIAS INTERNACIONALES (NO SON METAS)</div>
     <div class="grid">
-      <label class="f">TOTAL CASOS CMA (DENOMINADOR · OPCIONAL)<input type="number" id="t_total" min="0" placeholder="usa los caso_cma registrados"></label>
+      <label class="f">TOTAL DE CASOS CMA OPERADOS (OPCIONAL)<input type="number" id="t_total" min="0" placeholder="vacío = usa los casos registrados aquí"></label>
     </div>
     <button class="btn sec" onclick="verIndicadores()">VER TABLERO</button>
     <div class="res" id="t_res"></div>
-    <div class="hint">Los eventos se guardan en el disco del servidor y, si está configurado <span class="mono">CMA_SHEETS_WEBHOOK</span>, se respaldan además en la planilla Google Sheets del equipo. La ficha clínica sigue siendo la fuente primaria (Anexo O.5). Para el análisis mensual del comité, usar el lote completo vía <span class="mono">POST /cma/mejora</span>.</div>
+    <div class="hint">Los eventos quedan guardados en el servidor y, si el equipo lo activó, también en su planilla Google. La ficha clínica sigue siendo el registro oficial. El análisis mensual del comité se hace con el lote completo de la planilla.</div>
+  </div>
+</section>
+
+<!-- ═══════════ GUÍA ═══════════ -->
+<section id="guia">
+  <div class="card">
+    <div class="sec-title">── LOS NÚMEROS QUE HAY QUE SABERSE</div>
+    <div class="tbl"><table>
+      <tr><td class="num" style="white-space:nowrap">−7 · −3 · −1</td><td>Los tres controles de preparación antes de la cirugía (H2, H3 y H4).</td></tr>
+      <tr><td class="num">11 requisitos</td><td>CASO LISTO exige los 11. Si falta uno, el caso no entra a la tabla del día.</td></tr>
+      <tr><td class="num">6 h / 2 h</td><td>Ayuno: sólidos 6 h (comida pesada 8 h) · líquidos claros hasta 2 h. Nunca "desde medianoche" por defecto.</td></tr>
+      <tr><td class="num">STOP-BANG ≥ 3</td><td>Activa la evaluación completa de apnea del sueño (matriz SAHOS).</td></tr>
+      <tr><td class="num">CFS ≥ 6</td><td>No apto para ambulatoria. La escala de fragilidad es obligatoria desde los 65 años.</td></tr>
+      <tr><td class="num">IMC 40–50 · ≥ 50</td><td>40–50: alto riesgo, requiere respuesta del Policlínico. 50 o más: fuera de la ruta ambulatoria local.</td></tr>
+      <tr><td class="num">HbA1c 8 · 9 %</td><td>Bajo 8 sigue · 8–8,9 revisar y optimizar · 9 o más evaluación prioritaria. Nunca excluye por sí sola.</td></tr>
+      <tr><td class="num">TOF ≥ 0,9</td><td>Documentado antes de extubar. Sin excepciones.</td></tr>
+      <tr><td class="num">Aldrete 9 → PADSS 9</td><td>El avance y el alta son por puntaje, no por reloj. Ningún dominio en 0.</td></tr>
+      <tr><td class="num">EVA &gt; 4</td><td>Dolor sobre 4: activa rescate de analgesia y reevaluación.</td></tr>
+      <tr><td class="num">QoR-15E Δ ≤ −6</td><td>Caída de 6 o más entre el basal y las 24 h = deterioro importante: hay que evaluar.</td></tr>
+      <tr><td class="num">24–48 h · 7–14 d · 30 d</td><td>Llamada, control y cierre del caso con causa codificada.</td></tr>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── LO QUE YA NO EXCLUYE POR SÍ SOLO · LO QUE SÍ DETIENE SIEMPRE</div>
+    <div class="dims">
+      <div class="dim"><h4>YA NO EXCLUYE<span class="chip cVERDE">MITOS</span></h4><ul>
+        <li class="hVERDE">La edad por sí sola: deciden la fragilidad y las enfermedades.</li>
+        <li class="hVERDE">ASA III estable: con buena preparación opera ambulatorio con seguridad.</li>
+        <li class="hVERDE">IMC entre 35 y 50, con enfermedades optimizadas y ruta de apnea aplicada.</li>
+        <li class="hVERDE">Diabetes con insulina controlada, con plan de medicamentos individual.</li>
+        <li class="hVERDE">Apnea del sueño con CPAP bien usado.</li>
+        <li class="hVERDE">Fármacos GLP-1 (tipo Ozempic): se evalúa el riesgo, no se suspenden a todos.</li>
+        <li class="hVERDE">Lactancia: se retoma al estar alerta; no se bota la leche.</li>
+      </ul></div>
+      <div class="dim"><h4>SÍ DETIENE, SIEMPRE<span class="chip cROJO">FIRMES</span></h4><ul>
+        <li class="hROJO">Sin adulto responsable por 24 horas. Sin excepciones improvisadas.</li>
+        <li class="hROJO">ASA IV o descompensación aguda.</li>
+        <li class="hROJO">IMC 50 o más · fragilidad CFS 6 o más (límites institucionales declarados).</li>
+        <li class="hROJO">Cirugía fuera de la lista aprobada (cartera ACTIVA).</li>
+        <li class="hROJO">Duda clínica antigua sin respuesta escrita del Policlínico al llegar al día 0.</li>
+        <li class="hROJO">Sin rescate asegurado o sin cupo en recuperación en la jornada.</li>
+        <li class="hROJO">Término de cirugía proyectado fuera del horario seguro, sin cama aceptada.</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── TABLA DE AYUNO</div>
+    <div class="tbl"><table>
+      <tr><th>QUÉ COMIÓ O BEBIÓ</th><th>AYUNO MÍNIMO</th></tr>
+      <tr><td>Líquidos claros: agua, té sin leche, jugo sin pulpa</td><td class="num">2 h</td></tr>
+      <tr><td>Leche materna</td><td class="num">4 h</td></tr>
+      <tr><td>Fórmula, leche no humana o comida ligera</td><td class="num">6 h</td></tr>
+      <tr><td>Comida pesada: grasas, frituras, carne</td><td class="num">8 h</td></tr>
+      <tr><td>Usa GLP-1 con riesgo intermedio o alto</td><td>Plan individual: considerar solo líquidos por 24 h</td></tr>
+    </table></div>
+    <div class="hint">Siempre manda el plan individual escrito del paciente, nunca el "ayuno desde medianoche" por defecto.</div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── SEÑALES DE ALARMA — EXPLICARLAS EN EL TEACH-BACK Y ENTREGARLAS POR ESCRITO AL ALTA</div>
+    <div class="dim"><ul>
+      <li class="hROJO">Sangrado abundante o que va en aumento → urgencia.</li>
+      <li class="hROJO">Fiebre sobre 38,5 °C con escalofríos → urgencia.</li>
+      <li class="hROJO">Dificultad nueva para respirar → urgencia.</li>
+      <li class="hROJO">Dolor o hinchazón de una pantorrilla, o ahogo súbito con dolor al pecho (sospecha de trombosis) → urgencia.</li>
+      <li class="hAMARILLO">Dolor intenso que no cede con los medicamentos → consulta urgente.</li>
+      <li class="hAMARILLO">Vómitos 3 o más veces en 4 horas → consulta urgente.</li>
+      <li class="hAMARILLO">No orinar en más de 8 horas → consulta urgente.</li>
+      <li class="hAMARILLO">Herida enrojecida, caliente o con pus → consulta.</li>
+    </ul></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── ¿A QUIÉN LLAMO SI EL ALTA SE BLOQUEA?</div>
+    <div class="tbl"><table>
+      <tr><th>PROBLEMA</th><th>QUIÉN LO RESUELVE</th></tr>
+      <tr><td>Dolor, náuseas/vómitos, sedación, bloqueo residual, vía aérea, inestabilidad</td><td><b>Anestesiología</b></td></tr>
+      <tr><td>Sangrado, herida, drenajes, dispositivos, requisitos del procedimiento</td><td><b>Cirugía / Odontología</b></td></tr>
+    </table></div>
+    <div class="hint">Si persiste tras el manejo: observación prolongada, hospitalización o rescate — avisar a Jefatura de Pabellón y Gestión de Camas. Nunca dar el alta con un dominio en 0 ni sin acompañante presente.</div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── BLOQUEOS REGIONALES SUGERIDOS POR CIRUGÍA (9.7.2)</div>
+    <div class="tbl"><table>
+      <tr><th>CIRUGÍA</th><th>BLOQUEO</th></tr>
+      <tr><td>Colecistectomía laparoscópica</td><td>TAP / infiltración de puertos</td></tr>
+      <tr><td>Hernia inguinal</td><td>Ilioinguinal-iliohipogástrico / TAP</td></tr>
+      <tr><td>Hernia umbilical</td><td>Vaina de los rectos</td></tr>
+      <tr><td>Mama / mastectomía + ganglio centinela</td><td>PECS I+II o serrato</td></tr>
+      <tr><td>Artroscopia de rodilla</td><td>Femoral + ciático poplíteo</td></tr>
+      <tr><td>Artroscopia de hombro</td><td>Interescalénico</td></tr>
+      <tr><td>Mano / muñeca</td><td>Axilar / supraclavicular / infraclavicular</td></tr>
+      <tr><td>Hallux / pie</td><td>Tobillo / ciático poplíteo</td></tr>
+      <tr><td>Circuncisión</td><td>Peneano</td></tr>
+      <tr><td>Hernia / circuncisión pediátrica</td><td>Ilioinguinal / caudal</td></tr>
+    </table></div>
+    <div class="hint">Siempre individualizar fármaco, concentración y volumen según peso, ecografía y dosis máxima acumulada.</div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── ECOGRAFÍA GÁSTRICA (POCUS) · GRADOS DE PERLAS Y VOLUMEN</div>
+    <div class="tbl"><table>
+      <tr><th>GRADO</th><th>QUÉ SE VE</th><th>CONDUCTA</th></tr>
+      <tr><td class="num">0</td><td>Antro vacío en supino y en lateral derecho</td><td><span class="chip cVERDE">PROCEDER</span></td></tr>
+      <tr><td class="num">1</td><td>Líquido claro solo en lateral derecho (≤ 1,5 mL/kg)</td><td><span class="chip cVERDE">PROCEDER</span></td></tr>
+      <tr><td class="num">2</td><td>Líquido claro en ambas posiciones (&gt; 1,5 mL/kg)</td><td><span class="chip cROJO">DIFERIR ELECTIVA</span></td></tr>
+      <tr><td>Sólido</td><td>Contenido sólido o "vidrio esmerilado"</td><td><span class="chip cROJO">DIFERIR ELECTIVA</span></td></tr>
+    </table></div>
+    <div class="grid" style="margin-top:10px">
+      <label class="f">ÁREA DEL ANTRO · CSA (CM²)<input type="number" id="pv_csa" step="0.1" min="0" max="60"></label>
+      <label class="f">EDAD (AÑOS)<input type="number" id="pv_edad" min="18" max="110"></label>
+      <label class="f">PESO (KG)<input type="number" id="pv_peso" min="30" max="250"></label>
+    </div>
+    <button class="btn sec" onclick="calcVolumen()">CALCULAR VOLUMEN GÁSTRICO</button>
+    <div class="res" id="pv_res"></div>
+    <div class="hint">Fórmula de Perlas (adultos no gestantes, decúbito lateral derecho, fin de espiración): volumen = 27 + 14,6 × CSA − 1,28 × edad. Sobre 1,5 mL/kg se maneja como estómago lleno. Requiere operador entrenado; es un apoyo, no un criterio aislado.</div>
   </div>
 </section>
 
@@ -336,7 +459,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 const num = id => { const v = document.getElementById(id).value; return v === '' ? null : Number(v); };
 const chk = id => document.getElementById(id).checked;
 const val = id => document.getElementById(id).value;
-const fallo = (el, e) => { document.getElementById(el).innerHTML = `<div class="err">⚠ ERROR DE CONEXIÓN CON EL MOTOR: ${esc(e.message)}</div>`; };
+const fallo = (el, e) => { document.getElementById(el).innerHTML = `<div class="err">⚠ No hubo conexión con el sistema. Revisa internet e intenta de nuevo. Detalle: ${esc(e.message)}</div>`; };
 
 // ─── AYUDAS AUTO-EXPLICATIVAS (botón "?") ───
 const SB_PREGUNTAS = [
@@ -354,7 +477,7 @@ const HELP = {
   edad: 'La edad por sí sola <b>no excluye</b> de CMA: deciden la fragilidad (CFS) y la comorbilidad. Desde los 65 años el CFS es obligatorio.',
   asa: 'Estado físico de la American Society of Anesthesiologists.<br><b>I</b> sano · <b>II</b> enfermedad leve controlada (HTA o DM compensada, asma controlada) · <b>III</b> enfermedad grave (marca abajo si está estable y con plan) · <b>IV</b> amenaza vital constante · <b>V</b> moribundo. ASA III estable puede ser CMA; IV–V quedan fuera de la ruta electiva.',
   cfs: 'Escala Clínica de Fragilidad (Rockwood 1–9). Elige la descripción que mejor calza con las <b>2 semanas previas</b>, no con el día de hoy. Obligatoria en ≥65 años. CFS 4–5 van al Policlínico; ≥6 no es apto para CMA.',
-  imc: 'Peso (kg) ÷ estatura al cuadrado (m²). Ej: 90 kg y 1,70 m → 90 ÷ 2,89 = 31. <b>&lt;35</b> apto con comorbilidad optimizada · <b>35–40</b> amarillo · <b>40–50</b> amarillo de alto riesgo · <b>≥50</b> fuera de la ruta local.',
+  imc: '¿No tienes el IMC? Escribe peso y estatura y se calcula solo:<span class="sbq">Peso (kg) <input type="number" id="h_peso" min="20" max="300" style="max-width:95px"></span><span class="sbq">Estatura (m o cm) <input type="number" step="0.01" id="h_talla" min="0" max="230" style="max-width:95px" placeholder="1.65"></span><b>&lt;35</b> apto con enfermedades controladas · <b>35–40</b> amarillo · <b>40–50</b> amarillo de alto riesgo · <b>≥50</b> fuera de la ruta ambulatoria local.',
   hba1c: 'Solo en diabéticos, con examen de los últimos 3 meses. <b>&lt;8%</b> seguir · <b>8–8,9%</b> revisión y optimización · <b>≥9%</b> evaluación prioritaria. Nunca contraindica por sí sola.',
   sb: '<b>Cribado de apnea del sueño.</b> Marca las que apliquen y el puntaje se calcula solo:' +
       SB_PREGUNTAS.map(([l, q]) => `<span class="sbq"><input type="checkbox" class="sbc"> <b>${l}</b> ${q}</span>`).join('') +
@@ -364,7 +487,7 @@ const HELP = {
   anest: 'Técnica prevista para este caso. La local/regional es la más favorable para SAHOS; la general prolongada es la menos favorable.',
   vigil: '¿La recuperación de HOY puede vigilar a este paciente como lo necesita? <b>Prevista</b> = vigilancia estándar disponible · <b>reforzada</b> = puede ofrecer monitorización extendida/oximetría · <b>insuficiente</b> = lo que necesita supera la capacidad local.',
   glp1: 'Semaglutida (Ozempic®/Wegovy®), liraglutida, dulaglutida, tirzepatida... No se suspenden de forma universal. <b>Bajo</b>: dosis estable, sin síntomas digestivos · <b>Intermedio</b>: en escalamiento, dosis alta o síntomas leves · <b>Alto</b>: síntomas digestivos significativos o sospecha de estómago lleno.',
-  epm: 'Solo lactantes ex prematuros (&lt;37 semanas al nacer). Edad postmenstrual = <b>edad gestacional al nacer + semanas de vida</b>. Ej: nació de 32 sem y tiene 20 sem de vida → 52. Bajo 60 requiere evaluación pediátrico-anestésica resolutiva.',
+  epm: 'Solo bebés que nacieron antes de las 37 semanas. Escribe los dos datos y se suma solo:<span class="sbq">Semanas de gestación al nacer <input type="number" id="h_eg" min="22" max="42" style="max-width:80px"></span><span class="sbq">Semanas de vida <input type="number" id="h_sv" min="0" max="104" style="max-width:80px"></span>Bajo 60 semanas, el caso debe verlo el equipo pediátrico-anestésico antes de programar.',
   dur: 'Tiempo total estimado del procedimiento. <b>&gt;120 min no excluye</b>: exige paquete y franja horaria adecuadas para que la recuperación termine dentro del horario seguro.',
   a3e: 'Marca solo si la enfermedad grave está clínicamente estable y compensada (ej: ICC NYHA I–II, EPOC estable, cardiopatía isquémica estable). Con cambio reciente, NO marcar.',
   a3p: 'Existe un plan escrito y vigente para su enfermedad de base (habitualmente la nota resolutiva del Policlínico). ASA III estable + plan escrito = puede avanzar en verde.',
@@ -395,7 +518,8 @@ const HELP = {
 };
 
 // ─── ELEGIBILIDAD ───
-const NOMBRE_DIM = {clinico_anestesica:'CLÍNICO-ANESTÉSICA', quirurgica:'QUIRÚRGICA', social:'SOCIAL', logistica:'LOGÍSTICA'};
+const NOMBRE_DIM = {clinico_anestesica:'EL PACIENTE (CLÍNICO-ANESTÉSICA)', quirurgica:'LA CIRUGÍA', social:'EL ENTORNO EN CASA', logistica:'CAPACIDAD DEL HOSPITAL'};
+const TITULO_DISP = {'AVANZA':'PUEDE SER AMBULATORIO — AVANZA','ZONA AMARILLA CLINICO-ANESTESICA':'DEBE VERLO EL POLICLÍNICO DE ANESTESIA','AMARILLO NO CLINICO':'HAY PENDIENTES NO CLÍNICOS POR RESOLVER','NO ES CMA ELECTIVA':'NO ES CANDIDATO A AMBULATORIO'};
 const BANNER_DISP = {'AVANZA':'bVERDE','ZONA AMARILLA CLINICO-ANESTESICA':'bAMAR','AMARILLO NO CLINICO':'bAMAR','NO ES CMA ELECTIVA':'bROJO'};
 
 async function evaluarElegibilidad() {
@@ -421,7 +545,7 @@ async function evaluarElegibilidad() {
   const dur = num('e_dur');  if (dur  !== null) d.duracion_min = dur;
   try {
     const r = await post('/cma/elegibilidad', d);
-    let h = `<div class="banner ${BANNER_DISP[r.disposicion]||'bAZUL'}"><div class="t">${esc(r.disposicion)}</div><div class="a">${esc(r.accion)}</div></div><div class="dims">`;
+    let h = `<div class="banner ${BANNER_DISP[r.disposicion]||'bAZUL'}"><div class="t">${TITULO_DISP[r.disposicion] || esc(r.disposicion)}</div><div class="a">${esc(r.accion)}</div></div><div class="dims">`;
     for (const [k, v] of Object.entries(r.dimensiones)) {
       h += `<div class="dim"><h4>${NOMBRE_DIM[k]||k}<span class="chip c${v.color}">${v.color}</span></h4><ul>`;
       h += v.hallazgos.length
@@ -437,6 +561,7 @@ async function evaluarElegibilidad() {
       h += `<li style="padding-left:0;margin-top:4px">${esc(m.conducta)}</li></ul></div>`;
     }
     h += `<div class="hint">${esc(r.regla)}</div>`;
+    if (r.disposicion === 'AVANZA') h += `<button class="btn sec" onclick="irA('listo')">SIGUIENTE PASO: CASO LISTO →</button>`;
     document.getElementById('e_res').innerHTML = h;
   } catch(e) { fallo('e_res', e); }
 }
@@ -515,7 +640,8 @@ async function evaluarGate0() {
     document.getElementById('g_res').innerHTML =
       `<div class="banner ${ok?'bVERDE':'bROJO'}"><div class="t">${esc(r.resultado)}</div><div class="a">${esc(r.accion)}</div></div>` +
       (r.bloqueadores.length ? `<ul class="faltantes">${r.bloqueadores.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : '') +
-      (r.decide ? `<div class="banner bAMAR" style="margin-top:8px"><div class="a">DECIDE: ${esc(r.decide)}</div></div>` : '');
+      (r.decide ? `<div class="banner bAMAR" style="margin-top:8px"><div class="a">DECIDE: ${esc(r.decide)}</div></div>` : '') +
+      (ok ? '' : `<button class="btn sec" onclick="registrarDesde('pausa_cma')">REGISTRAR LA PAUSA EN "REGISTRO Y MEJORA" →</button>`);
   } catch(e) { fallo('g_res', e); }
 }
 
@@ -528,11 +654,14 @@ const ALDRETE = [
   ['spo2','SPO₂',['0 · < 90 % aún con O₂','1 · ≥ 90 % con O₂','2 · ≥ 92 % aire ambiente']],
 ];
 const selScore = (pre, items) => items.map(([k, t, ops]) =>
-  `<label class="f">${t}<select id="${pre}_${k}">${ops.map((o,i)=>`<option value="${i}" ${i===2?'selected':''}>${o}</option>`).join('')}</select></label>`).join('');
+  `<label class="f">${t}<select id="${pre}_${k}"><option value="" selected>— elegir —</option>${ops.map((o,i)=>`<option value="${i}">${o}</option>`).join('')}</select></label>`).join('');
 document.getElementById('a_items').innerHTML = selScore('a', ALDRETE);
 
 async function evaluarAldrete() {
-  const d = {sostenido_15min: chk('a_sost')};
+  if (ALDRETE.some(([k]) => val('a_' + k) === '')) {
+    document.getElementById('a_res').innerHTML = '<div class="err">Elige el puntaje de los 5 dominios antes de evaluar.</div>'; return;
+  }
+  const d = {id_caso: idCaso(), sostenido_15min: chk('a_sost')};
   ALDRETE.forEach(([k]) => d[k] = Number(val('a_' + k)));
   try {
     const r = await post('/cma/aldrete', d);
@@ -553,7 +682,10 @@ const PADSS = [
 document.getElementById('p_items').innerHTML = selScore('p', PADSS);
 
 async function evaluarPadss() {
-  const d = {pediatrico: chk('p_ped'), acompanante_presente: chk('p_acomp')};
+  if (PADSS.some(([k]) => val('p_' + k) === '')) {
+    document.getElementById('p_res').innerHTML = '<div class="err">Elige el puntaje de los 5 dominios antes de evaluar.</div>'; return;
+  }
+  const d = {id_caso: idCaso(), pediatrico: chk('p_ped'), acompanante_presente: chk('p_acomp')};
   PADSS.forEach(([k]) => d[k] = Number(val('p_' + k)));
   try {
     const r = await post('/cma/padss', d);
@@ -566,7 +698,7 @@ async function evaluarPadss() {
 // ─── APFEL ───
 async function evaluarApfel() {
   try {
-    const r = await post('/cma/apfel', {sexo_femenino: chk('ap_f'), no_fumador: chk('ap_nf'), antecedente_nvpo: chk('ap_ant'), opioides_postop: chk('ap_op')});
+    const r = await post('/cma/apfel', {id_caso: idCaso(), sexo_femenino: chk('ap_f'), no_fumador: chk('ap_nf'), antecedente_nvpo: chk('ap_ant'), opioides_postop: chk('ap_op')});
     const cls = r.apfel >= 3 ? 'bROJO' : r.apfel === 2 ? 'bAMAR' : 'bVERDE';
     document.getElementById('ap_res').innerHTML =
       `<div class="banner ${cls}"><div class="t">APFEL ${r.apfel}/4 · RIESGO NVPO ${esc(r.riesgo_nvpo)}</div><div class="a">${esc(r.profilaxis)}</div></div><div class="hint">${esc(r.nota)}</div>`;
@@ -575,25 +707,32 @@ async function evaluarApfel() {
 
 // ─── QOR-15E ───
 async function evaluarQor() {
-  const d = {total: num('q_total') ?? 0};
+  const vals = QOR_ITEMS.map((_, i) => val('q_i' + i));
+  const resp = vals.filter(v => v !== '').length;
+  let total;
+  if (resp === 15) { total = vals.reduce((a, v) => a + Number(v), 0); document.getElementById('q_total').value = total; }
+  else if (num('q_total') !== null) { total = num('q_total'); }
+  else { document.getElementById('q_res').innerHTML = `<div class="err">Responde los 15 ítems (llevas ${resp}) o escribe el puntaje total.</div>`; return; }
+  const d = {id_caso: idCaso(), total};
   const b = num('q_basal'); if (b !== null) d.basal = b;
   try {
     const r = await post('/cma/qor15', d);
     const cls = r.deterioro_mcid ? 'bROJO' : r.pass_118 ? 'bVERDE' : 'bAMAR';
     document.getElementById('q_res').innerHTML =
-      `<div class="banner ${cls}"><div class="t">QOR-15E ${r.total}/150${r.delta !== undefined ? ' · Δ ' + r.delta : ''}</div><div class="a">${esc(r.interpretacion)}</div></div>`;
+      `<div class="banner ${cls}"><div class="t">QOR-15E ${r.total}/150${r.delta !== undefined ? ' · cambio ' + r.delta : ''}</div><div class="a">${esc(r.interpretacion)}</div></div>` +
+      (r.deterioro_mcid ? `<button class="btn sec" onclick="registrarDesde('qor15_deterioro')">REGISTRAR EL DETERIORO (K19) →</button>` : '');
   } catch(e) { fallo('q_res', e); }
 }
 
 // ─── MEJORA ───
 const TIPOS = [
   ['caso_cma','Caso CMA realizado (denominador)'],['alta_mismo_dia','Alta física el mismo día (K2)'],
-  ['pernoctacion_no_planificada','Pernoctación no planificada'],['conversion_hospitalizacion','Conversión a hospitalización'],
-  ['suspension_dia0','Suspensión del día 0 (K7)'],['pausa_cma','PAUSA CMA declarada'],
+  ['pernoctacion_no_planificada','Se quedó hospitalizado sin planearlo (pernoctación)'],['conversion_hospitalizacion','Conversión a hospitalización'],
+  ['suspension_dia0','Cirugía suspendida el mismo día (K7)'],['pausa_cma','PAUSA CMA declarada'],
   ['rescate_activado','Rescate activado'],['evento_adverso','Evento adverso (K13)'],
   ['reconsulta_7d','Reconsulta no programada 7 d (K16)'],['readmision_30d','Readmisión 30 d (K17)'],
-  ['reoperacion_30d','Reoperación 30 d (K17)'],['seguimiento_24h_ok','Seguimiento 24 h contactado (K18)'],
-  ['seguimiento_24h_fallido','Seguimiento 24 h fallido (K18)'],['qor15_deterioro','QoR-15E con deterioro MCID (K19)'],
+  ['reoperacion_30d','Reoperación 30 d (K17)'],['seguimiento_24h_ok','Llamada de 24 h: contactado (K18)'],
+  ['seguimiento_24h_fallido','Llamada de 24 h: no se pudo contactar (K18)'],['qor15_deterioro','Recuperación deteriorada en QoR-15E (K19)'],
 ];
 const selTipo = document.getElementById('m_tipo');
 selTipo.innerHTML = TIPOS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
@@ -672,6 +811,103 @@ document.querySelectorAll('[data-h]').forEach(el => {
 document.querySelectorAll('.sbc').forEach(cb => cb.addEventListener('change', () => {
   document.getElementById('e_sb').value = document.querySelectorAll('.sbc:checked').length;
 }));
+
+// ─── QoR-15E: los 15 items ───
+const QOR_ITEMS = ['1 · Respirar con facilidad','2 · Disfrutar de la comida','3 · Sentirse descansado','4 · Dormir bien',
+  '5 · Higiene personal sin ayuda','6 · Comunicarse con familiares o amigos','7 · Apoyo del personal del hospital',
+  '8 · Volver al trabajo o actividades habituales','9 · Sentirse cómodo y en control','10 · Bienestar general',
+  '11 · Dolor moderado (10 = nada)','12 · Dolor severo (10 = nada)','13 · Náuseas o vómitos (10 = nada)',
+  '14 · Preocupación o ansiedad (10 = nada)','15 · Tristeza o depresión (10 = nada)'];
+document.getElementById('q_items').innerHTML = QOR_ITEMS.map((t, i) =>
+  `<label class="f">${t}<select id="q_i${i}"><option value="" selected>—</option>${Array.from({length:11},(_,n)=>`<option value="${n}">${n}</option>`).join('')}</select></label>`).join('');
+document.getElementById('q_items').addEventListener('change', () => {
+  const vals = QOR_ITEMS.map((_, i) => val('q_i' + i)).filter(v => v !== '');
+  document.getElementById('q_resp').textContent = vals.length;
+  document.getElementById('q_suma').textContent = vals.reduce((a, v) => a + Number(v), 0);
+});
+
+// ─── Los 8 requisitos del alta (9.9.3) ───
+const DEBERES = [
+  'PADSS 9 o más documentado, signos vitales en 2 y ningún dominio en 0',
+  'Acompañante adulto presente, comprometido por 24 horas',
+  'Transporte de regreso confirmado',
+  'Receta entregada: analgésicos para 5–7 días + su medicación habitual reactivada',
+  'Indicaciones impresas (herida, dieta, reposo, señales de alarma) y explicadas de palabra',
+  'Control en 7–14 días agendado (presencial o teleconsulta)',
+  'Teléfono de contacto y ruta de urgencia entregados por escrito + aviso de la llamada de 24–48 h',
+  'QoR-15E basal verificado en la ficha y seguimiento de 24 h activado',
+];
+document.getElementById('d8_items').innerHTML = DEBERES.map((t, i) =>
+  `<label class="c"><input type="checkbox" id="d8_${i}"> ${i + 1} · ${t}</label>`).join('');
+function evaluarDeberes() {
+  const faltan = DEBERES.map((t, i) => chk('d8_' + i) ? null : (i + 1) + ' · ' + t).filter(Boolean);
+  document.getElementById('d8_res').innerHTML = faltan.length
+    ? `<div class="banner bROJO"><div class="t">AÚN NO HAY ALTA — FALTAN ${faltan.length}</div><div class="a">Completa lo pendiente; si un requisito no se puede cumplir, revisión presencial según la guía "¿A quién llamo?"</div></div><ul class="faltantes">${faltan.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`
+    : `<div class="banner bVERDE"><div class="t">LOS 8 REQUISITOS CUMPLIDOS</div><div class="a">Enfermería puede ejecutar el alta dentro del paquete aprobado. Entregar la tarjeta de seguimiento y activar la llamada de 24 h.</div></div>`;
+}
+
+// ─── ID del caso compartido entre pestañas ───
+const CAMPOS_ID = ['e_id', 'l_id', 'g_id', 'm_id'];
+function idCaso() { return val('e_id'); }
+CAMPOS_ID.forEach(id => document.getElementById(id).addEventListener('input', e => {
+  CAMPOS_ID.forEach(o => { if (o !== id) document.getElementById(o).value = e.target.value; });
+}));
+
+// ─── Ir a otra pestaña / registrar evento sugerido ───
+function irA(t) { document.querySelector(`nav button[data-t=${t}]`).click(); window.scrollTo(0, 0); }
+function registrarDesde(tipo) {
+  irA('mejora');
+  const s = document.getElementById('m_tipo');
+  s.value = tipo; s.dispatchEvent(new Event('change'));
+}
+
+// ─── Aviso CFS obligatorio desde los 65 ───
+function avisoCFS() {
+  const e = num('e_edad'), s = document.getElementById('e_cfs');
+  s.style.outline = (e !== null && e >= 65 && !s.value) ? '2px solid var(--amar)' : '';
+}
+document.getElementById('e_edad').addEventListener('input', avisoCFS);
+document.getElementById('e_cfs').addEventListener('change', avisoCFS);
+
+// ─── Autor recordado en este dispositivo ───
+document.getElementById('m_autor').value = localStorage.getItem('cma_autor') || '';
+document.getElementById('m_autor').addEventListener('input', e => localStorage.setItem('cma_autor', e.target.value));
+
+// ─── Boton visible de las 8 preguntas STOP-BANG ───
+document.getElementById('sbAbrir').addEventListener('click', e => {
+  e.preventDefault(); e.stopPropagation();
+  document.querySelector('label[data-h=sb] .hbtn').click();
+});
+
+// ─── Mini-calculadoras dentro de las ayudas (IMC y edad corregida) ───
+function alEscribir(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener('input', fn); }
+function calcIMC() {
+  const p = Number(document.getElementById('h_peso').value), t0 = Number(document.getElementById('h_talla').value);
+  if (!p || !t0) return;
+  const t = t0 > 3 ? t0 / 100 : t0;
+  document.getElementById('e_imc').value = (p / (t * t)).toFixed(1);
+}
+alEscribir('h_peso', calcIMC); alEscribir('h_talla', calcIMC);
+function calcEPM() {
+  const g = Number(document.getElementById('h_eg').value);
+  const s = Number(document.getElementById('h_sv').value) || 0;
+  if (g) document.getElementById('e_epm').value = g + s;
+}
+alEscribir('h_eg', calcEPM); alEscribir('h_sv', calcEPM);
+
+// ─── Calculadora de volumen gastrico (Perlas) ───
+function calcVolumen() {
+  const csa = Number(document.getElementById('pv_csa').value);
+  const edad = Number(document.getElementById('pv_edad').value);
+  const peso = Number(document.getElementById('pv_peso').value);
+  if (!csa || !edad) { document.getElementById('pv_res').innerHTML = '<div class="err">Escribe el área del antro (CSA) y la edad.</div>'; return; }
+  const vol = Math.max(0, 27 + 14.6 * csa - 1.28 * edad);
+  const porKg = peso ? vol / peso : null;
+  const lleno = porKg !== null && porKg > 1.5;
+  document.getElementById('pv_res').innerHTML =
+    `<div class="banner ${lleno ? 'bROJO' : porKg !== null ? 'bVERDE' : 'bAZUL'}"><div class="t">≈ ${vol.toFixed(0)} mL${porKg !== null ? ' · ' + porKg.toFixed(1) + ' mL/kg' : ''}</div>` +
+    `<div class="a">${lleno ? 'Sobre 1,5 mL/kg: manejar como estómago lleno — diferir la electiva o precauciones de estómago lleno; decide el anestesiólogo del caso.' : porKg !== null ? 'Bajo 1,5 mL/kg: compatible con proceder, interpretado junto a la clínica.' : 'Agrega el peso para calcular mL/kg (el umbral es 1,5 mL/kg).'}</div></div>`;
+}
 </script>
 </body>
 </html>
