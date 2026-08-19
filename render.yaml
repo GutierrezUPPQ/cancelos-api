@@ -1,0 +1,15 @@
+# Despliegue en Render.com (plan gratuito)
+# Render lee este archivo con: New + -> Blueprint -> conectar este repositorio
+services:
+  - type: web
+    name: cancelos-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # Opcionales (configurar en el dashboard de Render):
+      # - key: CMA_PIN               # PIN del equipo para registrar eventos
+      # - key: CMA_SHEETS_WEBHOOK    # URL del Apps Script para respaldo en Google Sheets
