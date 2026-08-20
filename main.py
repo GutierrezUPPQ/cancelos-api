@@ -610,13 +610,16 @@ def registrar_encuesta(d):
                         else "¡Gracias! Sus respuestas quedaron registradas y el equipo las revisara.")}
 
 # Referencias externas (BADS/GIRFT): comparativas, NUNCA metas locales automaticas (Anexo I).
+# Solo el ingreso/pernoctacion no planificado <2% es estandar publicado (BADS/GIRFT);
+# el resto son referencias institucionales provisorias informadas por literatura
+# observacional, hasta contar con linea base local (Anexo I).
 REFERENCIAS_CMA = {
-    "pernoctacion_no_planificada": {"ref_pct": 2.0,  "fuente": "BADS/GIRFT"},
-    "suspension_dia0":             {"ref_pct": 2.0,  "fuente": "GIRFT"},
-    "reconsulta_7d":               {"ref_pct": 3.0,  "fuente": "BADS"},
-    "readmision_30d":              {"ref_pct": 2.0,  "fuente": "BADS/GIRFT"},
-    "reoperacion_30d":             {"ref_pct": 1.0,  "fuente": "BADS"},
-    "conversion_hospitalizacion":  {"ref_pct": 2.0,  "fuente": "BADS/GIRFT"},
+    "pernoctacion_no_planificada": {"ref_pct": 2.0,  "fuente": "BADS/GIRFT (estandar publicado)"},
+    "suspension_dia0":             {"ref_pct": 2.0,  "fuente": "referencia institucional provisoria"},
+    "reconsulta_7d":               {"ref_pct": 3.0,  "fuente": "referencia institucional provisoria"},
+    "readmision_30d":              {"ref_pct": 2.0,  "fuente": "referencia institucional provisoria"},
+    "reoperacion_30d":             {"ref_pct": 1.0,  "fuente": "referencia institucional provisoria"},
+    "conversion_hospitalizacion":  {"ref_pct": 2.0,  "fuente": "referencia institucional provisoria"},
 }
 ACCIONES_MEJORA = {
     "pernoctacion_no_planificada": "Clasificar cada caso en sus 3 capas (seleccion/proceso/no prevenible) y asignar una accion concreta con responsable y plazo (9.11.1)",
