@@ -127,6 +127,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
   <button data-t="recu">RECUPERACIÓN Y ALTA</button>
   <button data-t="escalas">CALCULADORAS</button>
   <button data-t="mejora">REGISTRO Y MEJORA</button>
+  <button data-t="segui">ENCUESTAS</button>
   <button data-t="guia">GUÍA</button>
 </nav>
 
@@ -305,6 +306,36 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <button class="btn sec" onclick="verIndicadores()">VER TABLERO</button>
     <div class="res" id="t_res"></div>
     <div class="hint">Los eventos quedan guardados en el servidor y, si el equipo lo activó, también en su planilla Google. La ficha clínica sigue siendo el registro oficial. El análisis mensual del comité se hace con el lote completo de la planilla.</div>
+  </div>
+</section>
+
+<!-- ═══════════ ENCUESTAS / SEGUIMIENTO ═══════════ -->
+<section id="segui">
+  <div class="card">
+    <div class="sec-title">── ENVIAR ENCUESTA AL PACIENTE (QOR-15E BASAL · 24 H · DÍA 7)</div>
+    <div class="grid">
+      <label class="f">ID CASO / EPISODIO<input type="text" id="s_id" placeholder="EP-001"></label>
+      <label class="f">MOMENTO<select id="s_mom">
+        <option value="basal">BASAL — antes de la cirugía</option>
+        <option value="h24">24 HORAS — al día siguiente</option>
+        <option value="d7">DÍA 7 — control de la semana</option>
+      </select></label>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <button class="btn sec" style="margin-top:0" onclick="copiarLink()">📋 COPIAR ENLACE</button>
+      <button class="btn sec" style="margin-top:0" onclick="enviarWhatsApp()">🟢 ENVIAR POR WHATSAPP</button>
+      <button class="btn sec" style="margin-top:0" onclick="mostrarQR()">🔳 MOSTRAR CÓDIGO QR</button>
+    </div>
+    <div class="res" id="s_res"></div>
+    <div class="hint">El enlace lleva solo el código del episodio: <b>sin nombre ni RUT</b> (seudonimización del Anexo O.5). El puntaje se calcula solo (ítems 11–15 invertidos), el cambio basal→24 h se aparea automático y cada respuesta queda clasificada P1 / P2 / P3 / GRIS. Se entrega la basal en la sala de espera, y la de 24 h y día 7 por WhatsApp o con el QR impreso en la tarjeta de alta.</div>
+  </div>
+  <div class="card">
+    <div class="sec-title">── RESPUESTAS RECIBIDAS · P1 PRIMERO, EL CIERRE ES SIEMPRE HUMANO</div>
+    <div class="grid">
+      <label class="f">FILTRAR POR ID (OPCIONAL)<input type="text" id="s_filtro" placeholder="vacío = todas"></label>
+    </div>
+    <button class="btn sec" onclick="verEncuestas()">VER RESPUESTAS</button>
+    <div class="res" id="s_lista"></div>
   </div>
 </section>
 
@@ -847,7 +878,7 @@ function evaluarDeberes() {
 }
 
 // ─── ID del caso compartido entre pestañas ───
-const CAMPOS_ID = ['e_id', 'l_id', 'g_id', 'm_id'];
+const CAMPOS_ID = ['e_id', 'l_id', 'g_id', 'm_id', 's_id'];
 function idCaso() { return val('e_id'); }
 CAMPOS_ID.forEach(id => document.getElementById(id).addEventListener('input', e => {
   CAMPOS_ID.forEach(o => { if (o !== id) document.getElementById(o).value = e.target.value; });
@@ -896,6 +927,53 @@ function calcEPM() {
 alEscribir('h_eg', calcEPM); alEscribir('h_sv', calcEPM);
 
 // ─── Calculadora de volumen gastrico (Perlas) ───
+// ─── Encuestas al paciente ───
+function linkEncuesta() {
+  const id = encodeURIComponent(val('s_id') || idCaso());
+  return `${location.origin}/encuesta?id=${id}&m=${val('s_mom')}`;
+}
+const NOMBRE_MOM = {basal: 'ANTES de su cirugía', h24: 'de las 24 horas', d7: 'del día 7'};
+function textoInvitacion() {
+  return `Hospital de Quilpué — Cirugía Mayor Ambulatoria: le invitamos a responder su encuesta ${NOMBRE_MOM[val('s_mom')]}. Tarda menos de 5 minutos y nos ayuda a cuidarle mejor: ${linkEncuesta()} (Esta encuesta no reemplaza a Urgencia ni al 131).`;
+}
+async function copiarLink() {
+  try { await navigator.clipboard.writeText(linkEncuesta()); }
+  catch (e) { prompt('Copia el enlace:', linkEncuesta()); }
+  document.getElementById('s_res').innerHTML = `<div class="banner bAZUL"><div class="t">ENLACE COPIADO</div><div class="a">${esc(linkEncuesta())}</div></div>`;
+}
+function enviarWhatsApp() {
+  window.open('https://wa.me/?text=' + encodeURIComponent(textoInvitacion()), '_blank');
+}
+function mostrarQR() {
+  const u = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(linkEncuesta());
+  document.getElementById('s_res').innerHTML =
+    `<div class="banner bAZUL"><div class="t">QR — ENCUESTA ${esc(val('s_mom').toUpperCase())}</div>` +
+    `<div class="a">El paciente lo escanea con la cámara del teléfono.</div></div>` +
+    `<div style="text-align:center;padding:10px;background:#fff;border-radius:10px;max-width:300px"><img src="${u}" alt="Código QR de la encuesta" style="max-width:100%"></div>`;
+}
+async function verEncuestas() {
+  try {
+    const f = val('s_filtro').trim();
+    const r = await fetch('/cma/encuestas' + (f ? `?id_caso=${encodeURIComponent(f)}` : '')).then(x => x.json());
+    let h = `<div class="banner ${r.colas.P1 ? 'bROJO' : r.colas.P2 ? 'bAMAR' : 'bVERDE'}">` +
+      `<div class="t">${r.total} RESPUESTAS · P1: ${r.colas.P1} · P2: ${r.colas.P2} · GRIS: ${r.colas.GRIS}</div>` +
+      `<div class="a">${esc(r.nota)}</div></div>`;
+    if (!r.encuestas.length) { h += '<div class="hint">Aún no hay respuestas registradas.</div>'; }
+    else {
+      h += '<div class="tbl"><table><tr><th>ID</th><th>MOMENTO</th><th>FECHA</th><th>PUNTAJE</th><th>CAMBIO</th><th>PRIORIDAD</th><th>MOTIVO</th></tr>';
+      for (const e of r.encuestas.slice(0, 60)) {
+        const cls = e.prioridad === 'P1' ? 'cROJO' : e.prioridad === 'P2' ? 'cAMARILLO' : e.prioridad === 'GRIS' ? 'cAMARILLO' : 'cVERDE';
+        h += `<tr><td class="mono">${esc(e.id_caso || '—')}</td><td>${esc(e.momento)}</td><td class="mono">${esc(e.fecha)} ${esc(e.hora)}</td>` +
+          `<td class="num">${e.total ?? (e.dolor_eva != null ? 'EVA ' + e.dolor_eva : '—')}</td><td class="num">${e.delta ?? '—'}</td>` +
+          `<td><span class="chip ${cls}">${esc(e.prioridad)}</span>${e.quiere_llamada ? ' 📞' : ''}${e.alarma ? ' ⚠' : ''}</td>` +
+          `<td style="font-size:12px">${esc(e.motivo)}${e.comentario ? '<br><i>«' + esc(e.comentario) + '»</i>' : ''}</td></tr>`;
+      }
+      h += '</table></div>';
+    }
+    document.getElementById('s_lista').innerHTML = h;
+  } catch (e) { fallo('s_lista', e); }
+}
+
 function calcVolumen() {
   const csa = Number(document.getElementById('pv_csa').value);
   const edad = Number(document.getElementById('pv_edad').value);

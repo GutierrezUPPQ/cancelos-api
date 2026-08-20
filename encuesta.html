@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encuesta de recuperación — Hospital de Quilpué</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#F5F8FA;--panel:#FFFFFF;--border:#D8E2E8;--ink:#1E2E39;--muted:#5C6E7B;
+  --azul:#0B76A6;--azul2:#155FBF;--verde:#1F7A41;--verde-bg:#E6F2EA;--rojo:#B3352E;--rojo-bg:#FAE9E8;
+}
+html{background:var(--paper)}
+body{min-height:100vh;background:var(--paper);color:var(--ink);
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:18px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding:18px 14px 80px}
+header{padding:6px 0 14px;border-bottom:2px solid var(--azul)}
+h1{font-size:22px;line-height:1.25}
+.sub{color:var(--muted);font-size:15px;margin-top:4px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px;box-shadow:0 1px 3px rgba(26,43,54,.08)}
+.preg{font-size:19px;font-weight:600;margin-bottom:4px}
+.escala-nota{color:var(--muted);font-size:14px;margin-bottom:10px}
+.nums{display:grid;grid-template-columns:repeat(11,1fr);gap:5px}
+.nums button{font-size:17px;font-weight:700;padding:12px 0;border-radius:9px;border:1.5px solid var(--border);
+  background:var(--paper);color:var(--ink);cursor:pointer}
+.nums button.sel{background:var(--azul);border-color:var(--azul);color:#fff}
+.alarma{border:2px solid var(--rojo);background:var(--rojo-bg);border-radius:14px;padding:16px;margin-top:14px}
+.alarma h2{color:var(--rojo);font-size:19px;margin-bottom:8px}
+label.chk{display:flex;gap:12px;align-items:flex-start;padding:11px 4px;font-size:17px;cursor:pointer;border-bottom:1px solid var(--border)}
+label.chk:last-of-type{border-bottom:none}
+label.chk input{width:24px;height:24px;flex:0 0 auto;margin-top:1px;accent-color:var(--rojo)}
+.card label.chk input{accent-color:var(--azul)}
+.aviso131{background:var(--rojo);color:#fff;border-radius:10px;padding:12px 14px;font-weight:700;font-size:17px;margin-top:10px;display:none}
+input[type=text],textarea,select{width:100%;font-size:17px;padding:12px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);font-family:inherit}
+.enviar{display:block;width:100%;font-size:20px;font-weight:800;padding:17px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--azul),var(--azul2));color:#fff;cursor:pointer;margin-top:18px}
+.progreso{position:sticky;top:0;background:var(--paper);padding:8px 0;font-size:15px;color:var(--muted);z-index:5;border-bottom:1px solid var(--border)}
+.gracias{text-align:center;padding:40px 10px;display:none}
+.gracias .icono{font-size:56px}
+.gracias h2{font-size:24px;margin:12px 0}
+.gracias p{font-size:18px;color:var(--muted)}
+.gracias .urgente{margin-top:16px;background:var(--rojo-bg);border:2px solid var(--rojo);color:var(--rojo);border-radius:12px;padding:14px;font-weight:700}
+.err{color:var(--rojo);font-weight:700;margin-top:12px;font-size:17px;display:none}
+.pie{margin-top:26px;color:var(--muted);font-size:13px;text-align:center;line-height:1.7}
+@media (max-width:420px){.nums{gap:3px}.nums button{font-size:15px;padding:11px 0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1 id="titulo">Encuesta de recuperación</h1>
+  <div class="sub" id="subtitulo">Hospital de Quilpué · Cirugía Mayor Ambulatoria</div>
+</header>
+
+<div id="formulario">
+  <div class="card" id="caja_id" style="display:none">
+    <div class="preg">Código de su caso</div>
+    <div class="escala-nota">Está impreso en la hoja o mensaje que le entregó el equipo (ej: EP-001). Si no lo tiene, deje el espacio vacío.</div>
+    <input type="text" id="inp_id" placeholder="EP-000">
+  </div>
+
+  <div class="alarma" id="caja_alarma" style="display:none">
+    <h2>Antes de empezar: ¿tiene AHORA alguno de estos síntomas?</h2>
+    <label class="chk"><input type="checkbox" class="al"> Sangrado abundante o que va en aumento</label>
+    <label class="chk"><input type="checkbox" class="al"> Fiebre sobre 38,5 °C con escalofríos</label>
+    <label class="chk"><input type="checkbox" class="al"> Dificultad nueva para respirar</label>
+    <label class="chk"><input type="checkbox" class="al"> Dolor al pecho, o dolor e hinchazón de una pierna</label>
+    <label class="chk"><input type="checkbox" class="al"> No ha podido orinar en más de 8 horas</label>
+    <div class="aviso131" id="aviso131">⚠ NO ESPERE ESTA ENCUESTA: llame a Urgencia del hospital o al 131 (SAMU) ahora. Igual puede terminar de responder después.</div>
+  </div>
+
+  <div class="progreso" id="progreso" style="display:none">Respondidas: <b id="p_num">0</b> de 15</div>
+  <div id="preguntas"></div>
+
+  <div id="dia7" style="display:none">
+    <div class="card">
+      <div class="preg">¿Cuánto dolor ha tenido hoy?</div>
+      <div class="escala-nota">0 = nada de dolor · 10 = el peor dolor imaginable</div>
+      <div class="nums" id="eva"></div>
+    </div>
+    <div class="card">
+      <label class="chk"><input type="checkbox" id="d7_herida"> La herida está enrojecida, caliente, con secreción o más hinchada</label>
+      <label class="chk"><input type="checkbox" id="d7_recon"> Tuve que consultar en Urgencia u otro servicio por esta cirugía</label>
+    </div>
+    <div class="card">
+      <div class="preg">¿Ha podido retomar sus actividades habituales?</div>
+      <select id="d7_activ" style="margin-top:8px">
+        <option value="">— elegir —</option>
+        <option value="si">Sí, casi todas</option>
+        <option value="parcial">Solo en parte</option>
+        <option value="no">Todavía no</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card" id="caja_final" style="display:none">
+    <label class="chk"><input type="checkbox" id="quiere_llamada"> Me gustaría que el equipo del hospital me llame</label>
+    <div class="preg" style="margin-top:12px">¿Quiere contarnos algo más? (opcional)</div>
+    <textarea id="comentario" rows="3" maxlength="400" placeholder="Escriba aquí si lo desea"></textarea>
+  </div>
+
+  <div class="err" id="error"></div>
+  <button class="enviar" id="btn_enviar">ENVIAR MIS RESPUESTAS</button>
+</div>
+
+<div class="gracias" id="gracias">
+  <div class="icono">💙</div>
+  <h2>¡Muchas gracias!</h2>
+  <p id="gracias_msg"></p>
+  <div class="urgente" id="gracias_urgente" style="display:none"></div>
+</div>
+
+<div class="pie">
+  Esta encuesta usa solo el código de su caso: no pide su nombre ni su RUT.<br>
+  No reemplaza la atención de Urgencia ni al SAMU (131).<br>
+  Cuestionario QoR-15, versión en español validada · Hospital de Quilpué
+</div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const MOMENTO = ['basal','h24','d7'].includes(params.get('m')) ? params.get('m') : 'h24';
+const ID = (params.get('id') || '').slice(0, 40);
+
+const TITULOS = {
+  basal: ['Encuesta ANTES de su cirugía', 'Sus respuestas nos ayudan a comparar cómo estará después. Piense en las últimas 24 horas.'],
+  h24:   ['¿Cómo se siente hoy? (24 horas después)', 'Piense en las últimas 24 horas, desde su cirugía.'],
+  d7:    ['Control de los 7 días', 'Piense en cómo ha estado durante esta semana.'],
+};
+document.getElementById('titulo').textContent = TITULOS[MOMENTO][0];
+document.getElementById('subtitulo').textContent = 'Hospital de Quilpué · ' + TITULOS[MOMENTO][1];
+
+const QOR = [
+  ['¿Ha podido respirar con facilidad?', 0],
+  ['¿Ha podido disfrutar de la comida?', 0],
+  ['¿Se ha sentido descansado/a?', 0],
+  ['¿Ha podido dormir bien?', 0],
+  ['¿Ha podido asearse o arreglarse sin ayuda?', 0],
+  ['¿Ha podido comunicarse con su familia o amigos?', 0],
+  ['¿Se ha sentido apoyado/a por el personal del hospital?', 0],
+  ['¿Ha podido retomar su trabajo o sus actividades habituales?', 0],
+  ['¿Se ha sentido cómodo/a y en control de la situación?', 0],
+  ['¿Ha tenido una sensación de bienestar general?', 0],
+  ['¿Ha tenido dolor moderado?', 1],
+  ['¿Ha tenido dolor intenso?', 1],
+  ['¿Ha tenido náuseas o vómitos?', 1],
+  ['¿Se ha sentido preocupado/a o con ansiedad?', 1],
+  ['¿Se ha sentido triste o deprimido/a?', 1],
+];
+const NOTA = ['0 = nunca · 10 = todo el tiempo (o excelente)', '0 = nunca lo tuve · 10 = todo el tiempo'];
+const resp = Array(15).fill(null);
+let eva = null;
+
+function filaNums(cont, alElegir) {
+  for (let n = 0; n <= 10; n++) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = n;
+    b.addEventListener('click', () => {
+      [...cont.children].forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel'); alElegir(n);
+    });
+    cont.appendChild(b);
+  }
+}
+
+if (!ID) document.getElementById('caja_id').style.display = 'block';
+if (MOMENTO !== 'basal') document.getElementById('caja_alarma').style.display = 'block';
+document.getElementById('caja_final').style.display = 'block';
+document.querySelectorAll('.al').forEach(c => c.addEventListener('change', () => {
+  const hay = [...document.querySelectorAll('.al')].some(x => x.checked);
+  document.getElementById('aviso131').style.display = hay ? 'block' : 'none';
+}));
+
+if (MOMENTO === 'd7') {
+  document.getElementById('dia7').style.display = 'block';
+  filaNums(document.getElementById('eva'), n => eva = n);
+} else {
+  document.getElementById('progreso').style.display = 'block';
+  const cont = document.getElementById('preguntas');
+  QOR.forEach(([texto, inv], i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="preg">${i + 1}. ${texto}</div><div class="escala-nota">${NOTA[inv]}</div><div class="nums" id="q${i}"></div>`;
+    cont.appendChild(card);
+    filaNums(card.querySelector('.nums'), n => {
+      resp[i] = n;
+      document.getElementById('p_num').textContent = resp.filter(v => v !== null).length;
+    });
+  });
+}
+
+document.getElementById('btn_enviar').addEventListener('click', async () => {
+  const err = document.getElementById('error');
+  err.style.display = 'none';
+  const d = {
+    id_caso: ID || document.getElementById('inp_id')?.value || '',
+    momento: MOMENTO,
+    alarma: [...document.querySelectorAll('.al')].some(x => x.checked),
+    quiere_llamada: document.getElementById('quiere_llamada').checked,
+    comentario: document.getElementById('comentario').value,
+  };
+  if (MOMENTO === 'd7') {
+    if (eva === null || !document.getElementById('d7_activ').value) {
+      err.textContent = 'Falta responder el dolor de hoy o la pregunta de actividades.'; err.style.display = 'block';
+      window.scrollTo({top: 0, behavior: 'smooth'}); return;
+    }
+    d.dolor_eva = eva;
+    d.herida_problema = document.getElementById('d7_herida').checked;
+    d.reconsulta = document.getElementById('d7_recon').checked;
+    d.actividad = document.getElementById('d7_activ').value;
+  } else {
+    const faltan = resp.filter(v => v === null).length;
+    if (faltan) {
+      err.textContent = `Le faltan ${faltan} pregunta${faltan > 1 ? 's' : ''} por responder.`; err.style.display = 'block'; return;
+    }
+    d.respuestas = resp;
+  }
+  const btn = document.getElementById('btn_enviar');
+  btn.disabled = true; btn.textContent = 'ENVIANDO…';
+  try {
+    const r = await fetch('/cma/encuesta', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(d)});
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status);
+    document.getElementById('formulario').style.display = 'none';
+    document.getElementById('gracias').style.display = 'block';
+    document.getElementById('gracias_msg').textContent = 'Sus respuestas quedaron registradas y el equipo del hospital las revisará.';
+    if (j.prioridad === 'P1' || (j.prioridad === 'P2' && d.alarma)) {
+      const u = document.getElementById('gracias_urgente');
+      u.style.display = 'block';
+      u.textContent = 'Por los síntomas que marcó: si ahora mismo se siente mal, llame a Urgencia del hospital o al 131 (SAMU) sin esperar.';
+    }
+    window.scrollTo(0, 0);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'ENVIAR MIS RESPUESTAS';
+    err.textContent = 'No se pudo enviar. Revise su conexión a internet e intente otra vez.'; err.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
