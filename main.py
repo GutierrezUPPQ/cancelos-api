@@ -36,6 +36,10 @@ def cma_app():
 def encuesta():
     return _html("encuesta.html", "<h1>Encuesta CMA - archivo encuesta.html no encontrado</h1>")
 
+@app.get("/alta", response_class=HTMLResponse)
+def hoja_alta():
+    return _html("alta.html", "<h1>Hoja de alta - archivo alta.html no encontrado</h1>")
+
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
 # ═══════════════════════════════════════════════
@@ -684,7 +688,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.4.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.5.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):

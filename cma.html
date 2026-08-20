@@ -250,6 +250,11 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <button class="btn" onclick="evaluarDeberes()">VERIFICAR REQUISITOS DEL ALTA</button>
     <div class="res" id="d8_res"></div>
   </div>
+  <div class="card">
+    <div class="sec-title">── HOJA DE ALTA PARA EL PACIENTE — SE IMPRIME O SE GUARDA COMO PDF</div>
+    <div class="hint">Genera las indicaciones escritas del requisito 5: medicamentos, cuidados, señales de alarma, control, teléfono y los QR de las encuestas de 24 h y día 7. Lleva el código del caso; el nombre se escribe a mano.</div>
+    <button class="btn" onclick="abrirHojaAlta()">🖨️ GENERAR HOJA DE ALTA</button>
+  </div>
 </section>
 
 <!-- ═══════════ ESCALAS ═══════════ -->
@@ -886,6 +891,10 @@ CAMPOS_ID.forEach(id => document.getElementById(id).addEventListener('input', e 
 
 // ─── Ir a otra pestaña / registrar evento sugerido ───
 function irA(t) { document.querySelector(`nav button[data-t=${t}]`).click(); window.scrollTo(0, 0); }
+function abrirHojaAlta() {
+  const id = idCaso();
+  window.open('/alta' + (id ? '?id=' + encodeURIComponent(id) : ''), '_blank');
+}
 function registrarDesde(tipo) {
   irA('mejora');
   const s = document.getElementById('m_tipo');

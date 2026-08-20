@@ -91,6 +91,14 @@ POST /cma/mejora
 La aplicación (`/cma-app`) es una página web servida por esta misma API: se abre
 desde cualquier celular o computador con la URL de Railway, sin instalar nada.
 
+**Hoja de alta imprimible** (`/alta`): el equipo llena un formulario breve
+(medicamentos, cuidados, control, teléfono) y genera la hoja escrita que exige
+el requisito 5 del alta (§9.9.3): señales de alarma fijas del protocolo, ruta de
+urgencia y 131, espacio de firma, y los códigos QR de las encuestas de 24 h y
+día 7 ya vinculados al código del caso. Se imprime o se guarda como PDF desde el
+navegador. El nombre del paciente se escribe a mano al entregarla: la página
+solo usa el código del caso (nunca nombre ni RUT).
+
 **Persistencia de eventos** (`POST /cma/evento`), en tres capas:
 
 1. **Disco del servidor** (`eventos_cma.jsonl`): automática, sobrevive reinicios.
