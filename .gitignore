@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .venv/
 eventos_cma.jsonl
+encuestas_cma.jsonl

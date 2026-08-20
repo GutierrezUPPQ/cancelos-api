@@ -32,6 +32,10 @@ def torre():
 def cma_app():
     return _html("cma.html", "<h1>Modulo CMA - archivo cma.html no encontrado</h1>")
 
+@app.get("/encuesta", response_class=HTMLResponse)
+def encuesta():
+    return _html("encuesta.html", "<h1>Encuesta CMA - archivo encuesta.html no encontrado</h1>")
+
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
 # ═══════════════════════════════════════════════
@@ -498,6 +502,113 @@ def _enviar_sheets(e):
 
 EVENTOS_CMA = _cargar_eventos()
 
+# ── Encuestas al paciente: QoR-15E basal y 24 h + control dia 7 ──
+# El enlace lleva solo el id de episodio (seudonimizado, Anexo O.5): sin nombre ni RUT.
+# Puntaje QoR-15E: items 1-10 directos, 11-15 invertidos (10 - respuesta del paciente).
+# Prioridad segun reglas de la plataforma de seguimiento: P1 alarma explicita ·
+# P2 QoR<118, caida >=6, solicita llamada o hallazgo no vital · P3 completa sin
+# gatillos · GRIS incompleta (nunca equivale a evolucion normal). Cierre humano.
+ENCUESTAS_FILE = os.path.join(os.path.dirname(__file__), "encuestas_cma.jsonl")
+MOMENTOS_ENCUESTA = ("basal", "h24", "d7")
+
+def _cargar_encuestas():
+    encs = []
+    try:
+        with open(ENCUESTAS_FILE, encoding="utf-8") as f:
+            for linea in f:
+                linea = linea.strip()
+                if linea:
+                    try: encs.append(json.loads(linea))
+                    except Exception: pass
+    except FileNotFoundError:
+        pass
+    return encs
+
+def _guardar_encuesta(e):
+    try:
+        with _ev_lock, open(ENCUESTAS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+        return True
+    except Exception:
+        return False
+
+ENCUESTAS_CMA = _cargar_encuestas()
+
+def _puntaje_qor(respuestas):
+    if not isinstance(respuestas, list) or len(respuestas) != 15:
+        return None
+    total = 0
+    for i, r in enumerate(respuestas):
+        try: v = int(r)
+        except (TypeError, ValueError): return None
+        if v < 0 or v > 10: return None
+        total += v if i < 10 else 10 - v
+    return total
+
+def _basal_de(id_caso):
+    if not id_caso: return None
+    for e in reversed(ENCUESTAS_CMA):
+        if e.get("id_caso") == id_caso and e.get("momento") == "basal" and e.get("total") is not None:
+            return e["total"]
+    return None
+
+def registrar_encuesta(d):
+    momento = str(d.get("momento", ""))
+    if momento not in MOMENTOS_ENCUESTA:
+        return {"error": f"momento invalido: '{momento}'", "momentos_validos": list(MOMENTOS_ENCUESTA)}
+    ahora = datetime.now()
+    id_caso = str(d.get("id_caso", "")).strip()[:40]
+    alarma = bool(d.get("alarma", False))
+    llamada = bool(d.get("quiere_llamada", False))
+    total = _puntaje_qor(d.get("respuestas")) if momento in ("basal", "h24") else None
+    delta = None
+    if momento == "h24" and total is not None:
+        basal = _basal_de(id_caso)
+        if basal is not None: delta = total - basal
+    extra = {}
+    if momento == "d7":
+        try: extra["dolor_eva"] = max(0, min(10, int(d.get("dolor_eva")))) if d.get("dolor_eva") is not None else None
+        except (TypeError, ValueError): extra["dolor_eva"] = None
+        extra["herida_problema"] = bool(d.get("herida_problema", False))
+        extra["reconsulta"] = bool(d.get("reconsulta", False))
+        extra["actividad"] = str(d.get("actividad", ""))[:20]
+
+    gatillos = []
+    if momento == "h24":
+        if total is None: gatillos = None  # GRIS
+        else:
+            if total < 118: gatillos.append("QoR bajo 118")
+            if delta is not None and delta <= -6: gatillos.append("caida de 6 o mas vs basal")
+    elif momento == "basal":
+        if total is None: gatillos = None
+    elif momento == "d7":
+        if extra.get("reconsulta"): gatillos.append("consulto en urgencia")
+        if extra.get("herida_problema"): gatillos.append("problema de herida")
+        if extra.get("dolor_eva") is not None and extra["dolor_eva"] > 4: gatillos.append("dolor sobre 4 (EVA)")
+    if llamada and gatillos is not None: gatillos.append("solicita llamada")
+    if not id_caso and gatillos is not None: gatillos.append("sin id de episodio: conciliar")
+
+    if alarma:
+        prioridad, motivo = "P1", "Sintoma de alarma declarado: revision humana inmediata (la alarma prevalece sobre todo)"
+    elif gatillos is None:
+        prioridad, motivo = "GRIS", "Encuesta incompleta o sin puntaje: nunca se interpreta como evolucion normal"
+    elif gatillos:
+        prioridad, motivo = "P2", " · ".join(gatillos)
+    else:
+        prioridad, motivo = "P3", "Completa y sin gatillos"
+
+    reg = {"id_caso": id_caso, "momento": momento, "fecha": str(ahora.date()), "hora": ahora.strftime("%H:%M:%S"),
+           "total": total, "delta": delta, "prioridad": prioridad, "motivo": motivo,
+           "alarma": alarma, "quiere_llamada": llamada,
+           "comentario": str(d.get("comentario", ""))[:500], **extra}
+    ENCUESTAS_CMA.append(reg)
+    _guardar_encuesta(reg)
+    _enviar_sheets({"tipo_registro": "encuesta", **reg})
+    return {"registrado": True, "prioridad": prioridad,
+            "mensaje": ("Gracias. Sus respuestas indican que el equipo debe contactarle: si ahora mismo se siente mal, "
+                        "llame a Urgencia o al 131 (SAMU) sin esperar." if prioridad in ("P1", "P2")
+                        else "¡Gracias! Sus respuestas quedaron registradas y el equipo las revisara.")}
+
 # Referencias externas (BADS/GIRFT): comparativas, NUNCA metas locales automaticas (Anexo I).
 REFERENCIAS_CMA = {
     "pernoctacion_no_planificada": {"ref_pct": 2.0,  "fuente": "BADS/GIRFT"},
@@ -570,7 +681,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.3.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.4.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):
@@ -660,6 +771,22 @@ def endpoint_cma_evento(body: dict):
     sheets = _enviar_sheets(evento)
     if sheets is not None: out["respaldado_en_sheets"] = sheets
     return out
+
+@app.post("/cma/encuesta")
+def endpoint_cma_encuesta(body: dict):
+    # Publico: lo contesta el paciente desde el enlace. Solo id de episodio, sin datos personales.
+    try: return registrar_encuesta(body)
+    except Exception as e: raise Exception(str(e))
+
+@app.get("/cma/encuestas")
+def endpoint_cma_encuestas(id_caso: str = ""):
+    encs = [e for e in ENCUESTAS_CMA if not id_caso or e.get("id_caso") == id_caso]
+    encs = list(reversed(encs))[:500]
+    abiertas = {"P1": 0, "P2": 0, "GRIS": 0}
+    for e in encs:
+        if e.get("prioridad") in abiertas: abiertas[e["prioridad"]] += 1
+    return {"total": len(encs), "colas": abiertas, "encuestas": encs,
+            "nota": "Prioridad determinística y versionada; el cierre de cada alerta es humano. GRIS nunca equivale a evolucion normal."}
 
 @app.get("/cma/indicadores")
 def endpoint_cma_indicadores(total_casos: int = 0):
