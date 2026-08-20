@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoja de alta — Cirugía Mayor Ambulatoria · Hospital de Quilpué</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#F5F8FA;--panel:#FFFFFF;--border:#D8E2E8;--ink:#1E2E39;--muted:#5C6E7B;
+  --azul:#0B76A6;--azul2:#155FBF;--verde:#1F7A41;--verde-bg:#E6F2EA;--rojo:#B3352E;--rojo-bg:#FAE9E8;
+}
+html{background:var(--paper)}
+body{min-height:100vh;background:var(--paper);color:var(--ink);
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:18px 14px 60px}
+header.app{padding:6px 0 14px;border-bottom:2px solid var(--azul)}
+h1{font-size:22px;line-height:1.25}
+.sub{color:var(--muted);font-size:14px;margin-top:4px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px;box-shadow:0 1px 3px rgba(26,43,54,.08)}
+.card h2{font-size:15px;color:var(--azul);letter-spacing:.4px;margin-bottom:10px;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;font-size:12px;font-weight:700;color:var(--muted);gap:4px}
+input[type=text],input[type=date],input[type=time],textarea,select{width:100%;font-size:15px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--paper);color:var(--ink);font-family:inherit;font-weight:400}
+textarea{min-height:64px;resize:vertical}
+label.chk{display:flex;gap:10px;align-items:flex-start;padding:7px 2px;font-size:14px;font-weight:400;color:var(--ink);cursor:pointer}
+label.chk input{width:20px;height:20px;flex:0 0 auto;margin-top:1px;accent-color:var(--azul)}
+.btn{display:inline-block;font-size:16px;font-weight:800;padding:13px 22px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--azul),var(--azul2));color:#fff;cursor:pointer;margin-top:14px}
+.btn.sec{background:var(--panel);color:var(--azul);border:2px solid var(--azul)}
+.hint{color:var(--muted);font-size:13px;margin-top:6px}
+
+/* ───────── hoja imprimible ───────── */
+#hoja{background:#fff;color:#111;border:1px solid var(--border);border-radius:14px;margin-top:20px;padding:26px 30px;box-shadow:0 1px 3px rgba(26,43,54,.08)}
+#hoja .enc{display:flex;justify-content:space-between;gap:14px;border-bottom:3px solid #0B76A6;padding-bottom:10px}
+#hoja .enc h2{font-size:19px;color:#0B76A6;text-transform:none;letter-spacing:0}
+#hoja .enc .hosp{font-size:13px;color:#444}
+#hoja .cod{font-size:13px;text-align:right;color:#444}
+#hoja .cod b{font-size:17px;color:#111}
+#hoja section{margin-top:16px}
+#hoja h3{font-size:14px;color:#0B76A6;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #D8E2E8;padding-bottom:3px;margin-bottom:7px}
+#hoja p,#hoja li{font-size:14px;line-height:1.55}
+#hoja ul{padding-left:20px}
+#hoja .linea{border-bottom:1px dotted #999;min-height:20px;display:inline-block;min-width:220px}
+#hoja table{width:100%;border-collapse:collapse;margin-top:4px}
+#hoja th,#hoja td{border:1px solid #C9D6DE;padding:6px 8px;font-size:13px;text-align:left}
+#hoja th{background:#EEF4F8;color:#0B4F6E}
+#hoja .alarma-caja{border:2.5px solid #B3352E;background:#FAE9E8;border-radius:10px;padding:12px 14px;margin-top:8px}
+#hoja .alarma-caja h3{color:#B3352E;border:none;margin-bottom:5px}
+#hoja .alarma-caja .fono{background:#B3352E;color:#fff;border-radius:8px;padding:8px 12px;font-weight:800;font-size:14px;margin-top:8px;text-align:center}
+#hoja .qrs{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
+#hoja .qrs .q{text-align:center;font-size:12px;color:#444}
+#hoja .qrs img{width:120px;height:120px;border:1px solid #D8E2E8;border-radius:8px;background:#fff}
+#hoja .firma{display:flex;gap:30px;margin-top:22px;flex-wrap:wrap}
+#hoja .firma div{flex:1;min-width:200px;border-top:1px solid #666;padding-top:4px;font-size:12px;color:#444;text-align:center}
+#hoja .pie-hoja{margin-top:14px;font-size:11px;color:#666;border-top:1px solid #D8E2E8;padding-top:6px}
+
+@media print{
+  body{background:#fff}
+  .solo-pantalla{display:none !important}
+  .wrap{max-width:none;padding:0}
+  #hoja{border:none;box-shadow:none;border-radius:0;padding:0;margin-top:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="app solo-pantalla">
+  <h1>🖨️ Hoja de alta para el paciente</h1>
+  <div class="sub">Hospital de Quilpué · Cirugía Mayor Ambulatoria · cubre los 8 requisitos del alta (PSQ-CMA-01 §9.9.3)</div>
+</header>
+
+<!-- ═══ FORMULARIO (solo pantalla) ═══ -->
+<div class="card solo-pantalla">
+  <h2>1 · Datos del caso</h2>
+  <div class="grid">
+    <label class="f">CÓDIGO DEL CASO (EP-001)<input type="text" id="f_id" placeholder="EP-001"></label>
+    <label class="f">FECHA DE LA CIRUGÍA<input type="date" id="f_fecha"></label>
+    <label class="f">CIRUGÍA REALIZADA (EN PALABRAS SIMPLES)<input type="text" id="f_cx" placeholder="ej: operación de hernia inguinal derecha"></label>
+    <label class="f">EQUIPO / ESPECIALIDAD<input type="text" id="f_esp" placeholder="ej: Cirugía General"></label>
+  </div>
+  <div class="hint">El nombre del paciente NO se escribe aquí: la hoja trae un espacio para escribirlo a mano al entregarla. Así el sistema digital nunca guarda nombre ni RUT.</div>
+</div>
+
+<div class="card solo-pantalla">
+  <h2>2 · Medicamentos para la casa</h2>
+  <div class="grid">
+    <label class="f">ANALGÉSICO 1<input type="text" id="f_m1" value="Paracetamol 1 g cada 8 horas, por 5 días, con horario fijo (no esperar el dolor)"></label>
+    <label class="f">ANALGÉSICO 2 (SI CORRESPONDE)<input type="text" id="f_m2" placeholder="ej: Ibuprofeno 400 mg cada 8 horas por 3 días, después de comer"></label>
+    <label class="f">RESCATE / OTRO (SI CORRESPONDE)<input type="text" id="f_m3" placeholder="ej: si el dolor supera 6 de 10 pese a lo anterior, consultar"></label>
+    <label class="f">SU MEDICACIÓN HABITUAL<input type="text" id="f_mh" value="Retomar todos sus remedios de siempre desde hoy, salvo indicación distinta escrita aquí"></label>
+  </div>
+</div>
+
+<div class="card solo-pantalla">
+  <h2>3 · Cuidados en la casa</h2>
+  <div class="grid">
+    <label class="f">HERIDA / CURACIÓN<input type="text" id="f_her" value="Mantener el parche limpio y seco; puede ducharse desde mañana sin frotar la herida"></label>
+    <label class="f">COMIDA<input type="text" id="f_die" value="Hoy: líquidos y comida liviana. Desde mañana: alimentación normal si no hay náuseas"></label>
+    <label class="f">REPOSO Y ACTIVIDAD<input type="text" id="f_rep" value="Hoy: reposo en casa acompañado. No conducir, no firmar documentos ni tomar alcohol por 24 horas"></label>
+    <label class="f">INDICACIÓN EXTRA (OPCIONAL)<input type="text" id="f_extra" placeholder="ej: usar faja, hielo local 15 min cada 4 h, etc."></label>
+  </div>
+</div>
+
+<div class="card solo-pantalla">
+  <h2>4 · Control y contacto</h2>
+  <div class="grid">
+    <label class="f">CONTROL AGENDADO (FECHA)<input type="date" id="f_ctrl"></label>
+    <label class="f">LUGAR / MODO DEL CONTROL<input type="text" id="f_ctrl_lugar" value="Policlínico de la especialidad, Hospital de Quilpué"></label>
+    <label class="f">TELÉFONO DE CONTACTO DIURNO<input type="text" id="f_fono" placeholder="ej: (32) 233 XXXX, lunes a viernes 8:00–17:00"></label>
+    <label class="f">LLAMADA DE SEGUIMIENTO<input type="text" id="f_llamada" value="El equipo lo llamará entre 24 y 48 horas después de la cirugía"></label>
+  </div>
+  <div class="hint">Los códigos QR de las encuestas de 24 horas y del día 7 se generan solos con el código del caso.</div>
+  <button class="btn" onclick="generar()">GENERAR HOJA</button>
+  <button class="btn sec" onclick="window.print()">🖨️ IMPRIMIR / GUARDAR PDF</button>
+</div>
+
+<!-- ═══ HOJA IMPRIMIBLE ═══ -->
+<div id="hoja">
+  <div class="enc">
+    <div>
+      <h2>Indicaciones al alta · Cirugía Mayor Ambulatoria</h2>
+      <div class="hosp">Hospital de Quilpué · Servicio de Salud Viña del Mar–Quillota</div>
+    </div>
+    <div class="cod">Código del caso<br><b id="h_id">EP-___</b><br><span id="h_fecha"></span></div>
+  </div>
+
+  <section>
+    <p><b>Nombre del paciente:</b> <span class="linea"></span> &nbsp; (escrito a mano al entregar)</p>
+    <p style="margin-top:4px"><b>Cirugía realizada:</b> <span id="h_cx">—</span> · <span id="h_esp"></span></p>
+  </section>
+
+  <section>
+    <h3>Sus medicamentos</h3>
+    <table>
+      <tr><th style="width:30%">Qué tomar</th><th>Cómo</th></tr>
+      <tbody id="h_meds"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3>Cuidados en la casa</h3>
+    <ul id="h_cuidados"></ul>
+  </section>
+
+  <section class="alarma-caja">
+    <h3>⚠️ Consulte de inmediato si presenta cualquiera de estos signos</h3>
+    <ul>
+      <li>Sangrado que empapa el parche o no se detiene con presión</li>
+      <li>Dolor fuerte que no calma con los medicamentos indicados</li>
+      <li>Fiebre de 38 °C o más</li>
+      <li>Vómitos repetidos que impiden tomar líquidos o medicamentos</li>
+      <li>Dificultad para orinar por más de 8 horas</li>
+      <li>Herida muy roja, hinchada o con secreción de mal olor</li>
+      <li>Dificultad para respirar, dolor al pecho o desmayo</li>
+      <li id="h_alarma_extra" style="display:none"></li>
+    </ul>
+    <div class="fono">🚑 Urgencia del Hospital de Quilpué (24 horas) · Emergencia vital: llame al 131 (SAMU)</div>
+  </section>
+
+  <section>
+    <h3>Su control y contacto</h3>
+    <ul>
+      <li id="h_ctrl">Control agendado: —</li>
+      <li id="h_fono">Teléfono de contacto: —</li>
+      <li id="h_llamada">—</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Cuéntenos cómo se recupera (encuestas de 5 minutos)</h3>
+    <p>Escanee el código con la cámara de su teléfono en el momento indicado. La encuesta no reemplaza a la Urgencia ni al 131.</p>
+    <div class="qrs">
+      <div class="q"><img id="qr24" alt="QR encuesta 24 horas"><br><b>Mañana</b><br>(a las 24 horas)</div>
+      <div class="q"><img id="qr7" alt="QR encuesta día 7"><br><b>En una semana</b><br>(día 7)</div>
+    </div>
+  </section>
+
+  <div class="firma">
+    <div>Profesional que entrega y explica<br>(nombre, cargo y firma)</div>
+    <div>Paciente o acompañante responsable<br>(recibí y comprendí las indicaciones)</div>
+  </div>
+
+  <div class="pie-hoja">
+    Documento de apoyo del protocolo PSQ-CMA (v2.0) · Hospital de Quilpué. Esta hoja acompaña —no reemplaza— la explicación de palabra del equipo.
+    El sistema digital identifica su atención solo por el código del caso: no registra su nombre ni su RUT.
+  </div>
+</div>
+
+</div>
+<script>
+function val(id){ return document.getElementById(id).value.trim(); }
+function esc(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fechaCL(iso){
+  if(!iso) return '';
+  const [a,m,d] = iso.split('-');
+  return `${d}-${m}-${a}`;
+}
+function generar(){
+  const id = val('f_id') || 'EP-___';
+  document.getElementById('h_id').textContent = id;
+  document.getElementById('h_fecha').textContent = val('f_fecha') ? 'Cirugía: ' + fechaCL(val('f_fecha')) : '';
+  document.getElementById('h_cx').textContent = val('f_cx') || '—';
+  document.getElementById('h_esp').textContent = val('f_esp');
+
+  const meds = [
+    ['f_m1','Analgésico'], ['f_m2','Analgésico'], ['f_m3','Rescate'], ['f_mh','Sus remedios de siempre'],
+  ].filter(([f]) => val(f));
+  document.getElementById('h_meds').innerHTML = meds.length
+    ? meds.map(([f,t]) => `<tr><td><b>${esc(t)}</b></td><td>${esc(val(f))}</td></tr>`).join('')
+    : '<tr><td colspan="2">Según receta entregada</td></tr>';
+
+  const cuidados = [
+    ['f_her','Herida'], ['f_die','Comida'], ['f_rep','Reposo y actividad'], ['f_extra','Además'],
+  ].filter(([f]) => val(f));
+  document.getElementById('h_cuidados').innerHTML =
+    cuidados.map(([f,t]) => `<li><b>${esc(t)}:</b> ${esc(val(f))}</li>`).join('');
+
+  document.getElementById('h_ctrl').textContent = 'Control agendado: ' +
+    (val('f_ctrl') ? fechaCL(val('f_ctrl')) + ' · ' : '') + (val('f_ctrl_lugar') || 'por confirmar');
+  document.getElementById('h_fono').textContent = 'Teléfono de contacto: ' + (val('f_fono') || 'ver tarjeta entregada');
+  document.getElementById('h_llamada').textContent = val('f_llamada') || 'El equipo lo llamará entre 24 y 48 horas después de la cirugía';
+
+  const enc = m => `${location.origin}/encuesta?id=${encodeURIComponent(id)}&m=${m}`;
+  const qr = u => 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(u);
+  document.getElementById('qr24').src = qr(enc('h24'));
+  document.getElementById('qr7').src  = qr(enc('d7'));
+  window.scrollTo({top: document.getElementById('hoja').offsetTop - 10, behavior: 'smooth'});
+}
+// Prefill: ?id=EP-001 y fecha de hoy
+const p = new URLSearchParams(location.search);
+if (p.get('id')) document.getElementById('f_id').value = p.get('id');
+document.getElementById('f_fecha').value = new Date().toISOString().slice(0,10);
+generar();
+</script>
+</body>
+</html>
