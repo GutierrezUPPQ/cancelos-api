@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 eventos_cma.jsonl
 encuestas_cma.jsonl
+casos_pbm.jsonl

@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBM·IA Perioperatorio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* ── Tokens · diseño dark-first (identidad PBM·IA: sangre sobre noche cálida) ── */
+:root{
+  --bg:#0B0A0E; --bg2:#121017; --card:#161219; --card2:#1B1721; --line:#2A2233; --line2:#221C2A;
+  --ink:#F7F3F1; --mut:#B9AEB6; --dim:#7E7480;
+  --acc:#E63B54; --acc2:#F0566B; --acc-ink:#FFFFFF; --acc-soft:rgba(230,59,84,.14);
+  --ok:#34D399; --warn:#FBBF24; --bad:#F87171; --sky:#38BDF8;
+  --ok-soft:rgba(52,211,153,.13); --warn-soft:rgba(251,191,36,.13); --bad-soft:rgba(248,113,113,.13);
+  --grid:#241E2B; --shadow:0 10px 30px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F7F3F1; --bg2:#F1EBE7; --card:#FFFFFF; --card2:#FBF8F6; --line:#E5DCD8; --line2:#EEE7E3;
+    --ink:#1A1620; --mut:#6E6470; --dim:#988D9A;
+    --acc:#C92B44; --acc2:#E63B54; --acc-ink:#FFFFFF; --acc-soft:rgba(201,43,68,.09);
+    --ok:#047857; --warn:#B45309; --bad:#B91C1C; --sky:#0369A1;
+    --ok-soft:rgba(4,120,87,.10); --warn-soft:rgba(180,83,9,.10); --bad-soft:rgba(185,28,28,.10);
+    --grid:#ECE4E0; --shadow:0 10px 30px rgba(26,22,32,.08);
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F7F3F1; --bg2:#F1EBE7; --card:#FFFFFF; --card2:#FBF8F6; --line:#E5DCD8; --line2:#EEE7E3;
+  --ink:#1A1620; --mut:#6E6470; --dim:#988D9A;
+  --acc:#C92B44; --acc2:#E63B54; --acc-ink:#FFFFFF; --acc-soft:rgba(201,43,68,.09);
+  --ok:#047857; --warn:#B45309; --bad:#B91C1C; --sky:#0369A1;
+  --ok-soft:rgba(4,120,87,.10); --warn-soft:rgba(180,83,9,.10); --bad-soft:rgba(185,28,28,.10);
+  --grid:#ECE4E0; --shadow:0 10px 30px rgba(26,22,32,.08);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:14.5px; line-height:1.5; min-height:100vh;
+}
+a{color:var(--sky);text-decoration:none} a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+.mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+.serif{font-family:'Instrument Serif',Georgia,serif}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px 72px}
+
+/* ── Cabecera ── */
+header.app{padding:26px 0 0}
+.masthead{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.brand h1{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:44px;line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+.brand h1 em{font-style:italic;color:var(--acc)}
+.brand .tag{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:8px}
+.src-pill{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;
+  border:1px solid var(--line);border-radius:999px;padding:7px 13px;background:var(--card);color:var(--mut)}
+.src-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.src-pill.live .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.src-pill.warn .dot{background:var(--warn)}
+.src-pill.demo .dot{background:var(--acc)}
+nav.tabs{display:flex;gap:4px;margin:22px 0 0;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);padding:12px 16px 11px;white-space:nowrap}
+nav.tabs button:hover{color:var(--mut)}
+nav.tabs button.on{color:var(--ink);border-bottom-color:var(--acc)}
+.banner{display:flex;gap:10px;align-items:baseline;border:1px solid var(--line);border-left:3px solid var(--warn);
+  background:var(--card);border-radius:10px;padding:11px 14px;margin:16px 0 0;font-size:13.5px;color:var(--mut)}
+.banner.bad{border-left-color:var(--bad)}
+.banner b{color:var(--ink)}
+
+/* ── Tarjetas y grillas ── */
+main{margin-top:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px}
+.card h2{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 14px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.card h2 .hint{letter-spacing:.02em;text-transform:none;color:var(--dim);font-size:11px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+@media(max-width:940px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* ── KPIs ── */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:16px}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px 12px}
+.kpi b{display:block;font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi b small{font-size:18px;color:var(--mut)}
+.kpi .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+.kpi .sub{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+.kpi.hero b{color:var(--acc)}
+
+/* ── Pilares ── */
+.pilar{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.pilar .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--acc)}
+.pilar h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:21px;margin:6px 0 2px}
+.pilar p{margin:0;font-size:12.5px;color:var(--mut)}
+.pilar .big{font-family:'Instrument Serif',Georgia,serif;font-size:30px;margin-top:10px;font-variant-numeric:tabular-nums}
+.meter{position:relative;height:6px;border-radius:3px;background:var(--line2);margin-top:10px;overflow:visible}
+.meter i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--acc)}
+.meter u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--mut);border-radius:1px}
+.meter-lbl{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:6px}
+
+/* ── Pills de estado (nunca solo color) ── */
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.05em;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{color:var(--ok);background:var(--ok-soft)}
+.pill.warn{color:var(--warn);background:var(--warn-soft)}
+.pill.bad{color:var(--bad);background:var(--bad-soft)}
+.pill.dim{color:var(--dim);background:var(--line2)}
+.pill.acc{color:var(--acc2);background:var(--acc-soft)}
+
+/* ── Gráficos ── */
+.chart{position:relative;margin-top:4px}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{font-family:'JetBrains Mono',monospace;fill:var(--dim)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mut);margin:2px 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.tip{position:fixed;z-index:60;pointer-events:none;background:var(--card2);border:1px solid var(--line);border-radius:10px;
+  padding:8px 11px;font-size:12.5px;box-shadow:var(--shadow);max-width:290px;color:var(--ink)}
+.tip .t-h{font-weight:600}
+.tip .t-s{color:var(--mut);font-size:11.5px}
+
+/* ── Tabla ── */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.filters select,.filters input{width:auto;background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font:inherit;font-size:13px}
+.filters input{min-width:170px;flex:1}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.reg{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+table.reg th{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);background:var(--card2);position:sticky;top:0}
+table.reg td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top;font-variant-numeric:tabular-nums}
+table.reg tbody tr{cursor:pointer}
+table.reg tbody tr:hover{background:var(--acc-soft)}
+table.reg td .sub{color:var(--dim);font-size:11.5px}
+.delta-up{color:var(--ok);font-weight:600}
+.delta-flat{color:var(--dim)}
+
+/* ── Formularios (Evaluación / Datos) ── */
+label{display:block;font-size:12px;color:var(--mut);margin:0 0 4px}
+input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 10px;font:inherit}
+textarea{min-height:60px;resize:vertical}
+.frow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+.frow2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+@media(max-width:720px){.frow,.frow2{grid-template-columns:1fr 1fr}}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button.btn{appearance:none;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:var(--acc-ink)}
+button.btn:hover{background:var(--acc2)}
+button.ghost{appearance:none;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer;background:var(--card2);color:var(--ink)}
+button.ghost:hover{border-color:var(--acc)}
+button.mini{appearance:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;background:var(--card2);color:var(--mut)}
+button.mini:hover{color:var(--ink);border-color:var(--acc)}
+.note{font-size:12.5px;color:var(--dim);line-height:1.5}
+.plan{white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px;max-height:460px;overflow:auto}
+.semaforo{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--card2)}
+.semaforo .dot-big{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;flex:none;background:var(--line2);color:var(--ink)}
+.semaforo h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:23px;margin:0}
+.rec{border-left:3px solid var(--acc);background:var(--card2);border-radius:0 12px 12px 0;padding:11px 13px;margin:0 0 9px}
+.rec.ok{border-left-color:var(--ok)} .rec.warn{border-left-color:var(--warn)} .rec.bad{border-left-color:var(--bad)}
+.rec h4{margin:0 0 4px;font-size:14px}
+.rec p,.rec li{margin:0;font-size:13px;line-height:1.5;color:var(--mut)}
+.rec b{color:var(--ink)}
+.rec ul{margin:6px 0 0;padding-left:18px}
+.rec .ev{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);margin-top:6px}
+details.src{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-top:10px;background:var(--card2)}
+details.src summary{cursor:pointer;font-weight:600;font-size:13px}
+details.src .note{margin-top:8px}
+.links-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:var(--card2);color:var(--ink)!important;text-decoration:none!important}
+.chip:hover{border-color:var(--acc)}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--dim)} .kv dd{margin:0}
+
+/* ── Modal ficha ── */
+.modal-bk{position:fixed;inset:0;background:rgba(6,4,10,.6);backdrop-filter:blur(2px);z-index:50;display:grid;place-items:center;padding:20px}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:640px;width:100%;max-height:86vh;overflow:auto;padding:20px;box-shadow:var(--shadow)}
+.modal h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:24px;margin:0 0 2px}
+
+footer{margin-top:34px;border-top:1px solid var(--line);padding-top:14px;font-size:12px;color:var(--dim);line-height:1.6}
+
+@media (prefers-reduced-motion: no-preference){
+  .kpi,.pilar,.card{transition:border-color .15s}
+  .src-pill.live .dot{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.55}}
+}
+@media print{
+  body{background:#fff;color:#111}
+  header.app nav,.filters,.actions,.src-pill,button,.banner{display:none!important}
+  .card,.kpi,.pilar{border-color:#ddd;background:#fff;color:#111;box-shadow:none}
+  .plan{background:#fff;color:#111;border-color:#ccc;max-height:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="app">
+  <div class="masthead">
+    <div class="brand">
+      <h1>PBM<em>·IA</em> Perioperatorio</h1>
+      <div class="tag">Patient Blood Management · Hospital de Quilpué · UPPQ · Protocolo PBM-HQ-001-2025 v2.0</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+      <span class="src-pill" id="srcPill"><span class="dot"></span><span id="srcTxt">Conectando datos…</span></span>
+      <button class="mini" id="btnRefresh" title="Volver a leer la fuente de datos">↻ Actualizar datos</button>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="on" data-v="tablero">Tablero</button>
+    <button data-v="pacientes">Pacientes</button>
+    <button data-v="evaluacion">Evaluación</button>
+    <button data-v="datos">Datos</button>
+  </nav>
+  <div class="banner" id="banner" hidden></div>
+</header>
+
+<main>
+<!-- ══════════ TABLERO ══════════ -->
+<section id="v-tablero">
+  <div class="kpis" id="kpis"></div>
+  <div class="grid3" id="pilares"></div>
+
+  <div class="grid2">
+    <div class="card" style="grid-column:1/-1">
+      <h2>Respuesta al tratamiento · Hb inicial → Hb preoperatoria <span class="hint">cada fila es un paciente · pasa el cursor para el detalle</span></h2>
+      <div class="legend">
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="4.5" fill="none" stroke="var(--acc)" stroke-width="2"/></svg> Hb inicial</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="var(--acc)"/></svg> Hb preoperatoria</span>
+        <span><svg width="18" height="14"><line x1="1" y1="7" x2="17" y2="7" stroke="var(--ok)" stroke-width="2" stroke-dasharray="3 3"/></svg> Meta OMS (12 ♀ · 13 ♂)</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="4.5" fill="none" stroke="var(--dim)" stroke-width="2"/></svg> Sin control aún</span>
+      </div>
+      <div class="chart" id="chDumbbell"></div>
+    </div>
+    <div class="card">
+      <h2>Casos por mes <span class="hint">barras = casos · ▾ = GR transfundidas</span></h2>
+      <div class="chart" id="chMes"></div>
+    </div>
+    <div class="card">
+      <h2>Por servicio</h2>
+      <div class="chart" id="chServicio"></div>
+    </div>
+    <div class="card">
+      <h2>Tipo de anemia</h2>
+      <div class="chart" id="chAnemia"></div>
+    </div>
+    <div class="card">
+      <h2>Insights del programa <span class="hint">generados desde tus datos</span></h2>
+      <div id="insights"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ PACIENTES ══════════ -->
+<section id="v-pacientes" hidden>
+  <div class="card">
+    <h2>Registro PBM <span class="hint" id="regCount"></span></h2>
+    <div class="filters">
+      <select id="fServ"><option value="">Servicio · todos</option></select>
+      <select id="fRiesgo"><option value="">Riesgo · todos</option><option>Alto</option><option>Moderado</option><option>Bajo</option></select>
+      <select id="fUrg"><option value="">Urgencia · todas</option><option value="TS">Tiempo-sensible</option><option value="Electiva">Electiva</option><option value="Urgencia">Urgencia</option></select>
+      <select id="fCumpl"><option value="">Cumplimiento · todos</option><option>Completo</option><option>Parcial</option><option>No</option></select>
+      <input id="fBusca" type="search" placeholder="Buscar diagnóstico, cirugía, ID…">
+      <button class="mini" id="btnRut">👁 Mostrar ID completo</button>
+      <button class="mini" id="btnCopyCsv">⧉ Copiar CSV</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="reg">
+        <thead><tr>
+          <th>Ingreso</th><th>Paciente</th><th>Servicio</th><th>Diagnóstico · Cirugía</th><th>Urg.</th>
+          <th>Hb ini → pre</th><th>Tratamiento</th><th>GR</th><th>Riesgo</th><th>Cumpl. PBM</th>
+        </tr></thead>
+        <tbody id="regBody"></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px">Haz clic en una fila para ver la ficha completa y precargarla en Evaluación. Los ID se muestran enmascarados por defecto.</p>
+  </div>
+</section>
+
+<!-- ══════════ EVALUACIÓN (motor NEXUS PBM IA v3.0) ══════════ -->
+<section id="v-evaluacion" hidden>
+  <div class="grid2" style="margin-top:0">
+    <div class="card">
+      <h2>1 · Datos clínicos <span class="hint"><select id="preload" style="width:auto;padding:4px 8px;font-size:12px"><option value="">Precargar desde registro…</option></select></span></h2>
+      <div class="frow">
+        <div><label>Iniciales / ID local (no RUT)</label><input id="e_id" placeholder="Ej. CG-031"></div>
+        <div><label>Edad</label><input id="e_edad" type="number" min="15" max="110" value="64"></div>
+        <div><label>Sexo</label><select id="e_sexo"><option value="M">Hombre</option><option value="F">Mujer</option></select></div>
+      </div>
+      <div class="frow">
+        <div><label>Peso (kg)</label><input id="e_peso" type="number" step="0.1" value="72"></div>
+        <div><label>ASA</label><select id="e_asa"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
+        <div><label>Servicio</label><select id="e_serv"><option>Cirugia</option><option>Ginecologia</option><option>Urologia</option><option>Traumatologia</option><option>Otro</option></select></div>
+      </div>
+      <div class="frow">
+        <div style="grid-column:span 2"><label>Cirugía</label><input id="e_cx" value="Gastrectomía"></div>
+        <div><label>Urgencia</label><select id="e_urg"><option value="Electiva">Electiva</option><option value="TS" selected>Tiempo-sensible</option><option value="Urgencia">Urgencia</option></select></div>
+      </div>
+      <div class="frow">
+        <div><label>Días hasta cirugía</label><input id="e_dias" type="number" value="14"></div>
+        <div><label>Riesgo de sangrado</label><select id="e_riesgo"><option value="auto">Auto (Anexo N3)</option><option>Bajo</option><option selected>Moderado</option><option>Alto</option></select></div>
+        <div><label>Pérdida estimada (mL)</label><input id="e_ebl" type="number" value="400"></div>
+      </div>
+      <h2 style="margin-top:16px">2 · Laboratorio</h2>
+      <div class="frow">
+        <div><label>Hb actual (g/dL)</label><input id="e_hb" type="number" step="0.1" value="8.3"></div>
+        <div><label>Hto (%)</label><input id="e_hto" type="number" step="0.1" value="26"></div>
+        <div><label>VCM (fL)</label><input id="e_vcm" type="number" value="74"></div>
+      </div>
+      <div class="frow">
+        <div><label>Ferritina (ng/mL)</label><input id="e_ferr" type="number" step="0.1" placeholder="si falta, lo marca"></div>
+        <div><label>TSAT (%)</label><input id="e_tsat" type="number" step="0.1"></div>
+        <div><label>Creatinina (mg/dL)</label><input id="e_cr" type="number" step="0.01" value="0.9"></div>
+      </div>
+      <h2 style="margin-top:16px">3 · Comorbilidad y seguridad</h2>
+      <div class="frow2">
+        <div><label>Cardiopatía / isquemia / ICC</label><select id="e_cv"><option value="no">No</option><option value="si">Sí</option></select></div>
+        <div><label>EPOC / fragilidad extrema</label><select id="e_epoc"><option value="no">No</option><option value="si">Sí</option></select></div>
+      </div>
+      <div class="frow2">
+        <div><label>Contraindicación TXA</label>
+          <select id="e_txaci"><option value="no">No</option><option value="tep">TEP / TVP aguda</option><option value="irc">ClCr &lt; 10 mL/min</option><option value="conv">Convulsiones por TXA</option></select></div>
+        <div><label>Checklist EPO</label><select id="e_epook"><option value="si">Sin CI obvia</option><option value="no">CI o incompleto</option></select></div>
+      </div>
+      <div><label>Notas / anticoagulantes / alergias</label><textarea id="e_notas" placeholder="Ej. AAS suspendida, no DOAC, HTA controlada"></textarea></div>
+      <div class="actions">
+        <button class="btn" id="btnEval">Generar plan PBM</button>
+        <button class="ghost" id="btnDemoCaso">Caso tipo Quilpué</button>
+        <button class="ghost" id="btnPrint">Imprimir / PDF</button>
+        <button class="ghost" id="btnCopyPlan">Copiar plan</button>
+      </div>
+      <p class="note" style="margin-top:10px">Apoyo a decisión — no sustituye el juicio clínico ni la ficha. No registre RUT ni datos identificables aquí.</p>
+    </div>
+
+    <div class="card">
+      <div class="semaforo">
+        <div class="dot-big" id="semDot">—</div>
+        <div>
+          <div class="tag mono" style="font-size:10px;letter-spacing:.14em;color:var(--dim)">ESTADO PBM · SEMÁFORO LOCAL</div>
+          <h3 id="semTitle">Complete datos y genere el plan</h3>
+          <div class="note" id="semTxt">Protocolo Quilpué: VERDE apto · AMARILLO evaluar · ROJO no programar electiva.</div>
+        </div>
+      </div>
+      <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin:0 0 12px">
+        <div class="kpi"><b id="kHb" style="font-size:24px">—</b><span class="lbl">Hb / meta</span></div>
+        <div class="kpi"><b id="kFe" style="font-size:24px">—</b><span class="lbl">Déficit Fe (Ganzoni)</span></div>
+        <div class="kpi"><b id="kAbl" style="font-size:24px">—</b><span class="lbl">Pérdida permisible</span></div>
+        <div class="kpi"><b id="kGat" style="font-size:24px">—</b><span class="lbl">Gatillo GR</span></div>
+      </div>
+      <div id="recs"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h2>Plan clínico para ficha / UPPQ</h2>
+    <pre class="plan" id="plan">Pulse «Generar plan PBM».</pre>
+  </div>
+</section>
+
+<!-- ══════════ DATOS ══════════ -->
+<section id="v-datos" hidden>
+  <div class="grid2" style="margin-top:0">
+    <div class="card">
+      <h2>Fuente de datos</h2>
+      <dl class="kv">
+        <dt>Fuente activa</dt><dd id="dSrc">—</dd>
+        <dt>Registros</dt><dd id="dN">—</dd>
+        <dt>Última lectura</dt><dd id="dTs">—</dd>
+        <dt>Planilla Drive</dt><dd id="dSheet" class="mono" style="font-size:12px;word-break:break-all">—</dd>
+      </dl>
+      <div style="margin-top:12px"><label>ID o URL de la planilla «Datos PBM» en Drive</label>
+        <input id="sheetId" class="mono" style="font-size:12px" placeholder="1QECBJmmivb3g2PIdKF0hL_gaLnhclZvkDBUcqtrEVWc">
+      </div>
+      <div class="actions">
+        <button class="btn" id="btnSheetSave">Guardar y reconectar</button>
+        <button class="ghost" id="btnRefresh2">↻ Releer ahora</button>
+      </div>
+      <details class="src">
+        <summary>¿Cómo se conecta con mi Drive?</summary>
+        <div class="note">
+          <b>Abierta como artefacto en claude.ai:</b> la página lee la planilla directamente con tu conector de Google Drive (con tu propia sesión — la planilla no se hace pública y nadie sin acceso puede verla).<br><br>
+          <b>Desplegada en cancelos-api (Render):</b> el servidor entrega los casos desde <span class="mono">/pbm/casos</span>; si configuras el webhook de Apps Script (ver PBM_DRIVE.md del repositorio), esos casos vienen de esta misma planilla, sin RUT.<br><br>
+          <b>Siempre disponible:</b> exportar la planilla como CSV (Archivo → Descargar → CSV) e importarla aquí abajo — los datos quedan solo en este navegador.
+        </div>
+      </details>
+      <div class="links-row">
+        <a class="chip" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1QECBJmmivb3g2PIdKF0hL_gaLnhclZvkDBUcqtrEVWc/edit">Planilla Datos PBM</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://docs.google.com/forms/d/1Utof0lQ2wXn0k0ZzwUVgkgHBWhdUfTi-tD5owtgwCs0/viewform">➕ Nuevo caso (Formulario)</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1k1yLOy-L2ZDeUbXdxuECKvdB6IiKwFar">Carpeta Drive PBM</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://docs.google.com/document/d/1GNcWAA9eLlsKdYINWoAo8xCX11lC0hVmB8irbaQWGgQ/edit">Plan Comité</a>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Importar CSV / pegar desde la planilla</h2>
+      <p class="note">Sirve sin conexión: exporta la pestaña de respuestas como CSV, o selecciona el rango en Sheets (con encabezados) y pégalo aquí (Ctrl+V).</p>
+      <div style="margin-top:10px"><input type="file" id="csvFile" accept=".csv,.tsv,text/csv,text/tab-separated-values"></div>
+      <div style="margin-top:10px"><textarea id="pasteBox" style="min-height:110px" placeholder="…o pega aquí las celdas copiadas de la planilla (incluye la fila de encabezados)"></textarea></div>
+      <div class="actions">
+        <button class="btn" id="btnImport">Importar</button>
+        <button class="ghost" id="btnClearLocal">Borrar datos importados</button>
+      </div>
+      <h2 style="margin-top:18px">Preferencias</h2>
+      <div class="frow2">
+        <div><label>Costo unidad GR (CLP) — para el ahorro estimado</label><input id="prefCosto" type="number" value="100000"></div>
+        <div><label>Meta TXA en riesgo moderado-alto (%)</label><input id="prefMetaTxa" type="number" value="70"></div>
+      </div>
+      <p class="note">Privacidad: esta página no envía tus datos a ningún servicio externo. La lectura de Drive ocurre con tu propia cuenta; lo importado por CSV vive solo en este navegador.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  PBM·IA Perioperatorio v4.0 · Dr. Claudio Gutiérrez · UPPQ Hospital de Quilpué / SSVQ · Hospital Provincial Marga Marga.<br>
+  Tres pilares PBM: optimizar eritropoyesis · minimizar sangrado · optimizar tolerancia a la anemia. Herramienta de apoyo a decisión y gestión de programa; la ficha clínica es la fuente primaria.<br>
+  Fuentes: Protocolo PBM-HQ-001-2025 v2.0 · OMS 2021 · HAS 2024 · AABB · TRICC/TRISS · CRASH-2 · POISE-3 · Musallam 2011 · Leahy 2017.
+</footer>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+<div class="modal-bk" id="modalBk" hidden><div class="modal" id="modalBox" role="dialog" aria-modal="true"></div></div>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════════════
+   PBM·IA Perioperatorio — una sola página, tres puertas de datos:
+   1) Artefacto claude.ai  → conector Google Drive del espectador (mcp)
+   2) Desplegada en Render → GET /pbm/casos de cancelos-api
+   3) Cualquier navegador  → CSV importado / pegado (localStorage)
+   Sin datos reales embebidos: el repositorio es público.
+   ════════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SHEET_DEFAULT = '1QECBJmmivb3g2PIdKF0hL_gaLnhclZvkDBUcqtrEVWc';
+const FORM_URL = 'https://docs.google.com/forms/d/1Utof0lQ2wXn0k0ZzwUVgkgHBWhdUfTi-tD5owtgwCs0/viewform';
+
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('pbmia_'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('pbmia_'+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem('pbmia_'+k); }catch(e){} }
+};
+
+/* ── Normalización de valores chilenos de la planilla ── */
+function numCL(v){
+  if (v == null) return null;
+  let s = String(v).trim();
+  if (!s || /^(-|—|n\/?a|no aplica|s\/r)$/i.test(s)) return null;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,'').replace(',', '.');
+  else s = s.replace(',', '.');
+  const m = s.match(/-?\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : null;
+}
+function siNo(v){
+  const s = String(v ?? '').trim().toLowerCase();
+  if (!s || s==='-'||s==='—') return null;
+  if (/^s[ií]/.test(s)) return true;
+  if (/^no/.test(s)) return false;
+  return null;
+}
+function fechaCL(v){
+  const m = String(v ?? '').trim().match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (!m) return null;
+  let y = +m[3]; if (y < 100) y += 2000;
+  const d = new Date(y, +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0));
+  return isNaN(d) ? null : d;
+}
+const normKey = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+
+/* Mapa encabezado planilla → campo canónico (por coincidencia normalizada) */
+const HEADMAP = [
+  ['marcatemporal','ts'],['idpaciente','id'],['edad','edad'],['sexo','sexo'],['servicio','servicio'],
+  ['diagnosticoquirurgico','dx'],['tipocirugia','cx'],['urgencia','urgencia'],['medicoresponsable','medico'],
+  ['hbinicial','hb_ini'],['ferritina','ferritina'],['tsat','tsat'],['anemiapreop','anemia_preop'],
+  ['tipoanemia','tipo_anemia'],['tratamientoprev','tto'],['hierroivprep','fe_prod'],['dosishierromg','fe_dosis'],
+  ['dosisepoui','epo_dosis'],['epo','epo'],['tiempotratamientodias','dias_tto'],['fechacirugia','fecha_cx'],
+  ['riesgoaltosangrado','riesgo'],['asa','asa'],['usodetranexamico','txa'],['dosistranexamicomg','txa_dosis'],
+  ['tecnicaanestesica','anestesia'],['perdidasangreml','perdida_ml'],['cellsaver','cell_saver'],
+  ['hemostasiaquirurgica','hemostasia'],['grtransfundidas','gr'],['plaquetastransfundidas','plaquetas'],
+  ['plasmatransfundido','plasma'],['crioprecipitado','crio'],['gatillotransfusional','gatillo'],
+  ['indicaciontransfusion','indicacion_tx'],['fechatransfusion','fecha_tx'],['estanciadias','estancia'],
+  ['tipocomplicacion','tipo_complic'],['complicaciones','complic'],['eventotrombotico','trombo'],
+  ['reintervencion','reint'],['mortalidadhospitalaria','mort'],['fechaalta','fecha_alta'],
+  ['cumplimientopbm','cumpl'],['oportunidadesmejora','mejora'],['responsableregistro','responsable'],
+  ['hbpreoperatoria','hb_pre'],['fechaingresodatos','fecha_ing'],['txevitadas','tx_evitadas']
+];
+function mapHeader(h){
+  const k = normKey(h);
+  if (!k) return null;
+  for (const [pat, campo] of HEADMAP) if (k.includes(pat)) return campo;
+  return null;
+}
+
+/* Fila cruda (array de celdas) + encabezados → caso canónico */
+function toCaso(head, cells){
+  const raw = {};
+  head.forEach((campo, i) => { if (campo && raw[campo] === undefined) raw[campo] = (cells[i] ?? '').trim(); });
+  const c = {};
+  c.ts        = fechaCL(raw.ts) || fechaCL(raw.fecha_ing) || null;
+  c.id        = raw.id || '';
+  c.edad      = numCL(raw.edad);
+  const sx = normKey(raw.sexo);
+  c.sexo      = !sx ? null : (sx === 'f' || sx.startsWith('mujer') || sx.startsWith('fem')) ? 'F' : 'M';
+  c.servicio  = (raw.servicio||'Otro').replace(/\s+$/,'') || 'Otro';
+  c.dx        = raw.dx || ''; c.cx = raw.cx || '';
+  const u = normKey(raw.urgencia);
+  c.urgencia  = u.includes('tiempo') ? 'TS' : u.includes('electiva') ? 'Electiva' : u ? 'Urgencia' : null;
+  c.medico    = raw.medico || '';
+  c.hb_ini    = numCL(raw.hb_ini);
+  c.hb_pre    = numCL(raw.hb_pre);
+  c.ferritina = numCL(raw.ferritina);
+  c.tsat      = numCL(raw.tsat);
+  c.tipo_anemia = (raw.tipo_anemia||'').trim();
+  c.tto       = raw.tto || '';
+  c.fe_prod   = /venofer|ferinject|feramyl/i.test(raw.fe_prod||'') ? raw.fe_prod.trim() : null;
+  c.fe_iv     = !!c.fe_prod || /hierro iv|fe iv/i.test(raw.tto||'');
+  c.fe_dosis  = numCL(raw.fe_dosis);
+  c.epo       = siNo(raw.epo) ?? (numCL(raw.epo_dosis) > 0 || null);
+  c.epo_dosis = numCL(raw.epo_dosis);
+  c.dias_tto  = numCL(raw.dias_tto);
+  c.fecha_cx  = fechaCL(raw.fecha_cx);
+  const r = normKey(raw.riesgo);
+  c.riesgo    = r.includes('alto') ? 'Alto' : r.includes('moder') ? 'Moderado' : r.includes('bajo') ? 'Bajo' : null;
+  c.asa       = numCL(raw.asa);
+  c.txa       = siNo(raw.txa);
+  c.txa_dosis = numCL(raw.txa_dosis);
+  c.anestesia = raw.anestesia || '';
+  c.perdida_ml= numCL(raw.perdida_ml);
+  c.gr        = numCL(raw.gr) || 0;
+  c.gatillo   = numCL(raw.gatillo);
+  c.estancia  = numCL(raw.estancia);
+  c.complic   = siNo(raw.complic);
+  c.trombo    = siNo(raw.trombo);
+  c.mort      = siNo(raw.mort);
+  const cu = normKey(raw.cumpl);
+  c.cumpl     = cu.includes('completo') ? 'Completo' : cu.includes('parcial') ? 'Parcial' : cu==='no' ? 'No' : null;
+  c.mejora    = raw.mejora || '';
+  c.tx_evitadas = numCL(raw.tx_evitadas) || 0;
+  c.delta     = (c.hb_ini != null && c.hb_pre != null) ? +(c.hb_pre - c.hb_ini).toFixed(1) : null;
+  return c;
+}
+const filaValida = c => (c.id || c.dx || c.cx) && (c.edad != null || c.hb_ini != null);
+
+/* ── Parser CSV/TSV (con comillas) ── */
+function parseDelimited(text){
+  const delim = (text.split('\n')[0].match(/\t/g)||[]).length >= 2 ? '\t'
+              : (text.split('\n')[0].match(/;/g)||[]).length > (text.split('\n')[0].match(/,/g)||[]).length ? ';' : ',';
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){
+      if (ch === '"'){ if (text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim){ row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r'){
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some(c => c.trim() !== '')) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  if (cell !== '' || row.length){ row.push(cell); if (row.some(c => c.trim() !== '')) rows.push(row); }
+  return rows;
+}
+function casosDesdeTabla(rows){
+  let hi = rows.findIndex(r => r.some(c => normKey(c).includes('idpaciente')) || (r.some(c => normKey(c).includes('hbinicial')) && r.some(c => normKey(c).includes('servicio'))));
+  if (hi < 0) return [];
+  const head = rows[hi].map(mapHeader);
+  return rows.slice(hi + 1).map(r => toCaso(head, r)).filter(filaValida);
+}
+
+/* ── Parser del volcado markdown de Drive (read_file_content) ── */
+function casosDesdeDrive(texto){
+  const rows = [];
+  for (const lineaRaw of String(texto).split('\n')){
+    const linea = lineaRaw.trim();
+    if (!linea.startsWith('|')) continue;
+    const marcada = linea.replace(/\\\|/g, '\u0001');
+    let cells = marcada.split('|').map(c => c.replace(/\u0001/g,'|').replace(/\\(.)/g,'$1').trim());
+    if (cells.length && cells[0]==='') cells.shift();
+    if (cells.length && cells[cells.length-1]==='') cells.pop();
+    cells = cells.map(c => c.replace(/^\[merged\]\s*/,''));
+    if (cells.every(c => /^:?-{2,}:?$/.test(c) || c==='')) continue;
+    rows.push(cells);
+  }
+  return casosDesdeTabla(rows);
+}
+
+/* ── Datos de ejemplo (sintéticos, sin relación con pacientes reales) ── */
+const DEMO = [
+ ['01/03/2026','DEMO-01',72,'Hombre','Cirugia','Cáncer gástrico','Gastrectomía','Tiempo-sensible',7.4,'Microcitica','Hierro IV, EPO','Venofer',1000,'Si',20000,14,'Alto',3,'Si',2000,0,'Completo',9.6,2],
+ ['05/03/2026','DEMO-02',45,'Mujer','Ginecologia','Miomatosis uterina','Histerectomía','Electiva',8.1,'Microcitica','Hierro IV','Ferinject',1000,'No',0,21,'Moderado',2,'Si',1000,0,'Completo',10.9,1],
+ ['09/03/2026','DEMO-03',66,'Hombre','Cirugia','Tumor de colon','Colectomía','Tiempo-sensible',7.0,'Microcitica','Hierro IV, EPO','Venofer',1000,'Si',20000,15,'Alto',3,'Si',2000,0,'Completo',10.2,2],
+ ['14/03/2026','DEMO-04',58,'Hombre','Urologia','Tumor renal','Nefrectomía','Tiempo-sensible',9.0,'Normocitica','Hierro VO','No',0,'No',0,10,'Moderado',3,'No',0,0,'Parcial',null,0],
+ ['21/03/2026','DEMO-05',81,'Mujer','Cirugia','HDA','EDA','Electiva',6.9,'Macrocitica','Hierro IV, EPO','Venofer',1000,'Si',12000,12,'Moderado',3,'Si',1000,0,'Completo',7.8,1],
+ ['02/04/2026','DEMO-06',37,'Mujer','Ginecologia','Endometriosis','Histerectomía','Electiva',8.4,'Microcitica','Hierro IV, EPO','Venofer',1000,'Si',20000,14,'Moderado',2,'Si',1000,0,'Completo',10.8,1],
+ ['08/04/2026','DEMO-07',63,'Hombre','Cirugia','Pie diabético','Amputación infracondílea','Tiempo-sensible',6.2,'Normocitica','Hierro IV','Venofer',1000,'No',0,7,'Moderado',3,'No',0,0,'Parcial',8.4,2],
+ ['15/04/2026','DEMO-08',20,'Mujer','Cirugia','Cáncer de colon hereditario','Colectomía','Tiempo-sensible',7.2,'Microcitica','Hierro IV','Venofer',1000,'No',0,15,'Alto',3,'Si',2000,2,'Completo',10.1,1],
+ ['22/04/2026','DEMO-09',49,'Mujer','Ginecologia','Sangrado uterino anormal','Histerectomía','Electiva',10.2,'Microcitica','Hierro VO','No',0,'No',0,60,'Moderado',2,'Si',2000,0,'Completo',12.1,0],
+ ['29/04/2026','DEMO-10',75,'Hombre','Cirugia','Cáncer gástrico','Gastrectomía total','Tiempo-sensible',8.6,'Microcitica','Hierro IV, EPO','Ferinject',1000,'Si',16000,9,'Alto',3,'Si',2000,0,'Completo',10.9,1]
+].map(r => {
+  const head = ['ts','id','edad','sexo','servicio','dx','cx','urgencia','hb_ini','tipo_anemia','tto','fe_prod','fe_dosis','epo','epo_dosis','dias_tto','riesgo','asa','txa','txa_dosis','gr','cumpl','hb_pre','tx_evitadas'];
+  return toCaso(head, r.map(v => v == null ? '' : String(v)));
+});
+
+/* ════════ Estado global de datos ════════ */
+const state = {
+  casos: [], fuente: 'demo', fuenteTxt: 'Datos de ejemplo', ts: null,
+  mcp: null, unwatch: null,
+  sheetId: store.get('sheet', SHEET_DEFAULT),
+  vista: 'tablero', mostrarRut: false,
+  costoGR: store.get('costo', 100000), metaTxa: store.get('metatxa', 70)
+};
+
+function setSource(fuente, casos, ts, txt){
+  state.fuente = fuente; state.ts = ts || new Date();
+  if (casos) state.casos = casos;
+  state.fuenteTxt = txt || fuente;
+  const pill = $('srcPill');
+  pill.classList.remove('live','warn','demo');
+  if (fuente === 'drive'){ pill.classList.add('live'); $('srcTxt').textContent = 'Drive · ' + state.casos.length + ' casos'; }
+  else if (fuente === 'api'){ pill.classList.add('live'); $('srcTxt').textContent = 'API cancelos · ' + state.casos.length + ' casos'; }
+  else if (fuente === 'import'){ pill.classList.add('warn'); $('srcTxt').textContent = 'CSV importado · ' + state.casos.length + ' casos'; }
+  else { pill.classList.add('demo'); $('srcTxt').textContent = 'Datos de ejemplo'; }
+  renderAll();
+}
+function showBanner(html, bad){
+  const b = $('banner');
+  if (!html){ b.hidden = true; return; }
+  b.innerHTML = html; b.hidden = false; b.classList.toggle('bad', !!bad);
+}
+
+/* ════════ Puerta 1: conector Google Drive (artefacto claude.ai) ════════ */
+const MCP_FIX = {
+  needs_reauth: 'Tu sesión de Google Drive expiró. <b>Reconecta Google Drive</b> en claude.ai → Ajustes → Conectores y vuelve a abrir la página.',
+  server_not_connected: 'No hay conector de Google Drive. <b>Agrégalo</b> en claude.ai → Ajustes → Conectores para ver tus datos en vivo.',
+  selection_required: 'Hay más de un conector «Google Drive»: elige uno cuando claude.ai lo pregunte y presiona ↻ Actualizar.',
+  blocked_by_policy: 'La política de tu organización bloquea la lectura de Drive desde esta página.',
+  approval_required: 'Tu organización requiere aprobación por llamada para este conector; usa la importación CSV mientras tanto.',
+  tool_error: 'Google Drive respondió con un error al leer la planilla. Revisa que el ID sea correcto en la pestaña Datos.'
+};
+function extractSheetId(v){
+  const m = String(v||'').match(/[-\w]{25,}/);
+  return m ? m[0] : SHEET_DEFAULT;
+}
+async function initDrive(){
+  if (!(window.claude && typeof window.claude.use === 'function')) return false;
+  let mcp = null;
+  try{ mcp = await window.claude.use('mcp'); }catch(e){ mcp = null; }
+  if (!mcp) return false;
+  state.mcp = mcp;
+  watchSheet();
+  return true;
+}
+function watchSheet(){
+  if (!state.mcp) return;
+  if (state.unwatch){ try{ state.unwatch(); }catch(e){} state.unwatch = null; }
+  let retried = false;
+  const un = state.mcp.watchTool('Google Drive','read_file_content',{ fileId: state.sheetId }, ev => {
+    if (ev.type === 'data'){
+      const payload = ev.result && ev.result.payload;
+      const texto = payload && typeof payload === 'object' ? payload.fileContent : (typeof payload === 'string' ? payload : '');
+      const casos = casosDesdeDrive(texto || '');
+      if (casos.length){
+        const t = ev.result.cache && ev.result.cache.storedAt ? new Date(ev.result.cache.storedAt) : new Date();
+        showBanner('');
+        setSource('drive', casos, t, 'Planilla «Datos PBM» vía tu Google Drive');
+      } else {
+        showBanner('Se leyó el archivo de Drive pero <b>no se encontró la tabla de casos</b> (encabezado «ID_paciente»). Revisa el ID de la planilla en la pestaña Datos, o importa el CSV.', true);
+      }
+    } else if (ev.type === 'error'){
+      const code = ev.error && ev.error.code;
+      if (code === 'server_unavailable' && ev.error.retryable && !retried){
+        retried = true;
+        setTimeout(() => { try{ state.mcp.invalidate('Google Drive','read_file_content',{fileId: state.sheetId}); }catch(e){} }, 1500 + Math.random()*1500);
+        return;
+      }
+      const fix = MCP_FIX[code] || 'No se pudo leer Drive en este momento ('+esc(code||'error')+'). Se muestran los últimos datos disponibles.';
+      if (state.fuente !== 'drive' || ['needs_reauth','server_not_connected','blocked_by_policy','approval_required'].includes(code)){
+        showBanner('Vínculo con Drive: ' + fix, false);
+        if (['needs_reauth','server_not_connected','blocked_by_policy','approval_required'].includes(code) && state.fuente === 'drive'){
+          fallbackChain();
+        }
+      }
+    }
+  }, { cache: { staleTime: 300000, gcTime: 86400000 } });
+  state.unwatch = un;
+}
+function refreshDrive(){
+  if (state.mcp){
+    try{ state.mcp.invalidate('Google Drive','read_file_content',{ fileId: state.sheetId }); }catch(e){}
+  } else fallbackChain(true);
+}
+
+/* ════════ Puerta 2: API cancelos (misma origin) ════════ */
+async function tryApi(){
+  try{
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 4000);
+    const r = await fetch('pbm/casos', { signal: ctrl.signal });
+    if (!r.ok) return false;
+    const j = await r.json();
+    const lista = Array.isArray(j) ? j : (j.casos || []);
+    if (!lista.length) return false;
+    if (lista[0] && typeof lista[0] === 'object' && !Array.isArray(lista[0])){
+      const keys = Object.keys(lista[0]);
+      const head = keys.map(mapHeader);
+      const casos = lista.map(o => toCaso(head, keys.map(k => o[k] == null ? '' : String(o[k])))).filter(filaValida);
+      if (casos.length){ setSource('api', casos, new Date(), 'API /pbm/casos'); return true; }
+    }
+    return false;
+  }catch(e){ return false; }
+}
+
+/* ════════ Puerta 3: importación local ════════ */
+function tryLocal(){
+  const rows = store.get('import', null);
+  if (rows && rows.length){
+    const casos = casosDesdeTabla(rows);
+    if (casos.length){ setSource('import', casos, new Date(store.get('importTs', Date.now())), 'CSV importado'); return true; }
+  }
+  return false;
+}
+async function fallbackChain(skipDrive){
+  if (await tryApi()) return;
+  if (tryLocal()) return;
+  setSource('demo', DEMO, new Date(), 'Datos de ejemplo');
+  showBanner('Estás viendo <b>datos de ejemplo</b>. Conecta tu planilla de Drive (pestaña Datos) o importa el CSV para ver la cohorte real.', false);
+}
+
+/* ════════ Estadísticas de la cohorte ════════ */
+function stats(casos){
+  const n = casos.length;
+  const pct = x => n ? Math.round(100 * x / n) : 0;
+  const conDelta = casos.filter(c => c.delta != null);
+  const dMean = conDelta.length ? conDelta.reduce((a,c) => a + c.delta, 0) / conDelta.length : null;
+  const feIV = casos.filter(c => c.fe_iv).length;
+  const epo = casos.filter(c => c.epo === true).length;
+  const txaSi = casos.filter(c => c.txa === true).length;
+  const grTot = casos.reduce((a,c) => a + (c.gr||0), 0);
+  const txEv = casos.reduce((a,c) => a + (c.tx_evitadas||0), 0);
+  const transfundidos = casos.filter(c => (c.gr||0) > 0).length;
+  const cumplC = casos.filter(c => c.cumpl === 'Completo').length;
+  const sinFerr = casos.filter(c => c.ferritina == null).length;
+  const porServ = {};
+  for (const c of casos){
+    const s = porServ[c.servicio] || (porServ[c.servicio] = {n:0, feIV:0, txa:0, gr:0, txEv:0, cumpl:0, hbs:[], deltas:[]});
+    s.n++; if (c.fe_iv) s.feIV++; if (c.txa === true) s.txa++; s.gr += c.gr||0; s.txEv += c.tx_evitadas||0;
+    if (c.cumpl === 'Completo') s.cumpl++;
+    if (c.hb_ini != null) s.hbs.push(c.hb_ini);
+    if (c.delta != null) s.deltas.push(c.delta);
+  }
+  const porTipo = {};
+  for (const c of casos){ const t = c.tipo_anemia || 'Sin clasificar'; porTipo[t] = (porTipo[t]||0) + 1; }
+  const porRiesgo = {};
+  for (const c of casos){
+    if (!c.riesgo) continue;
+    const r = porRiesgo[c.riesgo] || (porRiesgo[c.riesgo] = {n:0, txa:0, gr:0, hbs:[]});
+    r.n++; if (c.txa === true) r.txa++; r.gr += c.gr||0; if (c.hb_ini != null) r.hbs.push(c.hb_ini);
+  }
+  const porMes = {};
+  for (const c of casos){
+    if (!c.ts) continue;
+    const k = c.ts.getFullYear() + '-' + String(c.ts.getMonth()+1).padStart(2,'0');
+    const m = porMes[k] || (porMes[k] = {n:0, gr:0, deltas:[]});
+    m.n++; m.gr += c.gr||0; if (c.delta != null) m.deltas.push(c.delta);
+  }
+  const dTS = casos.filter(c => c.urgencia === 'TS' && c.delta != null).map(c => c.delta);
+  const dEl = casos.filter(c => c.urgencia === 'Electiva' && c.delta != null).map(c => c.delta);
+  const mean = a => a.length ? a.reduce((x,y) => x+y, 0) / a.length : null;
+  return { n, pct, dMean, conDelta: conDelta.length, feIV, epo, txaSi, grTot, txEv, transfundidos, cumplC, sinFerr,
+           porServ, porTipo, porRiesgo, porMes, dTSMean: mean(dTS), dElMean: mean(dEl) };
+}
+const fmt1 = v => v == null ? '—' : (Math.round(v*10)/10).toLocaleString('es-CL', {minimumFractionDigits:1, maximumFractionDigits:1});
+const fmtCLP = v => '$' + Math.round(v).toLocaleString('es-CL');
+
+/* ════════ Render: KPIs y pilares ════════ */
+function renderKpis(S){
+  $('kpis').innerHTML = `
+    <div class="kpi hero"><b class="num">${S.n}</b><span class="lbl">Pacientes PBM</span><span class="sub">100% anemia captada</span></div>
+    <div class="kpi"><b class="num">${S.dMean != null ? '+'+fmt1(S.dMean) : '—'}<small> g/dL</small></b><span class="lbl">Δ Hb medio</span><span class="sub">${S.conDelta} con control post-tto</span></div>
+    <div class="kpi"><b class="num">${S.pct(S.feIV)}<small>%</small></b><span class="lbl">Hierro IV</span><span class="sub">${S.feIV}/${S.n} tratados</span></div>
+    <div class="kpi"><b class="num">${S.pct(S.txaSi)}<small>%</small></b><span class="lbl">Uso de TXA</span><span class="sub">meta &gt;${state.metaTxa}% en riesgo mod-alto</span></div>
+    <div class="kpi"><b class="num">${S.grTot}</b><span class="lbl">GR transfundidas</span><span class="sub">${S.transfundidos} paciente${S.transfundidos===1?'':'s'} · tasa ${S.pct(S.transfundidos)}%</span></div>
+    <div class="kpi"><b class="num">${S.txEv}</b><span class="lbl">Tx evitadas</span><span class="sub">≈ ${fmtCLP(S.txEv * state.costoGR)} CLP ahorrados</span></div>`;
+}
+function meter(val, target, max){
+  const pv = Math.min(100, 100 * val / max), pt = Math.min(100, 100 * target / max);
+  return `<div class="meter"><i style="width:${pv}%"></i><u style="left:${pt}%"></u></div>
+          <div class="meter-lbl"><span>actual ${Math.round(val)}%</span><span>meta ${Math.round(target)}%</span></div>`;
+}
+function renderPilares(S){
+  const noTx = S.n - S.transfundidos;
+  $('pilares').innerHTML = `
+    <div class="pilar"><span class="eyebrow">Pilar 1</span><h3>Optimizar eritropoyesis</h3>
+      <p>Detección y tratamiento de la anemia preoperatoria</p>
+      <div class="big">${S.dMean != null ? '+'+fmt1(S.dMean)+' g/dL' : '—'} <small style="font-size:14px;color:var(--mut)">Δ Hb post-tratamiento</small></div>
+      ${meter(S.pct(S.feIV), 90, 100)}
+      <p style="margin-top:8px">Hierro IV ${S.feIV}/${S.n} · EPO ${S.epo}/${S.n} (${S.pct(S.epo)}%)</p></div>
+    <div class="pilar"><span class="eyebrow">Pilar 2</span><h3>Minimizar sangrado</h3>
+      <p>Ácido tranexámico, técnica quirúrgica, hemostasia</p>
+      <div class="big">${S.pct(S.txaSi)}% <small style="font-size:14px;color:var(--mut)">con TXA</small></div>
+      ${meter(S.pct(S.txaSi), state.metaTxa, 100)}
+      <p style="margin-top:8px">${S.txaSi}/${S.n} pacientes recibieron TXA</p></div>
+    <div class="pilar"><span class="eyebrow">Pilar 3</span><h3>Optimizar tolerancia</h3>
+      <p>Restricción transfusional, gatillo individualizado</p>
+      <div class="big">${S.pct(noTx)}% <small style="font-size:14px;color:var(--mut)">sin transfusión</small></div>
+      ${meter(S.pct(noTx), 92, 100)}
+      <p style="margin-top:8px">${S.txEv} transfusiones evitadas · solo ${S.grTot} GR usadas</p></div>`;
+}
+
+/* ════════ Tooltip compartido ════════ */
+function tipShow(html, x, y){
+  const t = $('tip'); t.innerHTML = html; t.hidden = false;
+  const w = t.offsetWidth, h = t.offsetHeight;
+  let L = x + 14, T = y - h - 10;
+  if (L + w > innerWidth - 8) L = x - w - 14;
+  if (T < 8) T = y + 16;
+  t.style.left = L + 'px'; t.style.top = T + 'px';
+}
+function tipHide(){ $('tip').hidden = true; }
+
+/* ════════ Gráficos SVG ════════ */
+function svgEl(w, h){ return `<svg viewBox="0 0 ${w} ${h}" role="img">`; }
+
+function renderDumbbell(casos){
+  const rows = casos.filter(c => c.hb_ini != null)
+    .slice().sort((a,b) => a.hb_ini - b.hb_ini);
+  const el = $('chDumbbell');
+  if (!rows.length){ el.innerHTML = '<p class="note">Sin datos de hemoglobina.</p>'; return; }
+  const W = 1180, rh = 21, padT = 26, padB = 30, padL = 10, padR = 66;
+  const H = padT + rows.length * rh + padB;
+  const lo = 4, hi = 15;
+  const X = v => padL + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (W - padL - padR);
+  let s = svgEl(W, H);
+  for (let g = 5; g <= 14; g++){
+    s += `<line x1="${X(g)}" y1="${padT-8}" x2="${X(g)}" y2="${H-padB+4}" stroke="var(--grid)" stroke-width="1"/>`;
+    s += `<text x="${X(g)}" y="${H-padB+18}" font-size="10" text-anchor="middle">${g}</text>`;
+  }
+  s += `<line x1="${X(12)}" y1="${padT-8}" x2="${X(12)}" y2="${H-padB+4}" stroke="var(--ok)" stroke-width="1.6" stroke-dasharray="4 4" opacity=".8"/>`;
+  s += `<line x1="${X(13)}" y1="${padT-8}" x2="${X(13)}" y2="${H-padB+4}" stroke="var(--ok)" stroke-width="1.6" stroke-dasharray="4 4" opacity=".8"/>`;
+  s += `<text x="${X(12)}" y="${padT-12}" font-size="10" text-anchor="middle" fill="var(--ok)">♀ 12</text>`;
+  s += `<text x="${X(13)}" y="${padT-12}" font-size="10" text-anchor="middle" fill="var(--ok)">♂ 13</text>`;
+  const maxD = Math.max(...rows.map(r => r.delta ?? -99));
+  rows.forEach((c, i) => {
+    const y = padT + i * rh + rh/2;
+    const x1 = X(c.hb_ini);
+    if (c.hb_pre != null){
+      const x2 = X(c.hb_pre);
+      s += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--acc)" stroke-width="2" opacity=".55"/>`;
+      s += `<circle cx="${x2}" cy="${y}" r="5" fill="var(--acc)"/>`;
+      if (c.delta === maxD || c.delta >= 3.8)
+        s += `<text x="${x2+10}" y="${y+3.5}" font-size="10" fill="var(--acc)">+${fmt1(c.delta)}</text>`;
+    } else {
+      s += `<line x1="${x1}" y1="${y}" x2="${x1+26}" y2="${y}" stroke="var(--dim)" stroke-width="1.4" stroke-dasharray="2 4"/>`;
+    }
+    s += `<circle cx="${x1}" cy="${y}" r="4.5" fill="var(--card)" stroke="${c.hb_pre != null ? 'var(--acc)' : 'var(--dim)'}" stroke-width="2"/>`;
+    s += `<rect data-i="${i}" x="0" y="${padT + i*rh}" width="${W}" height="${rh}" fill="transparent" class="hover-row"/>`;
+  });
+  s += '</svg>';
+  el.innerHTML = s;
+  el.querySelectorAll('.hover-row').forEach(r => {
+    const c = rows[+r.dataset.i];
+    const html = `<div class="t-h">${esc(c.servicio)} · ${esc(c.cx || c.dx || 'caso')}</div>
+      <div class="t-s">${c.edad != null ? c.edad+' años · ' : ''}${c.sexo === 'F' ? 'Mujer' : c.sexo === 'M' ? 'Hombre' : ''} · ${esc(c.urgencia || '')}</div>
+      <div class="num">Hb ${fmt1(c.hb_ini)} → ${c.hb_pre != null ? fmt1(c.hb_pre) : 'sin control'}${c.delta != null ? ' <b class="delta-up">(+'+fmt1(c.delta)+')</b>' : ''}</div>
+      <div class="t-s">${esc(c.tto || '')}${c.txa === true ? ' · TXA' : ''}${c.gr ? ' · '+c.gr+' GR' : ''}</div>`;
+    r.addEventListener('pointermove', e => tipShow(html, e.clientX, e.clientY));
+    r.addEventListener('pointerleave', tipHide);
+  });
+}
+
+function renderMes(S){
+  const keys = Object.keys(S.porMes).sort();
+  const el = $('chMes');
+  if (!keys.length){ el.innerHTML = '<p class="note">Sin fechas registradas.</p>'; return; }
+  const W = 560, H = 230, padL = 30, padR = 12, padT = 16, padB = 44;
+  const bw = Math.min(42, (W - padL - padR) / keys.length - 8);
+  const maxN = Math.max(...keys.map(k => S.porMes[k].n), 4);
+  const X = i => padL + (i + .5) * (W - padL - padR) / keys.length;
+  const Y = v => padT + (1 - v / maxN) * (H - padT - padB);
+  const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  let s = svgEl(W, H);
+  for (let g = 0; g <= maxN; g += Math.ceil(maxN/4)){
+    s += `<line x1="${padL}" y1="${Y(g)}" x2="${W-padR}" y2="${Y(g)}" stroke="var(--grid)"/>`;
+    s += `<text x="${padL-6}" y="${Y(g)+3}" font-size="10" text-anchor="end">${g}</text>`;
+  }
+  keys.forEach((k, i) => {
+    const m = S.porMes[k];
+    const x = X(i), y = Y(m.n);
+    s += `<rect data-k="${k}" x="${x-bw/2}" y="${y}" width="${bw}" height="${Math.max(2, H-padB-y)}" rx="4" fill="var(--acc)" opacity=".92"/>`;
+    s += `<text x="${x}" y="${y-5}" font-size="10" text-anchor="middle" fill="var(--mut)">${m.n}</text>`;
+    if (m.gr > 0) s += `<text x="${x}" y="${H-padB+26}" font-size="10" text-anchor="middle" fill="var(--bad)">▾${m.gr} GR</text>`;
+    const [yy, mm] = k.split('-');
+    s += `<text x="${x}" y="${H-padB+14}" font-size="10" text-anchor="middle">${MESES[+mm-1]} ${yy.slice(2)}</text>`;
+  });
+  s += '</svg>';
+  el.innerHTML = s;
+  el.querySelectorAll('rect[data-k]').forEach(r => {
+    const m = S.porMes[r.dataset.k];
+    const dm = m.deltas.length ? (m.deltas.reduce((a,b)=>a+b,0)/m.deltas.length) : null;
+    const html = `<div class="t-h">${r.dataset.k}</div><div class="num">${m.n} caso${m.n===1?'':'s'} · ${m.gr} GR${dm != null ? ' · ΔHb '+fmt1(dm) : ''}</div>`;
+    r.addEventListener('pointermove', e => tipShow(html, e.clientX, e.clientY));
+    r.addEventListener('pointerleave', tipHide);
+  });
+}
+
+function renderServicio(S){
+  const servs = Object.entries(S.porServ).sort((a,b) => b[1].n - a[1].n);
+  const el = $('chServicio');
+  const W = 560, rh = 40, padT = 24, H = padT + servs.length * rh + 8;
+  const maxN = Math.max(...servs.map(([,v]) => v.n), 1);
+  let s = svgEl(W, H);
+  s += `<text x="188" y="12" font-size="9.5">CASOS</text><text x="392" y="12" font-size="9.5" text-anchor="middle">FE IV</text><text x="452" y="12" font-size="9.5" text-anchor="middle">TXA</text><text x="506" y="12" font-size="9.5" text-anchor="middle">GR</text><text x="548" y="12" font-size="9.5" text-anchor="end">EVIT.</text>`;
+  servs.forEach(([nombre, v], i) => {
+    const y = padT + i * rh;
+    const bw = Math.max(3, (v.n / maxN) * 160);
+    const hbm = v.hbs.length ? v.hbs.reduce((a,b)=>a+b,0)/v.hbs.length : null;
+    s += `<text x="0" y="${y+16}" font-size="12" fill="var(--ink)" font-family="'Instrument Sans',sans-serif">${esc(nombre)}</text>`;
+    s += `<text x="0" y="${y+30}" font-size="10">Hb media ${hbm != null ? fmt1(hbm) : '—'}</text>`;
+    s += `<rect data-s="${esc(nombre)}" x="188" y="${y+6}" width="${bw}" height="14" rx="4" fill="var(--acc)" opacity=".92"/>`;
+    s += `<text x="${192+bw+4}" y="${y+17}" font-size="11" fill="var(--mut)">${v.n}</text>`;
+    s += `<text x="392" y="${y+17}" font-size="11" text-anchor="middle" fill="var(--mut)">${v.feIV}/${v.n}</text>`;
+    s += `<text x="452" y="${y+17}" font-size="11" text-anchor="middle" fill="var(--mut)">${Math.round(100*v.txa/v.n)}%</text>`;
+    s += `<text x="506" y="${y+17}" font-size="11" text-anchor="middle" fill="${v.gr>0?'var(--bad)':'var(--mut)'}">${v.gr}</text>`;
+    s += `<text x="548" y="${y+17}" font-size="11" text-anchor="end" fill="var(--ok)">${v.txEv}</text>`;
+  });
+  s += '</svg>';
+  el.innerHTML = s;
+}
+
+function renderAnemia(S){
+  const tipos = Object.entries(S.porTipo).sort((a,b) => b[1] - a[1]);
+  const el = $('chAnemia');
+  const W = 560, rh = 30, padT = 6, H = padT + tipos.length * rh + 6;
+  const maxN = Math.max(...tipos.map(([,v]) => v), 1);
+  let s = svgEl(W, H);
+  tipos.forEach(([t, v], i) => {
+    const y = padT + i * rh;
+    const bw = Math.max(3, (v / maxN) * 300);
+    s += `<text x="0" y="${y+15}" font-size="11.5" fill="var(--ink)" font-family="'Instrument Sans',sans-serif">${esc(t)}</text>`;
+    s += `<rect x="200" y="${y+5}" width="${bw}" height="13" rx="4" fill="var(--acc)" opacity=".9"/>`;
+    s += `<text x="${204+bw+4}" y="${y+16}" font-size="11" fill="var(--mut)">${v} · ${Math.round(100*v/S.n)}%</text>`;
+  });
+  s += '</svg>';
+  el.innerHTML = s;
+}
+
+/* ════════ Insights generados desde los datos ════════ */
+function renderInsights(S){
+  const out = [];
+  const noTxPct = S.pct(S.n - S.transfundidos);
+  out.push(['ok','Impacto clínico', `${noTxPct}% de los pacientes no requirió transfusión`,
+    `De ${S.n} pacientes anémicos, ${S.transfundidos || 'ninguno'} requirió GR (${S.grTot} unidades en total). Se evitaron ~${S.txEv} unidades ≈ ${fmtCLP(S.txEv*state.costoGR)} CLP.`]);
+  if (S.dMean != null){
+    const cmp = (S.dElMean != null && S.dTSMean != null)
+      ? ` Electivas +${fmt1(S.dElMean)} vs tiempo-sensible +${fmt1(S.dTSMean)}: ${S.dElMean > S.dTSMean ? 'priorizar captación precoz en tiempo-sensible para ampliar la ventana de tratamiento.' : 'la respuesta es comparable entre grupos.'}`
+      : '';
+    out.push(['ok','Respuesta al hierro IV', `+${fmt1(S.dMean)} g/dL promedio post-tratamiento`, `Medido en ${S.conDelta} pacientes con control.${cmp}`]);
+  }
+  const txaPct = S.pct(S.txaSi);
+  out.push([txaPct >= state.metaTxa ? 'ok' : 'warn','Ácido tranexámico', `${txaPct}% de uso · meta ${state.metaTxa}%`,
+    Object.entries(S.porServ).map(([s,v]) => `${s} ${Math.round(100*v.txa/v.n)}%`).join(' · ') + '. Protocolo: TXA por defecto en cirugía de riesgo moderado-alto salvo contraindicación.']);
+  if (S.sinFerr > 0)
+    out.push(['warn','Estudio ferropénico incompleto', `${S.sinFerr}/${S.n} sin ferritina/TSAT`,
+      'Solicitar ferritina y TSAT de rutina al captar la anemia: hoy limita la clasificación precisa (mayoría microcítica probable ferropénica).']);
+  const parcial = S.n - S.cumplC;
+  if (parcial > 0)
+    out.push(['warn','Ventana de tratamiento', `${S.cumplC}/${S.n} con cumplimiento completo (${S.pct(S.cumplC)}%)`,
+      'Principal barrera: tiempo entre interconsulta y cirugía en casos tiempo-sensible. Recomendación: screening PBM automático al ingresar a lista de espera quirúrgica.']);
+  out.push(['acc','Proyección Marga Marga', `~120 pacientes/año al escalar`,
+    `Con 4–5× volumen en el Hospital Provincial Marga Marga el programa podría evitar ~100+ unidades/año manteniendo la tasa transfusional actual (${S.pct(S.transfundidos)}%).`]);
+  $('insights').innerHTML = out.map(([cls, eyebrow, titulo, cuerpo]) =>
+    `<div class="rec ${cls}"><h4><span class="pill ${cls === 'acc' ? 'acc' : cls}">${esc(eyebrow)}</span></h4>
+     <p><b>${esc(titulo)}.</b> ${esc(cuerpo)}</p></div>`).join('');
+}
+
+/* ════════ Tabla de pacientes ════════ */
+function maskId(id){
+  if (state.mostrarRut || !id) return id || '—';
+  const s = String(id).trim();
+  if (s.length <= 4) return s;
+  return s.slice(0,2) + '·····' + s.slice(-2);
+}
+function pillCumpl(c){
+  if (c === 'Completo') return '<span class="pill ok">Completo</span>';
+  if (c === 'Parcial') return '<span class="pill warn">Parcial</span>';
+  if (c === 'No') return '<span class="pill bad">No</span>';
+  return '<span class="pill dim">s/d</span>';
+}
+function pillRiesgo(r){
+  if (r === 'Alto') return '<span class="pill bad">Alto</span>';
+  if (r === 'Moderado') return '<span class="pill warn">Mod</span>';
+  if (r === 'Bajo') return '<span class="pill ok">Bajo</span>';
+  return '<span class="pill dim">s/d</span>';
+}
+let filtered = [];
+function renderTabla(){
+  const fs = $('fServ').value, fr = $('fRiesgo').value, fu = $('fUrg').value, fc = $('fCumpl').value,
+        q = normKey($('fBusca').value);
+  filtered = state.casos.filter(c =>
+    (!fs || c.servicio === fs) && (!fr || c.riesgo === fr) && (!fu || c.urgencia === fu) &&
+    (!fc || c.cumpl === fc) &&
+    (!q || normKey(c.dx + c.cx + c.id + c.servicio + c.tipo_anemia).includes(q)))
+    .slice().sort((a,b) => (b.ts?.getTime()||0) - (a.ts?.getTime()||0));
+  $('regCount').textContent = filtered.length + ' de ' + state.casos.length + ' casos';
+  $('regBody').innerHTML = filtered.map((c, i) => `
+    <tr data-i="${i}">
+      <td class="num">${c.ts ? c.ts.toLocaleDateString('es-CL') : '—'}</td>
+      <td><span class="mono" style="font-size:11px">${esc(maskId(c.id))}</span><div class="sub">${c.edad != null ? c.edad+' a' : ''} ${c.sexo === 'F' ? '♀' : c.sexo === 'M' ? '♂' : ''}</div></td>
+      <td>${esc(c.servicio)}</td>
+      <td>${esc(c.dx || '—')}<div class="sub">${esc(c.cx || '')}</div></td>
+      <td>${c.urgencia === 'TS' ? 'TS' : esc(c.urgencia || '—')}</td>
+      <td class="num">${fmt1(c.hb_ini)} → ${c.hb_pre != null ? fmt1(c.hb_pre) : '—'} ${c.delta != null ? `<span class="${c.delta >= .5 ? 'delta-up' : 'delta-flat'}">+${fmt1(c.delta)}</span>` : ''}</td>
+      <td><div class="sub">${esc(c.tto || '—')}${c.txa === true ? ' · TXA' : c.txa === false ? ' · sin TXA' : ''}</div></td>
+      <td class="num">${c.gr || '—'}</td>
+      <td>${pillRiesgo(c.riesgo)}</td>
+      <td>${pillCumpl(c.cumpl)}</td>
+    </tr>`).join('');
+  $('regBody').querySelectorAll('tr').forEach(tr =>
+    tr.addEventListener('click', () => showFicha(filtered[+tr.dataset.i])));
+}
+function showFicha(c){
+  const f = [
+    ['Ingreso', c.ts ? c.ts.toLocaleString('es-CL') : '—'], ['ID', maskId(c.id)],
+    ['Edad / sexo', (c.edad ?? '—') + ' · ' + (c.sexo === 'F' ? 'Mujer' : 'Hombre')],
+    ['Servicio', c.servicio], ['Diagnóstico', c.dx || '—'], ['Cirugía', c.cx || '—'],
+    ['Urgencia', c.urgencia || '—'], ['Fecha cirugía', c.fecha_cx ? c.fecha_cx.toLocaleDateString('es-CL') : '—'],
+    ['Hb inicial', fmt1(c.hb_ini) + ' g/dL'], ['Hb preoperatoria', c.hb_pre != null ? fmt1(c.hb_pre) + ' g/dL' : 'sin control'],
+    ['Δ Hb', c.delta != null ? '+' + fmt1(c.delta) + ' g/dL' : '—'],
+    ['Ferritina / TSAT', (c.ferritina ?? '—') + ' / ' + (c.tsat ?? '—')],
+    ['Tipo de anemia', c.tipo_anemia || '—'], ['Tratamiento', c.tto || '—'],
+    ['Hierro IV', c.fe_prod ? c.fe_prod + (c.fe_dosis ? ' ' + c.fe_dosis + ' mg' : '') : (c.fe_iv ? 'Sí' : 'No')],
+    ['EPO', c.epo === true ? 'Sí' + (c.epo_dosis ? ' · ' + c.epo_dosis.toLocaleString('es-CL') + ' UI' : '') : 'No'],
+    ['Días de tratamiento', c.dias_tto ?? '—'], ['ASA', c.asa ?? '—'],
+    ['Riesgo de sangrado', c.riesgo || '—'],
+    ['TXA', c.txa === true ? 'Sí' + (c.txa_dosis ? ' · ' + c.txa_dosis + ' mg' : '') : c.txa === false ? 'No' : '—'],
+    ['Anestesia', c.anestesia || '—'], ['Pérdida (mL)', c.perdida_ml ?? '—'],
+    ['GR transfundidas', c.gr || 0], ['Tx evitadas', c.tx_evitadas || 0],
+    ['Cumplimiento PBM', c.cumpl || '—'], ['Oportunidades de mejora', c.mejora || '—']
+  ];
+  $('modalBox').innerHTML = `<h3>${esc(c.cx || c.dx || 'Caso PBM')}</h3>
+    <p class="note" style="margin:0 0 12px">${esc(c.servicio)} · ${esc(c.urgencia || '')}</p>
+    <dl class="kv">${f.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(String(v))}</dd>`).join('')}</dl>
+    <div class="actions"><button class="btn" id="mEval">Precargar en Evaluación</button><button class="ghost" id="mClose">Cerrar</button></div>`;
+  $('modalBk').hidden = false;
+  $('mClose').onclick = closeModal;
+  $('mEval').onclick = () => { closeModal(); preloadCaso(c); setView('evaluacion'); };
+}
+function closeModal(){ $('modalBk').hidden = true; }
+$('modalBk').addEventListener('click', e => { if (e.target === $('modalBk')) closeModal(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function copyCsv(){
+  const cols = ['fecha','id','edad','sexo','servicio','diagnostico','cirugia','urgencia','hb_inicial','hb_preop','delta_hb','tipo_anemia','tratamiento','fe_iv','epo','txa','gr_transfundidas','tx_evitadas','riesgo','cumplimiento'];
+  const lines = [cols.join(';')].concat(filtered.map(c => [
+    c.ts ? c.ts.toLocaleDateString('es-CL') : '', maskId(c.id), c.edad ?? '', c.sexo ?? '', c.servicio, c.dx, c.cx,
+    c.urgencia ?? '', c.hb_ini ?? '', c.hb_pre ?? '', c.delta ?? '', c.tipo_anemia, c.tto,
+    c.fe_iv ? 'Si' : 'No', c.epo === true ? 'Si' : 'No', c.txa === true ? 'Si' : c.txa === false ? 'No' : '',
+    c.gr || 0, c.tx_evitadas || 0, c.riesgo ?? '', c.cumpl ?? ''
+  ].map(v => String(v).replace(/;/g, ',')).join(';')));
+  navigator.clipboard.writeText(lines.join('\n')).then(
+    () => { $('btnCopyCsv').textContent = '✓ Copiado'; setTimeout(() => $('btnCopyCsv').textContent = '⧉ Copiar CSV', 1600); },
+    () => alert('No se pudo copiar al portapapeles.'));
+}
+
+/* ════════ Motor clínico NEXUS PBM IA v3.0 (reglas Protocolo Quilpué) ════════ */
+const eNum = (id, d = null) => {
+  const v = $(id).value;
+  if (v === '' || v == null) return d;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : d;
+};
+function inferRiesgo(cx){
+  const t = (cx || '').toLowerCase();
+  const alto = ['gastrect','colect','hemicolect','hepatec','pancrea','cistect','prostatect','columna','cardia','neuro','panprocto','nefrectomia parcial'];
+  const mod = ['histerect','nefrect','artroplast','cadera','rodilla','bypass','by pass','amput','resecci','laparotom','colecist','maxilof'];
+  if (alto.some(k => t.includes(k))) return 'Alto';
+  if (mod.some(k => t.includes(k))) return 'Moderado';
+  return 'Bajo';
+}
+const hbMeta = sexo => sexo === 'F' ? 12 : 13;
+function clasificarAnemia(hb, sexo){
+  const meta = hbMeta(sexo);
+  if (hb >= meta) return { nivel: 'Optimizado', decision: 'APTO' };
+  if (hb < 9) return { nivel: 'Anemia severa', decision: 'POSTERGAR si electiva' };
+  if (hb < 10) return { nivel: 'Anemia moderada', decision: 'POSTERGAR si electiva' };
+  return { nivel: 'Anemia leve', decision: 'EVALUAR' };
+}
+function tipoAnemia(vcm, ferritina, tsat){
+  const miss = [];
+  if (ferritina == null) miss.push('ferritina');
+  if (tsat == null) miss.push('TSAT');
+  let tipo = 'No clasificable con certeza';
+  let conducta = 'Solicitar ferritina + TSAT + B12 + folato hoy (brecha local: faltan en la mayoría de fichas).';
+  if (vcm != null && vcm > 100){
+    tipo = 'Macrocítica';
+    conducta = 'Dosar B12/folato. Corregir antes de hierro masivo si hay déficit documentado.';
+  } else if (ferritina != null && ferritina < 30){
+    tipo = 'Ferropénica absoluta';
+    conducta = 'Hierro (IV si ventana <4 sem o Hb <10). Buscar causa de pérdida.';
+  } else if (tsat != null && tsat < 20 && ferritina != null && ferritina >= 30){
+    tipo = 'Déficit funcional / inflamatoria';
+    conducta = 'Preferir hierro IV ± tratar causa de base. EPO solo si checklist OK y ventana/severidad lo justifican.';
+  } else if (vcm != null && vcm < 80){
+    tipo = 'Microcítica (probable ferropénica)';
+    conducta = 'Tratar como ferropénica mientras llegan ferritina/TSAT. No retrasar hierro si Hb baja y cx próxima.';
+  } else if (ferritina != null && tsat != null){
+    tipo = 'Normocítica / no ferropénica evidente';
+    conducta = 'Revisar inflamación, ERC, hemólisis, sangrado agudo. Derivar Hematología si no responde.';
+  }
+  return { tipo, conducta, miss };
+}
+const ganzoni = (peso, hb, target) => (!peso || hb == null) ? null : Math.round(peso * (target - hb) * 2.4 + (peso >= 35 ? 500 : 15 * peso));
+const volemia = (peso, sexo) => Math.round((sexo === 'F' ? 65 : 70) * peso);
+const ablCalc = (vol, hto, htoMin) => (!vol || !hto || !htoMin) ? null : Math.round(vol * (hto - htoMin) / ((hto + htoMin) / 2));
+function semaforoEval(hb, sexo, dias, urgencia, anemia){
+  const meta = hbMeta(sexo);
+  if (urgencia === 'Urgencia') return { cls:'warn', tag:'AMARILLO', txt:'Urgencia: no postergar por PBM. Optimizar en paralelo (hierro IV, TXA, umbral restrictivo, cell saver si aplica).' };
+  if (hb >= meta) return { cls:'ok', tag:'VERDE', txt:'Hb en meta OMS/PBM local. Programar. Reserva GR solo si riesgo alto.' };
+  if (anemia.nivel === 'Anemia severa' && dias < 42 && urgencia === 'Electiva')
+    return { cls:'bad', tag:'ROJO', txt:'Electiva + Hb <9: mínimo 6 semanas con Fe IV ± EPO. No programar hoy.' };
+  if (anemia.nivel === 'Anemia moderada' && dias < 28 && urgencia === 'Electiva')
+    return { cls:'bad', tag:'ROJO', txt:'Electiva + Hb 9–10: mínimo 4 semanas con Fe IV. Postergar o reevaluar en Comité.' };
+  if (hb < meta) return { cls:'warn', tag:'AMARILLO', txt:'En tratamiento / Hb subóptima. Anestesiólogo decide con equipo. Reservar 2U si riesgo mod-alto.' };
+  return { cls:'ok', tag:'VERDE', txt:'Apto.' };
+}
+function esquemaHierro(deficit, dias, hb){
+  if (!deficit || deficit <= 0) return { farm:'No hay déficit calculable o ya en meta', plan:'Mantener depósitos; no Fe IV rutinario.' };
+  const sesiones = Math.ceil(Math.min(deficit, 1500) / 200);
+  const fcm = Math.min(1000, deficit);
+  if (dias <= 21 || hb < 10) return {
+    farm: 'Carboximaltosa (Ferinject) preferente; Venofer si es el arsenal disponible',
+    plan: `Déficit Ganzoni ≈ ${deficit} mg. Ferinject ${fcm} mg EV 15–30 min (máx 1000 mg/sesión). Alternativa local: Venofer 200 mg EV × ${sesiones} sesiones (máx 3/sem).`
+  };
+  return {
+    farm: 'Hierro oral si hay ≥4 semanas y buena tolerancia; IV si no responde o malabsorción',
+    plan: `Sulfato ferroso 1 comp (≈60–65 mg elemental) cada 24–48 h en ayunas. Si no sube Hb en 2–3 sem o la cx se acerca: pasar a Fe IV. Déficit ≈ ${deficit} mg.`
+  };
+}
+function esquemaEPO(hb, dias, epoOk, urgencia){
+  if (hb >= 12 || epoOk === 'no' || urgencia === 'Urgencia') return null;
+  if (dias >= 21) return 'EPO 40.000 UI SC 1 vez/semana × 3–4 sem + Fe IV/VO. Control semanal Hb y PA. Suspender si Hb >14 o ΔHb >2 g/dL/sem. HBPM si riesgo trombótico intermedio-alto.';
+  if (dias >= 7) return 'Ventana corta: EPO 40.000 UI SC cada 3–4 días (hasta 4 dosis) SIEMPRE con Fe IV. Checklist EPO obligatorio.';
+  return 'Ventana <7 días: priorizar Fe IV + TXA + umbral restrictivo. EPO acelerado 600 UI/kg c/3 días (máx 40.000) solo si no hay CI y el caso lo justifica.';
+}
+function recCard(cls, titulo, html){ return `<div class="rec ${cls}"><h4>${titulo}</h4>${html}</div>`; }
+
+function evaluar(){
+  const sexo = $('e_sexo').value, hb = eNum('e_hb'), peso = eNum('e_peso'), dias = eNum('e_dias', 0);
+  const urgencia = $('e_urg').value, cx = $('e_cx').value;
+  if (hb == null){ alert('Ingrese la Hb actual.'); return; }
+  const riesgo = $('e_riesgo').value === 'auto' ? inferRiesgo(cx) : $('e_riesgo').value;
+  const anemia = clasificarAnemia(hb, sexo);
+  const tipo = tipoAnemia(eNum('e_vcm'), eNum('e_ferr'), eNum('e_tsat'));
+  const deficit = ganzoni(peso, hb, 13);
+  const vol = volemia(peso, sexo);
+  const hto = eNum('e_hto') || (hb ? hb * 3 : null);
+  const gatillo = ($('e_cv').value === 'si' || $('e_epoc').value === 'si') ? 8 : 7;
+  const perdidaPerm = ablCalc(vol, hto, gatillo * 3);
+  const sem = semaforoEval(hb, sexo, dias, urgencia, anemia);
+  const hierro = esquemaHierro(deficit, dias, hb);
+  const epo = esquemaEPO(hb, dias, $('e_epook').value, urgencia);
+  const txaCI = $('e_txaci').value;
+  const txa = (riesgo !== 'Bajo' && txaCI === 'no')
+    ? 'TXA 1 g EV en 10 min ANTES de incisión. Si cirugía >3 h: +1 g a las 3 h (o 1 mg/kg/h).'
+    : (txaCI !== 'no' ? 'TXA contraindicado por el criterio marcado.' : 'Riesgo bajo: TXA no universal; considerar si sangrado real.');
+
+  const COLORES = { ok:'var(--ok)', warn:'var(--warn)', bad:'var(--bad)' };
+  $('semDot').style.background = COLORES[sem.cls]; $('semDot').style.color = '#0B0A0E';
+  $('semDot').textContent = sem.tag[0];
+  $('semTitle').textContent = sem.tag + ' · ' + anemia.nivel;
+  $('semTxt').textContent = sem.txt + ' Decisión local: ' + anemia.decision + '.';
+  $('kHb').textContent = fmt1(hb) + ' / ' + hbMeta(sexo);
+  $('kFe').textContent = deficit != null ? deficit + ' mg' : '—';
+  $('kAbl').textContent = perdidaPerm != null ? perdidaPerm + ' mL' : '—';
+  $('kGat').textContent = '<' + gatillo + ' g/dL';
+
+  $('recs').innerHTML =
+    recCard(sem.cls, 'Pilar 1 · Masa eritrocitaria',
+      `<p><b>${esc(tipo.tipo)}.</b> ${esc(tipo.conducta)}</p><ul>
+        <li>${esc(hierro.plan)}</li>${epo ? '<li>' + esc(epo) + '</li>' : ''}
+        <li>Control Hb a 7–14 días si la ventana lo permite. Clínica de anemia UPPQ si Hb &lt;13 H o &lt;12 M (urgente si &lt;10).</li>
+        ${tipo.miss.length ? '<li>Faltan: ' + esc(tipo.miss.join(', ')) + ' — solicitar hoy.</li>' : ''}</ul>
+      <div class="ev">OMS 2021 · HAS 2024 · Protocolo HQ tablas 3–12 · Musallam Lancet 2011</div>`) +
+    recCard('', 'Pilar 2 · Minimizar pérdida',
+      `<ul><li>Riesgo Anexo N3 / inferido: <b>${esc(riesgo)}</b>. EBL ${eNum('e_ebl') ?? '—'} mL. Volemia estimada ${vol || '—'} mL.</li>
+        <li>${esc(txa)}</li>
+        <li>Hemostasia meticulosa, normotermia &gt;36 °C, Ca²⁺ ionizado &gt;1.1. Evitar flebotomía innecesaria.</li>
+        <li>Cell saver: considerar si pérdida prevista alta y sin contraindicación oncológica/infecciosa local.</li></ul>
+      <div class="ev">CRASH-2 · POISE-3 · Protocolo HQ tabla 15 y Anexo N3</div>`) +
+    recCard('', 'Pilar 3 · Tolerancia y transfusión',
+      `<ul><li>Gatillo restrictivo: Hb &lt; ${gatillo} g/dL en paciente estable${gatillo === 8 ? ' (cardiopatía / EPOC / fragilidad)' : ''}. 1 unidad y reevaluar.</li>
+        <li>Pérdida permisible aproximada hasta Hto de gatillo: <b>${perdidaPerm ?? '—'} mL</b>.</li>
+        <li>Postop: hemograma 12–24 h. Si Hb &lt;10 al egreso: Fe IV. HBPM 12–24 h si hemostasia ok.</li>
+        <li>No programar electiva en ROJO. Reserva 2U GR si riesgo moderado-alto y estado AMARILLO/ROJO tratado.</li></ul>
+      <div class="ev">TRISS/TRICC · AABB single-unit · Protocolo HQ tabla 13</div>`);
+
+  const plan = [
+    'PBM·IA PERIOPERATORIO v4.0 — PLAN CLÍNICO',
+    'Hospital de Quilpué · UPPQ · ' + new Date().toLocaleString('es-CL'),
+    'ID local: ' + ($('e_id').value || 's/r') + ' | ' + $('e_serv').value + ' | ASA ' + $('e_asa').value,
+    'Cirugía: ' + cx + ' | ' + urgencia + ' | días a cx: ' + dias + ' | riesgo: ' + riesgo,
+    '────────────────────────────────────────',
+    'ESTADO SEMÁFORO: ' + sem.tag, sem.txt,
+    'Anemia: ' + anemia.nivel + ' (' + anemia.decision + ') · ' + tipo.tipo,
+    'Hb ' + hb + ' g/dL (meta ' + hbMeta(sexo) + ') · Hto ' + (hto ?? '—') + ' · VCM ' + (eNum('e_vcm') ?? '—'),
+    'Ferritina ' + (eNum('e_ferr') ?? 'no disponible') + ' · TSAT ' + (eNum('e_tsat') ?? 'no disponible'),
+    '────────────────────────────────────────',
+    'PREOPERATORIO',
+    '- ' + hierro.farm,
+    '- ' + hierro.plan,
+    epo ? '- EPO: ' + epo : '- EPO: no de primera línea en este escenario',
+    '- Labs pendientes: ' + (tipo.miss.length ? tipo.miss.join(', ') : 'perfil férrico presente o no crítico'),
+    '- Prehabilitación: proteína 1.2–1.5 g/kg/d, ejercicio, cese tabaco ≥4 sem si electiva',
+    'INTRAOPERATORIO',
+    '- ' + txa,
+    '- Normotermia, calcio, hemostasia, evitar sobrehidratación',
+    '- Cell saver según tipo de cx y protocolo local',
+    'POSTOPERATORIO',
+    '- Gatillo GR: Hb < ' + gatillo + ' g/dL + clínica. Single unit.',
+    '- Control Hb 12–24 h. Fe IV si Hb <10 al alta. HBPM 12–24 h.',
+    '- Seguimiento UPPQ/APS 3–4 sem; si Hb alta <8: control en 7 días',
+    '────────────────────────────────────────',
+    'Notas: ' + ($('e_notas').value || '—'),
+    'Fuentes: Protocolo PBM-HQ-001-2025 v2.0; OMS 2021; HAS 2024; AABB; TRISS; CRASH-2; Musallam 2011; Leahy 2017.',
+    'Registrar el caso en la planilla del programa: ' + FORM_URL,
+    'DISCLAIMER: apoyo a decisión. Validar con anestesiólogo/cirujano/UMT.'
+  ].join('\n');
+  $('plan').textContent = plan;
+}
+function casoDemoEval(){
+  $('e_id').value = 'NEXUS-demo'; $('e_edad').value = 68; $('e_sexo').value = 'M';
+  $('e_peso').value = 72; $('e_asa').value = '3'; $('e_serv').value = 'Cirugia';
+  $('e_cx').value = 'Gastrectomía total'; $('e_urg').value = 'TS'; $('e_dias').value = 14;
+  $('e_riesgo').value = 'Alto'; $('e_hb').value = 8.3; $('e_hto').value = 26; $('e_vcm').value = 74;
+  $('e_ferr').value = ''; $('e_tsat').value = ''; $('e_ebl').value = 500; $('e_cv').value = 'no';
+  $('e_notas').value = 'Caso tipo cohorte local: cáncer gástrico tiempo-sensible, microcítica, Fe IV ± EPO, TXA 1–2 g.';
+  evaluar();
+}
+function preloadCaso(c){
+  $('e_id').value = ''; // nunca copiar el ID/RUT del registro al plan
+  if (c.edad != null) $('e_edad').value = c.edad;
+  $('e_sexo').value = c.sexo === 'F' ? 'F' : 'M';
+  const servs = ['Cirugia','Ginecologia','Urologia','Traumatologia'];
+  $('e_serv').value = servs.find(s => normKey(s) === normKey(c.servicio)) || 'Otro';
+  if (c.cx) $('e_cx').value = c.cx;
+  $('e_urg').value = c.urgencia === 'Electiva' ? 'Electiva' : c.urgencia === 'Urgencia' ? 'Urgencia' : 'TS';
+  if (c.riesgo) $('e_riesgo').value = c.riesgo;
+  const hbRef = c.hb_pre != null ? c.hb_pre : c.hb_ini;
+  if (hbRef != null) $('e_hb').value = hbRef;
+  $('e_hto').value = hbRef != null ? Math.round(hbRef * 3) : '';
+  if (c.ferritina != null) $('e_ferr').value = c.ferritina; else $('e_ferr').value = '';
+  if (c.tsat != null) $('e_tsat').value = c.tsat; else $('e_tsat').value = '';
+  if (c.fecha_cx){
+    const d = Math.max(0, Math.round((c.fecha_cx - Date.now()) / 86400000));
+    $('e_dias').value = d;
+  }
+  evaluar();
+}
+
+/* ════════ Vistas y eventos ════════ */
+function setView(v){
+  state.vista = v;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  for (const s of ['tablero','pacientes','evaluacion','datos']) $('v-' + s).hidden = s !== v;
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+
+function renderDatosTab(){
+  const nom = { drive:'Google Drive (lectura en vivo con tu cuenta)', api:'API cancelos-api (/pbm/casos)', import:'CSV importado en este navegador', demo:'Datos de ejemplo (sintéticos)' };
+  $('dSrc').textContent = nom[state.fuente] || state.fuente;
+  $('dN').textContent = state.casos.length + ' casos';
+  $('dTs').textContent = state.ts ? state.ts.toLocaleString('es-CL') : '—';
+  $('dSheet').textContent = state.sheetId;
+  if (!$('sheetId').value) $('sheetId').value = state.sheetId;
+  $('prefCosto').value = state.costoGR; $('prefMetaTxa').value = state.metaTxa;
+}
+function renderAll(){
+  const S = stats(state.casos);
+  renderKpis(S); renderPilares(S);
+  renderDumbbell(state.casos); renderMes(S); renderServicio(S); renderAnemia(S); renderInsights(S);
+  const servSel = $('fServ');
+  const cur = servSel.value;
+  servSel.innerHTML = '<option value="">Servicio · todos</option>' +
+    Object.keys(S.porServ).sort().map(s => `<option${s === cur ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  renderTabla();
+  const pre = $('preload'); const preCur = pre.value;
+  pre.innerHTML = '<option value="">Precargar desde registro…</option>' +
+    state.casos.map((c, i) => `<option value="${i}">${esc((c.cx || c.dx || 'caso') + ' · ' + (c.servicio || '') + ' · Hb ' + fmt1(c.hb_ini))}</option>`).join('');
+  pre.value = preCur;
+  renderDatosTab();
+}
+
+['fServ','fRiesgo','fUrg','fCumpl'].forEach(id => $(id).addEventListener('change', renderTabla));
+$('fBusca').addEventListener('input', renderTabla);
+$('btnRut').addEventListener('click', () => {
+  state.mostrarRut = !state.mostrarRut;
+  $('btnRut').textContent = state.mostrarRut ? '🙈 Enmascarar ID' : '👁 Mostrar ID completo';
+  renderTabla();
+});
+$('btnCopyCsv').addEventListener('click', copyCsv);
+$('btnEval').addEventListener('click', evaluar);
+$('btnDemoCaso').addEventListener('click', casoDemoEval);
+$('btnPrint').addEventListener('click', () => { evaluar(); print(); });
+$('btnCopyPlan').addEventListener('click', () => {
+  evaluar();
+  navigator.clipboard.writeText($('plan').textContent).then(
+    () => { $('btnCopyPlan').textContent = '✓ Copiado'; setTimeout(() => $('btnCopyPlan').textContent = 'Copiar plan', 1600); }, () => {});
+});
+$('preload').addEventListener('change', e => { const c = state.casos[+e.target.value]; if (c) preloadCaso(c); });
+$('btnRefresh').addEventListener('click', refreshDrive);
+$('btnRefresh2').addEventListener('click', refreshDrive);
+$('btnSheetSave').addEventListener('click', () => {
+  state.sheetId = extractSheetId($('sheetId').value);
+  store.set('sheet', state.sheetId);
+  renderDatosTab();
+  if (state.mcp) watchSheet(); else fallbackChain();
+});
+$('prefCosto').addEventListener('change', () => { state.costoGR = eNum('prefCosto', 100000); store.set('costo', state.costoGR); renderAll(); });
+$('prefMetaTxa').addEventListener('change', () => { state.metaTxa = eNum('prefMetaTxa', 70); store.set('metatxa', state.metaTxa); renderAll(); });
+function importarTexto(text){
+  const rows = parseDelimited(text);
+  const casos = casosDesdeTabla(rows);
+  if (!casos.length){ alert('No se reconocieron casos: incluye la fila de encabezados de la planilla (ID_paciente, Hb_inicial…).'); return; }
+  store.set('import', rows); store.set('importTs', Date.now());
+  showBanner('');
+  setSource('import', casos, new Date(), 'CSV importado');
+}
+$('btnImport').addEventListener('click', () => {
+  const f = $('csvFile').files && $('csvFile').files[0];
+  if (f){ f.text().then(importarTexto); return; }
+  const t = $('pasteBox').value.trim();
+  if (t) importarTexto(t); else alert('Selecciona un archivo CSV o pega las celdas copiadas.');
+});
+$('btnClearLocal').addEventListener('click', () => {
+  store.del('import'); store.del('importTs'); $('pasteBox').value = ''; $('csvFile').value = '';
+  fallbackChain();
+});
+
+/* ════════ Arranque ════════ */
+(async function boot(){
+  setSource('demo', DEMO, new Date(), 'Datos de ejemplo');
+  const enDrive = await initDrive();
+  if (!enDrive) await fallbackChain();
+  else showBanner('Conectando con tu planilla «Datos PBM» en Google Drive… la primera lectura puede pedirte autorización.', false);
+})();
+</script>
+</body>
+</html>

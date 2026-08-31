@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import date, datetime, timedelta
-import os, json, threading, urllib.request
+import os, json, time, threading, urllib.request
 
 app = FastAPI(title="CancelOS IA v4 API", version="4.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -39,6 +39,78 @@ def encuesta():
 @app.get("/alta", response_class=HTMLResponse)
 def hoja_alta():
     return _html("alta.html", "<h1>Hoja de alta - archivo alta.html no encontrado</h1>")
+
+# ═══════════════════════════════════════════════
+# PBM: APP + REGISTRO VINCULADO A LA PLANILLA DRIVE
+# La planilla "Datos PBM" (Google Forms) es la fuente primaria del programa.
+# PBM_SHEETS_FEED   = URL del Apps Script doGet que entrega los casos SIN RUT (ver PBM_DRIVE.md)
+# PBM_SHEETS_WEBHOOK = URL del Apps Script doPost para anexar casos (mismo patron que CMA)
+# ═══════════════════════════════════════════════
+@app.get("/pbm-app", response_class=HTMLResponse)
+def pbm_app():
+    return _html("pbm.html", "<h1>PBM-IA Perioperatorio - falta pbm.html en el repo</h1>")
+
+PBM_FILE = os.path.join(os.path.dirname(__file__), "casos_pbm.jsonl")
+_pbm_lock = threading.Lock()
+_pbm_feed_cache = {"ts": 0.0, "casos": []}
+
+def _pbm_load():
+    out = []
+    try:
+        with open(PBM_FILE, encoding="utf-8") as f:
+            for linea in f:
+                linea = linea.strip()
+                if linea:
+                    try: out.append(json.loads(linea))
+                    except Exception: pass
+    except FileNotFoundError:
+        pass
+    return out
+
+def _pbm_feed():
+    # Casos desde la planilla Drive via Apps Script (cache 5 min para no golpear Google)
+    url = os.environ.get("PBM_SHEETS_FEED", "")
+    if not url: return []
+    ahora = time.time()
+    if ahora - _pbm_feed_cache["ts"] < 300:
+        return _pbm_feed_cache["casos"]
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "CancelOS/4.6"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        casos = data.get("casos", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        _pbm_feed_cache["ts"] = ahora
+        _pbm_feed_cache["casos"] = casos
+        return casos
+    except Exception:
+        return _pbm_feed_cache["casos"]
+
+@app.get("/pbm/casos")
+def pbm_casos():
+    planilla = _pbm_feed()
+    return {"casos": planilla + _pbm_load(),
+            "fuente_planilla": bool(planilla),
+            "hospital": "Hospital de Quilpue"}
+
+@app.post("/pbm/caso")
+def pbm_caso(body: dict):
+    caso = dict(body or {})
+    caso["ts"] = caso.get("ts") or datetime.now().isoformat()
+    try:
+        with _pbm_lock, open(PBM_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(caso, ensure_ascii=False) + "\n")
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+    # Respaldo durable en la planilla del equipo (Apps Script doPost, ver PBM_DRIVE.md)
+    url = os.environ.get("PBM_SHEETS_WEBHOOK", "")
+    if url:
+        try:
+            req = urllib.request.Request(url, data=json.dumps(caso, ensure_ascii=False).encode("utf-8"),
+                                         headers={"Content-Type": "application/json", "User-Agent": "CancelOS/4.6"})
+            with urllib.request.urlopen(req, timeout=8) as r: r.read()
+        except Exception:
+            pass
+    return {"ok": True, "id": caso.get("id")}
 
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
@@ -688,7 +760,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.5.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","pbm_app":"/pbm-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/pbm/casos","/pbm/caso","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):

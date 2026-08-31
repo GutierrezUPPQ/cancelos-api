@@ -13,3 +13,5 @@ services:
       # Opcionales (configurar en el dashboard de Render):
       # - key: CMA_PIN               # PIN del equipo para registrar eventos
       # - key: CMA_SHEETS_WEBHOOK    # URL del Apps Script para respaldo en Google Sheets
+      # - key: PBM_SHEETS_FEED       # URL del Apps Script que entrega los casos PBM sin RUT (ver PBM_DRIVE.md)
+      # - key: PBM_SHEETS_WEBHOOK    # URL del Apps Script para anexar casos PBM a la planilla
