@@ -676,7 +676,7 @@ function watchSheet(){
       const code = ev.error && ev.error.code;
       if (code === 'server_unavailable' && ev.error.retryable && !retried){
         retried = true;
-        setTimeout(() => { try{ state.mcp.invalidate('Google Drive','read_file_content',{fileId: state.sheetId}); }catch(e){} }, 1500 + Math.random()*1500);
+        setTimeout(() => { const p = state.mcp.invalidate('Google Drive','read_file_content',{fileId: state.sheetId}); if (p && p.catch) p.catch(() => {}); }, 1500 + Math.random()*1500);
         return;
       }
       const fix = MCP_FIX[code] || 'No se pudo leer Drive en este momento ('+esc(code||'error')+'). Se muestran los últimos datos disponibles.';
@@ -692,7 +692,7 @@ function watchSheet(){
 }
 function refreshDrive(){
   if (state.mcp){
-    try{ state.mcp.invalidate('Google Drive','read_file_content',{ fileId: state.sheetId }); }catch(e){}
+    const p = state.mcp.invalidate('Google Drive','read_file_content',{ fileId: state.sheetId }); if (p && p.catch) p.catch(() => {});
   } else fallbackChain(true);
 }
 
