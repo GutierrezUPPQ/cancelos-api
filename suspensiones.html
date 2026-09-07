@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CancelOS — Suspensiones en el tiempo</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#020b18;--panel:#040f1f;--border:#0d2137;--dim:#0a1a2e;--text:#e2e8f0;--muted:#4a6484;--soft:#94a3b8;--accent:#0ea5e9;
+  --rojo:#ef4444;--ambar:#eab308;--verde:#22c55e;--violeta:#a78bfa;--naranjo:#fb923c;--gris:#64748b}
+html{background:var(--navy)}
+body{min-height:100vh;background:var(--navy);color:var(--text);font-family:'Barlow',sans-serif}
+body::after{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(#0d2137 1px,transparent 1px),linear-gradient(90deg,#0d2137 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:0 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#0369a1,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:3px}
+.logo-title span{color:var(--accent)}
+.logo-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px}
+a.volver{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:2px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end;padding:14px 0;border-bottom:1px solid var(--border)}
+label.f{display:flex;flex-direction:column;gap:4px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted)}
+input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{background:var(--dim);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;padding:8px 10px;min-width:140px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+label.c{display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 10px;background:var(--dim);border:1px solid var(--border);border-radius:6px;cursor:pointer}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:3px;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--dim)}
+.kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;line-height:1}
+.kpi-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:4px}
+.kpi-sub{font-size:11px;color:var(--soft);margin-top:4px}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+svg{width:100%;height:auto;display:block}
+.bar-row{display:grid;grid-template-columns:190px 1fr 60px 52px;gap:8px;align-items:center;font-size:12px;padding:3px 0}
+.bar-row .lbl{color:var(--soft);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-bg{height:14px;background:var(--border);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.num{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900}
+.mono{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--soft)}
+.legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.alert{border-left:3px solid var(--ambar);background:rgba(234,179,8,.08);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:6px}
+.plan{border-left:3px solid var(--accent);background:rgba(14,165,233,.06);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:6px}
+.plan b{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl{overflow-x:auto}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;border:1px solid}
+.bevitable{color:var(--rojo);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.12)}
+.bpotencialmente_evitable{color:var(--ambar);border-color:rgba(234,179,8,.4);background:rgba(234,179,8,.12)}
+.bno_evitable{color:var(--verde);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.12)}
+.bsin_clasificar{color:var(--soft);border-color:rgba(148,163,184,.4);background:rgba(148,163,184,.12)}
+.forms{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+@media (max-width:900px){.forms{grid-template-columns:1fr}}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#0369a1,#1d4ed8);border:none;border-radius:6px;color:#fff;padding:10px 22px;cursor:pointer;margin-top:12px}
+.msg{font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:8px;color:var(--verde)}
+.msg.err{color:var(--rojo)}
+.hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px}
+footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-align:center;padding:26px 10px;line-height:2}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--navy)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚕</div>
+    <div>
+      <div class="logo-title">CANCEL<span>OS</span> · SUSPENSIONES EN EL TIEMPO</div>
+      <div class="logo-sub">REGISTRO OPERABLE · SERIE, CARTA P Y PARETO · HOSPITAL DE QUILPUÉ / HPMM</div>
+    </div>
+  </div>
+  <a class="volver" href="/torre">← TORRE DE CONTROL</a>
+</header>
+
+<div class="controls">
+  <label class="f">GRANULARIDAD<select id="gran"><option value="dia">Día</option><option value="semana">Semana (ISO)</option><option value="mes" selected>Mes</option></select></label>
+  <label class="f">RANGO<select id="rango"><option value="30">Últimos 30 días</option><option value="90">Últimos 90 días</option><option value="180" selected>Últimos 180 días</option><option value="365">Últimos 365 días</option><option value="0">Todo el registro</option></select></label>
+  <label class="f">SERVICIO<input type="text" id="servicio" placeholder="todos"></label>
+  <label class="f">CENTRO CARTA P (%)<input type="number" id="centro" step="0.01" placeholder="tasa del rango" style="min-width:110px"></label>
+  <label class="c"><input type="checkbox" id="habil"> Solo lunes a viernes</label>
+  <button class="btn" style="margin-top:0" onclick="cargar()">ACTUALIZAR</button>
+</div>
+
+<div class="sec-title">── INDICADORES DEL RANGO</div>
+<div class="kpis" id="kpis"></div>
+
+<div class="sec-title">── SUSPENSIONES EN EL TIEMPO · barras por categoría · línea = tasa hábil CME normal con banda ±3σ</div>
+<div class="card"><div id="serie"></div><div class="legend" id="leg"></div><div class="hint" id="tend"></div></div>
+
+<div class="grid2" style="margin-top:14px">
+  <div class="card"><div class="sec-title" style="margin-top:0">── PARETO DE CAUSAS</div><div id="pareto"></div></div>
+  <div class="card"><div class="sec-title" style="margin-top:0">── DÍA DE LA SEMANA</div><div id="dow"></div>
+    <div class="sec-title">── EVITABILIDAD · MOMENTO · MODALIDAD</div><div id="mix" style="font-size:12px;line-height:1.7"></div></div>
+</div>
+
+<div class="grid2" style="margin-top:14px">
+  <div class="card"><div class="sec-title" style="margin-top:0">── ALERTAS</div><div id="alertas"></div></div>
+  <div class="card"><div class="sec-title" style="margin-top:0">── PLAN DE ACCIÓN</div><div id="plan"></div></div>
+</div>
+
+<div class="sec-title">── ÚLTIMOS REGISTROS</div>
+<div class="card tbl"><table><thead><tr><th>FECHA CX</th><th>DÍA</th><th>ID</th><th>SERVICIO</th><th>TIPO · MOD.</th><th>CAUSA</th><th>EVITABILIDAD</th><th>MOMENTO</th><th>EVENTO RAÍZ</th><th>PAB.</th><th>AUTOR</th></tr></thead><tbody id="tbody"></tbody></table></div>
+
+<div class="sec-title">── REGISTRAR</div>
+<div class="forms">
+  <div class="card">
+    <div class="mono" style="margin-bottom:10px">NUEVA SUSPENSIÓN · un registro por caso · sin nombre ni RUT</div>
+    <div class="fgrid">
+      <label class="f">FECHA DE LA CIRUGÍA<input type="date" id="s_fecha"></label>
+      <label class="f">ID DE CASO / EPISODIO<input type="text" id="s_id" placeholder="CX-001"></label>
+      <label class="f">SERVICIO / ESPECIALIDAD<input type="text" id="s_servicio" placeholder="Traumatología"></label>
+      <label class="f">PABELLÓN<input type="text" id="s_pab" placeholder="PAB 2"></label>
+      <label class="f">TIPO<select id="s_tipo"></select></label>
+      <label class="f">MODALIDAD<select id="s_mod"></select></label>
+      <label class="f">CAUSA (CATÁLOGO)<select id="s_causa"></select></label>
+      <label class="f">EVITABILIDAD<select id="s_evit"></select></label>
+      <label class="f">MOMENTO<select id="s_mom"></select></label>
+      <label class="f">EVENTO RAÍZ (OPCIONAL)<input type="text" id="s_raiz" placeholder="p. ej. jornada 08-09 ago"></label>
+      <label class="f">PROCEDIMIENTO<input type="text" id="s_proc" placeholder="Colecistectomía lap."></label>
+      <label class="f">AUTOR<input type="text" id="s_autor" placeholder="iniciales"></label>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <label class="c"><input type="checkbox" id="s_reprog"> Reprogramada</label>
+      <label class="f">FECHA REPROGRAMACIÓN<input type="date" id="s_freprog"></label>
+      <label class="c"><input type="checkbox" id="s_onco"> Oncológico</label>
+      <label class="f">PIN DEL EQUIPO<input type="password" id="s_pin" style="min-width:110px"></label>
+    </div>
+    <label class="f" style="margin-top:10px">DETALLE<textarea id="s_detalle" rows="2" placeholder="Qué pasó, sin datos personales"></textarea></label>
+    <button class="btn" onclick="enviarSuspension()">REGISTRAR SUSPENSIÓN</button>
+    <div class="msg" id="s_msg"></div>
+    <div class="hint">La evitabilidad se sugiere por la causa (regla del analista) y puede sobrescribirse. "Sin causal" queda disponible para completar después: no equivale a "no evitable".</div>
+  </div>
+  <div class="card">
+    <div class="mono" style="margin-bottom:10px">PROGRAMADAS DEL DÍA · denominador de la tasa hábil (monitoreo)</div>
+    <div class="fgrid">
+      <label class="f">FECHA<input type="date" id="p_fecha"></label>
+      <label class="f">PROGRAMADAS NORMALES (CME)<input type="number" id="p_prog" min="0" placeholder="0"></label>
+      <label class="f">CONDICIONALES<input type="number" id="p_cond" min="0" placeholder="0"></label>
+      <label class="f">REALIZADAS<input type="number" id="p_real" min="0" placeholder="0"></label>
+      <label class="f">AUTOR<input type="text" id="p_autor"></label>
+      <label class="f">PIN DEL EQUIPO<input type="password" id="p_pin"></label>
+    </div>
+    <button class="btn" onclick="enviarProgramadas()">GUARDAR DÍA</button>
+    <div class="msg" id="p_msg"></div>
+    <div class="hint">Un registro por fecha; la última versión manda. Sin denominador, la serie muestra solo conteos (nunca una tasa inventada).</div>
+  </div>
+</div>
+
+<footer>REGISTRO OPERABLE DE SUSPENSIONES · CADA INDICADOR CON SU DENOMINADOR · POBLACIONES DISTINTAS NO SE SUMAN<br><span style="color:var(--accent)">CANCELOS IA v4</span> · COORDINACIÓN DEL PROCESO QUIRÚRGICO</footer>
+</div>
+
+<script>
+const COLOR={equipo_quirurgico:'#ef4444',paciente:'#eab308',administrativa:'#0ea5e9',apoyo_logistico:'#a78bfa',infraestructura:'#22c55e',emergencia:'#fb923c',otra:'#94a3b8',sin_causal:'#4a6484'};
+const NOMBRE={equipo_quirurgico:'Equipo quirúrgico',paciente:'Paciente',administrativa:'Administrativas',apoyo_logistico:'Apoyo logístico',infraestructura:'Infraestructura',emergencia:'Emergencias',otra:'Otra',sin_causal:'Sin causal'};
+const EV={evitable:'Evitable',potencialmente_evitable:'Potencialmente evitable',no_evitable:'No evitable',sin_clasificar:'Sin clasificar'};
+const DIAS=['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+let CAT=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=v=>v==null?'—':String(v).replace('.',',')+' %';
+const hoy=()=>new Date().toISOString().slice(0,10);
+async function api(path,opts){const r=await fetch(path,opts);return r.json();}
+
+function params(){
+  const d=parseInt($('rango').value,10); const p=new URLSearchParams();
+  if(d>0){const f=new Date();f.setDate(f.getDate()-d);p.set('desde',f.toISOString().slice(0,10));p.set('hasta',hoy());}
+  if($('servicio').value.trim())p.set('servicio',$('servicio').value.trim());
+  if($('habil').checked)p.set('habil','1');
+  return p;
+}
+async function cargarCatalogo(){
+  CAT=await api('/suspension/catalogo');
+  const grupos={};CAT.causas.forEach(c=>{(grupos[c.categoria_nombre]=grupos[c.categoria_nombre]||[]).push(c)});
+  $('s_causa').innerHTML=Object.entries(grupos).map(([g,cs])=>`<optgroup label="${esc(g)}">`+cs.map(c=>`<option value="${c.codigo}" data-ev="${c.evitabilidad_sugerida}">${esc(c.descripcion)}</option>`).join('')+'</optgroup>').join('');
+  $('s_evit').innerHTML=CAT.evitabilidades.map(e=>`<option value="${e}">${EV[e]||e}</option>`).join('');
+  $('s_mod').innerHTML=CAT.modalidades.map(m=>`<option value="${m}">${m}</option>`).join('');
+  $('s_tipo').innerHTML=CAT.tipos_cx.map(m=>`<option value="${m}">${m}</option>`).join('');
+  $('s_mom').innerHTML=CAT.momentos.map(m=>`<option value="${m}">${{dia_previo:'Día previo',dia_0:'Mismo día (antes de pabellón)',en_pabellon:'Paciente en pabellón'}[m]||m}</option>`).join('');
+  $('s_causa').onchange=()=>{const o=$('s_causa').selectedOptions[0];if(o)$('s_evit').value=o.dataset.ev;};
+  $('s_causa').value='error_programacion';$('s_causa').onchange();
+  $('s_fecha').value=hoy();$('p_fecha').value=hoy();
+}
+
+async function cargar(){
+  const p=params(); const ps=new URLSearchParams(p); ps.set('granularidad',$('gran').value);
+  if($('centro').value)ps.set('centro_pct',$('centro').value);
+  const [serie,res,lista]=await Promise.all([api('/suspension/serie?'+ps),api('/suspension/resumen?'+p),api('/suspension/lista?'+p+'&limite=60')]);
+  renderKpis(res,serie);renderSerie(serie);renderPareto(res);renderDow(res);renderMix(res);renderAlertas(res);renderTabla(lista);
+}
+
+function renderKpis(r,s){
+  const t=r.tasa_habil_cme_normal, e=r.evitabilidad;
+  const k=[
+    {v:r.total_registros,l:'REGISTROS EN EL RANGO',s:`${r.habiles} L–V · ${r.fin_de_semana} fin de semana`,c:'var(--accent)'},
+    {v:pct(t.tasa_pct),l:'TASA HÁBIL · CME NORMAL',s:t.programadas?`${t.suspendidas} / ${t.programadas} programadas`:'sin denominador registrado',c:'var(--text)'},
+    {v:pct(e.evitable_pct_clasificados),l:'EVITABLE (DE CLASIFICADOS)',s:`${e.evitable} de ${e.clasificados} · prevenible ${pct(e.prevenible_pct_clasificados)}`,c:'var(--rojo)'},
+    {v:pct(e.sin_clasificar_pct),l:'SIN CAUSAL',s:`${e.sin_clasificar} registros por completar`,c:'var(--ambar)'},
+    {v:pct(r.lunes_pct_de_habiles),l:'LUNES (DE L–V)',s:`${r.por_dia_semana.lunes||0} registros el lunes`,c:'var(--violeta)'},
+    {v:(s.tendencia&&s.tendencia.direccion)||'—',l:'TENDENCIA',s:s.tendencia&&s.tendencia.delta_pct!=null?`${s.tendencia.medida==='tasa_pct'?'tasa':'conteo'} · Δ ${String(s.tendencia.delta_pct).replace('.',',')} % (mitades)`:'≥ 4 periodos con datos',c:'var(--verde)'},
+  ];
+  const cmp=r.comparacion_periodo_anterior;
+  if(cmp)k.push({v:(cmp.delta_suspensiones>0?'+':'')+cmp.delta_suspensiones,l:'VS PERÍODO ANTERIOR',s:`${cmp.suspensiones} registros entre ${cmp.desde} y ${cmp.hasta}`+(cmp.delta_tasa_pp!=null?` · Δ tasa ${String(cmp.delta_tasa_pp).replace('.',',')} pp`:''),c:'var(--soft)'});
+  $('kpis').innerHTML=k.map(x=>`<div class="kpi"><div class="kpi-val" style="color:${x.c}">${esc(x.v)}</div><div class="kpi-lbl">${x.l}</div><div class="kpi-sub">${esc(x.s)}</div></div>`).join('');
+}
+
+function renderSerie(s){
+  const P=s.periodos||[];
+  if(!P.length){$('serie').innerHTML='<div class="mono" style="padding:30px;text-align:center">SIN REGISTROS EN EL RANGO · un dato ausente nunca se interpreta como cero</div>';$('leg').innerHTML='';$('tend').textContent='';return;}
+  const W=1000,H=330,L=44,R=52,T=16,B=46,pw=W-L-R,ph=H-T-B;
+  const maxN=Math.max(1,...P.map(b=>b.suspensiones)); const yN=v=>T+ph*(1-v/maxN);
+  const conTasa=P.some(b=>b.tasa_pct!=null);
+  const maxT=conTasa?Math.max(5,...P.map(b=>Math.max(b.tasa_pct||0,b.ucl_pct||0)))*1.1:0; const yT=v=>T+ph*(1-v/maxT);
+  const slot=pw/P.length, bw=Math.max(4,slot*0.62);
+  let g=''; const ticks=Math.min(maxN,5);
+  for(let i=0;i<=ticks;i++){const v=Math.round(maxN*i/ticks);g+=`<line x1="${L}" x2="${L+pw}" y1="${yN(v)}" y2="${yN(v)}" stroke="#0d2137"/><text x="${L-6}" y="${yN(v)+4}" fill="#4a6484" font-size="10" text-anchor="end">${v}</text>`;}
+  P.forEach((b,i)=>{
+    const x=L+i*slot+(slot-bw)/2; let y=yN(0);
+    Object.entries(b.por_categoria).sort((a,c)=>c[1]-a[1]).forEach(([cat,n])=>{const h=ph*n/maxN;y-=h;g+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${COLOR[cat]||'#94a3b8'}" rx="2"><title>${b.periodo} · ${NOMBRE[cat]||cat}: ${n}</title></rect>`;});
+    if(b.suspensiones)g+=`<text x="${x+bw/2}" y="${yN(b.suspensiones)-4}" fill="#e2e8f0" font-size="11" font-weight="700" text-anchor="middle">${b.suspensiones}</text>`;
+    const every=Math.ceil(P.length/16);
+    if(i%every===0)g+=`<text x="${x+bw/2}" y="${H-B+16}" fill="#4a6484" font-size="10" text-anchor="middle">${esc(b.periodo.replace(/^\d{4}-/,''))}</text>`;
+  });
+  if(conTasa){
+    const pts=P.map((b,i)=>b.tasa_pct==null?null:[L+i*slot+slot/2,yT(b.tasa_pct)]);
+    const band=P.map((b,i)=>b.ucl_pct==null?null:[L+i*slot+slot/2,yT(Math.min(b.ucl_pct,maxT))]).filter(Boolean);
+    const bandL=P.map((b,i)=>b.lcl_pct==null?null:[L+i*slot+slot/2,yT(b.lcl_pct)]).filter(Boolean).reverse();
+    if(band.length>1)g+=`<polygon points="${band.concat(bandL).map(p=>p.join(',')).join(' ')}" fill="#0ea5e9" opacity=".12"/>`;
+    if(s.carta_p&&s.carta_p.centro_pct!=null)g+=`<line x1="${L}" x2="${L+pw}" y1="${yT(s.carta_p.centro_pct)}" y2="${yT(s.carta_p.centro_pct)}" stroke="#eab308" stroke-dasharray="6 4"/><text x="${L+pw-4}" y="${yT(s.carta_p.centro_pct)-5}" fill="#eab308" font-size="10" text-anchor="end">centro ${String(s.carta_p.centro_pct).replace('.',',')} %</text>`;
+    const d=pts.filter(Boolean).map(p=>p.join(',')).join(' ');
+    if(d)g+=`<polyline points="${d}" fill="none" stroke="#5eead4" stroke-width="2.5"/>`;
+    P.forEach((b,i)=>{if(b.tasa_pct==null)return;const p=pts[i];const c=b.senal==='BAJO LCL'?'#22c55e':b.senal==='SOBRE UCL'?'#ef4444':'#5eead4';g+=`<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${c}" stroke="#020b18" stroke-width="1.5"><title>${b.periodo}: ${b.cme_normal} / ${b.programadas} = ${String(b.tasa_pct).replace('.',',')} %${b.senal?' · '+b.senal:''}</title></circle>`;});
+    for(let i=0;i<=4;i++){const v=maxT*i/4;g+=`<text x="${L+pw+6}" y="${yT(v)+4}" fill="#5eead4" font-size="10">${v.toFixed(1).replace('.',',')}%</text>`;}
+  }
+  $('serie').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Suspensiones por periodo">${g}</svg>`;
+  const cats=new Set();P.forEach(b=>Object.keys(b.por_categoria).forEach(c=>cats.add(c)));
+  $('leg').innerHTML=[...cats].map(c=>`<span style="--c:${COLOR[c]||'#94a3b8'}">${NOMBRE[c]||c}</span>`).join('')+(conTasa?'<span style="--c:#5eead4">Tasa hábil CME normal (%)</span><span style="--c:#0ea5e9">Banda ±3σ</span>':'');
+  const t=s.tendencia||{};
+  $('tend').textContent=`${s.total_suspensiones} registros · ${s.total_programadas?`tasa del rango ${pct(s.tasa_pct)} (${s.total_cme_normal} / ${s.total_programadas})`:'sin denominador: solo conteos'} · tendencia ${t.direccion||'—'}${t.delta_pct!=null?` (Δ ${String(t.delta_pct).replace('.',',')} % entre mitades del rango)`:''}`;
+}
+
+function barras(items,max,color){return items.map(it=>`<div class="bar-row"><div class="lbl" title="${esc(it.l)}">${esc(it.l)}</div><div class="bar-bg"><div class="bar-fill" style="width:${max?Math.max(1,it.v/max*100):0}%;background:${it.c||color}"></div></div><div class="num">${it.v}</div><div class="mono">${it.x||''}</div></div>`).join('');}
+function renderPareto(r){
+  const P=r.pareto_causas||[];
+  $('pareto').innerHTML=P.length?barras(P.map(c=>({l:c.descripcion,v:c.n,c:COLOR[c.categoria]||'#94a3b8',x:`${String(c.pct).replace('.',',')}% · ac. ${String(c.acumulado_pct).replace('.',',')}%`})),P[0].n):'<div class="mono">SIN REGISTROS</div>';
+}
+function renderDow(r){
+  const d=r.por_dia_semana||{}; const max=Math.max(1,...DIAS.map(x=>d[x]||0));
+  $('dow').innerHTML=barras(DIAS.map(x=>({l:x.charAt(0).toUpperCase()+x.slice(1),v:d[x]||0,c:x==='lunes'?'#ef4444':(x==='sabado'||x==='domingo')?'#1d4ed8':'#0ea5e9'})),max);
+}
+function renderMix(r){
+  const e=r.evitabilidad,m=r.por_momento,mo=r.por_modalidad,t=r.por_tipo;
+  const chip=(k,v)=>`<span class="badge b${k}">${EV[k]} ${v}</span>`;
+  $('mix').innerHTML=`<div>${['evitable','potencialmente_evitable','no_evitable','sin_clasificar'].map(k=>chip(k,e[k]||0)).join(' ')}</div>
+  <div class="mono" style="margin-top:8px">MOMENTO</div><div>Día previo ${m.dia_previo||0} · Mismo día ${m.dia_0||0} · En pabellón <b style="color:var(--rojo)">${m.en_pabellon||0}</b></div>
+  <div class="mono" style="margin-top:6px">MODALIDAD · TIPO</div><div>Directa ${mo.directa||0} · Condicional ${mo.condicional||0} · Urgencia ${mo.urgencia||0} · Mayor ${t.mayor||0} · Menor ${t.menor||0} · Procedimiento ${t.procedimiento||0}</div>
+  <div class="mono" style="margin-top:6px">EVENTOS RAÍZ · REPROGRAMADAS</div><div>${r.eventos_raiz.registros_con_evento_raiz} registros en ${r.eventos_raiz.eventos_distintos} eventos raíz · reprogramadas ${r.reprogramadas.n} (${pct(r.reprogramadas.pct)})</div>`;
+}
+function renderAlertas(r){
+  $('alertas').innerHTML=(r.alertas||[]).length?r.alertas.map(a=>`<div class="alert">${esc(a)}</div>`).join(''):'<div class="mono" style="color:var(--verde)">✓ SIN ALERTAS EN EL RANGO</div>';
+  $('plan').innerHTML=(r.plan_de_accion||[]).length?r.plan_de_accion.map(p=>`<div class="plan"><b>${esc((NOMBRE[p.foco]||p.foco).toUpperCase())} · ${p.registros}</b><br>${esc(p.accion)}</div>`).join('')+`<div class="hint">${esc(r.ciclo)}</div>`:`<div class="hint">${esc(r.ciclo||'')}</div>`;
+}
+function renderTabla(l){
+  const S=l.suspensiones||[];
+  $('tbody').innerHTML=S.length?S.map(s=>`<tr><td class="mono" style="color:var(--accent)">${s.fecha_cx}</td><td>${esc(s.dia_semana)}</td><td class="mono">${esc(s.id_caso)}</td><td>${esc(s.servicio)}</td><td>${esc(s.tipo_cx)} · ${esc(s.modalidad)}</td><td>${esc(s.causa_descripcion)}</td><td><span class="badge b${s.evitabilidad}">${EV[s.evitabilidad]||s.evitabilidad}</span></td><td>${esc(s.momento)}</td><td>${esc(s.evento_raiz)}</td><td>${esc(s.pabellon)}</td><td>${esc(s.autor)}</td></tr>`).join(''):'<tr><td colspan="11" class="mono" style="text-align:center;padding:24px">SIN REGISTROS · registra la primera suspensión abajo</td></tr>';
+}
+
+async function enviarSuspension(){
+  const body={fecha_cx:$('s_fecha').value,id_caso:$('s_id').value,servicio:$('s_servicio').value,pabellon:$('s_pab').value,tipo_cx:$('s_tipo').value,modalidad:$('s_mod').value,causa:$('s_causa').value,evitabilidad:$('s_evit').value,momento:$('s_mom').value,evento_raiz:$('s_raiz').value,procedimiento:$('s_proc').value,autor:$('s_autor').value,reprogramada:$('s_reprog').checked,fecha_reprogramacion:$('s_freprog').value,oncologico:$('s_onco').checked,detalle:$('s_detalle').value,pin:$('s_pin').value};
+  const r=await api('/suspension',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const m=$('s_msg'); if(r.error){m.className='msg err';m.textContent='✗ '+r.error;return;}
+  m.className='msg';m.textContent=`✓ Registrada (${r.suspensiones_registradas} en total${r.persistido_en_disco?', persistida':''}${r.respaldado_en_sheets?', respaldada en Sheets':''})`;
+  $('s_id').value='';$('s_detalle').value='';$('s_raiz').value='';cargar();
+}
+async function enviarProgramadas(){
+  const body={fecha:$('p_fecha').value,programadas:$('p_prog').value,condicionales:$('p_cond').value,realizadas:$('p_real').value,autor:$('p_autor').value,pin:$('p_pin').value};
+  const r=await api('/suspension/programadas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const m=$('p_msg'); if(r.error){m.className='msg err';m.textContent='✗ '+r.error;return;}
+  m.className='msg';m.textContent=`✓ Día guardado (${r.fechas_con_denominador} fechas con denominador)`;cargar();
+}
+cargarCatalogo().then(cargar);
+</script>
+</body>
+</html>

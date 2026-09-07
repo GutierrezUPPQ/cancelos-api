@@ -40,6 +40,10 @@ def encuesta():
 def hoja_alta():
     return _html("alta.html", "<h1>Hoja de alta - archivo alta.html no encontrado</h1>")
 
+@app.get("/suspensiones", response_class=HTMLResponse)
+def suspensiones_app():
+    return _html("suspensiones.html", "<h1>Suspensiones en el tiempo - archivo suspensiones.html no encontrado</h1>")
+
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
 # ═══════════════════════════════════════════════
@@ -684,11 +688,342 @@ def indicadores_cma(eventos, total_override=0):
     }
 
 # ═══════════════════════════════════════════════
+# MODULO SUSPENSIONES - SEGUIMIENTO EN EL TIEMPO
+# Registro operable de suspensiones quirurgicas (Comite Quirurgico):
+# causal codificada (catalogo SSVQ/MINSAL), evitabilidad, modalidad, tipo,
+# momento, evento raiz y reprogramacion; denominador diario de programadas
+# normales (monitoreo L-V) para la tasa habil; serie temporal, carta p,
+# Pareto y comparacion de periodos. Cada indicador se lee con su
+# denominador propio: los conteos del registro no son tasas y las
+# poblaciones distintas no se suman. Ver SUSPENSIONES.md
+# ═══════════════════════════════════════════════
+CAUSAS_SUSPENSION = {  # codigo: (categoria MINSAL, descripcion, evitabilidad sugerida por la regla del analista)
+    "error_programacion":     ("equipo_quirurgico", "Error de programacion (incluye prolongacion de tabla)", "evitable"),
+    "reemplazo_urgencia":     ("equipo_quirurgico", "Reemplazo por urgencia", "no_evitable"),
+    "falta_cirujano":         ("equipo_quirurgico", "Falta de cirujano", "potencialmente_evitable"),
+    "falta_anestesiologo":    ("equipo_quirurgico", "Falta de anestesiologo", "potencialmente_evitable"),
+    "no_se_presenta":         ("paciente", "No se presenta", "potencialmente_evitable"),
+    "falta_ayuno":            ("paciente", "Falta de ayuno", "evitable"),
+    "atraso_ingreso":         ("paciente", "Atraso al ingreso", "evitable"),
+    "patologia_aguda":        ("paciente", "Patologia aguda o enfermedad intercurrente", "no_evitable"),
+    "descompensacion":        ("paciente", "Descompensacion de patologia cronica", "no_evitable"),
+    "rechazo_paciente":       ("paciente", "Paciente rechaza o desiste", "potencialmente_evitable"),
+    "estudio_incompleto":     ("administrativa", "Estudio preoperatorio incompleto", "evitable"),
+    "sin_consentimiento":     ("administrativa", "Consentimiento informado no firmado", "evitable"),
+    "sin_cupo_recuperacion":  ("administrativa", "Sin cupo en recuperacion (URPA)", "potencialmente_evitable"),
+    "sin_cama":               ("administrativa", "Sin cama de hospitalizacion o UCI", "potencialmente_evitable"),
+    "falta_personal":         ("administrativa", "Falta de personal (enfermeria, TENS, otros)", "potencialmente_evitable"),
+    "instrumental_incompleto":("apoyo_logistico", "Instrumental incompleto o no esteril", "evitable"),
+    "falta_insumos":          ("apoyo_logistico", "Falta de insumos, implantes o farmacos", "evitable"),
+    "equipo_fuera_servicio":  ("apoyo_logistico", "Equipamiento fuera de servicio", "potencialmente_evitable"),
+    "falla_climatizacion":    ("infraestructura", "Falla de climatizacion", "potencialmente_evitable"),
+    "falla_infraestructura":  ("infraestructura", "Falla o destruccion de infraestructura", "potencialmente_evitable"),
+    "desastre_natural":       ("emergencia", "Desastre natural o emergencia externa", "no_evitable"),
+    "otra":                   ("otra", "Otra causa consignada en el detalle", "sin_clasificar"),
+    "sin_causal":             ("sin_causal", "Sin causal registrada (completar por jornada)", "sin_clasificar"),
+}
+CATEGORIAS_SUSPENSION = {"equipo_quirurgico":"Equipo quirurgico","paciente":"Paciente","administrativa":"Administrativas",
+                         "apoyo_logistico":"Unidades de apoyo logistico","infraestructura":"Infraestructura",
+                         "emergencia":"Emergencias","otra":"Otra","sin_causal":"Sin causal"}
+EVITABILIDADES = ("evitable", "potencialmente_evitable", "no_evitable", "sin_clasificar")
+MODALIDADES_CX = ("directa", "condicional", "urgencia")
+TIPOS_CX = ("mayor", "menor", "procedimiento")
+MOMENTOS_SUSPENSION = ("dia_previo", "dia_0", "en_pabellon")   # anticipacion: antes del dia, el mismo dia, con el paciente en pabellon
+DIAS_SEMANA = ("lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo")
+GRANULARIDADES = ("dia", "semana", "mes")
+ACCIONES_SUSPENSION = {
+    "equipo_quirurgico": "Auditar ficha por ficha el error de programacion: separar error de agenda (UPPQ) de indicacion o insumo (unidad quirurgica); reglas de reemplazo por urgencia y de cobertura del equipo",
+    "paciente":          "Confirmacion telefonica 24-48 h antes (viernes PM para la tabla del lunes), recordatorio de ayuno e instrucciones escritas; contacto del dia -1",
+    "administrativa":    "Compuertas H2-H4 del prequirurgico: estudio interpretado, consentimiento firmado y cupo de recuperacion o cama confirmados antes de la tabla definitiva",
+    "apoyo_logistico":   "Checklist de instrumental e insumos del dia -1 con dueno y plazo; mantencion preventiva de equipos",
+    "infraestructura":   "Plan de mantencion preventiva y protocolo de contingencia por sala",
+    "emergencia":        "Registrar el evento raiz con una codificacion unica del suceso; no atribuir evitabilidad",
+    "otra":              "Recodificar con el catalogo para que el dato alimente el ciclo de mejora",
+    "sin_causal":        "Completar la causal por jornada: sin causal no hay evitabilidad ni accion posible",
+    "lunes":             "Blindar la tabla del lunes: confirmacion y revision de examenes el viernes PM y dotacion de enfermeria asegurada",
+}
+SUSPENSIONES_FILE = os.path.join(os.path.dirname(__file__), "suspensiones.jsonl")
+PROGRAMADAS_FILE  = os.path.join(os.path.dirname(__file__), "programadas.jsonl")
+
+def _cargar_jsonl(path):
+    regs = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for linea in f:
+                linea = linea.strip()
+                if linea:
+                    try: regs.append(json.loads(linea))
+                    except Exception: pass
+    except FileNotFoundError:
+        pass
+    return regs
+
+def _anexar_jsonl(path, obj):
+    try:
+        with _ev_lock, open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+        return True
+    except Exception:
+        return False
+
+SUSPENSIONES = _cargar_jsonl(SUSPENSIONES_FILE)
+PROGRAMADAS  = {r["fecha"]: r for r in _cargar_jsonl(PROGRAMADAS_FILE) if r.get("fecha")}  # la ultima version de cada fecha manda
+
+def _fecha(v, default=None):
+    try: return date.fromisoformat(str(v)[:10])
+    except Exception: return default
+
+def _clave_periodo(f, gran):
+    if gran == "dia": return f.isoformat()
+    if gran == "semana":
+        iso = f.isocalendar(); return f"{iso[0]}-S{iso[1]:02d}"
+    return f.strftime("%Y-%m")
+
+def _normalizar_suspension(d):
+    # Devuelve (registro, error). No persiste: lo usan el endpoint y el lote sin estado.
+    fecha_dt = _fecha(d.get("fecha_cx") or d.get("fecha"))
+    if fecha_dt is None: return None, {"error": "fecha_cx invalida: usar AAAA-MM-DD"}
+    causa = (str(d.get("causa", "")).strip().lower() or "sin_causal")
+    if causa not in CAUSAS_SUSPENSION:
+        return None, {"error": f"causa invalida: '{causa}'", "causas_validas": list(CAUSAS_SUSPENSION)}
+    cat, desc, evit_sug = CAUSAS_SUSPENSION[causa]
+    evit = str(d.get("evitabilidad", "") or evit_sug).strip().lower()
+    if evit not in EVITABILIDADES:
+        return None, {"error": f"evitabilidad invalida: '{evit}'", "valores_validos": list(EVITABILIDADES)}
+    modalidad = str(d.get("modalidad", "directa")).strip().lower()
+    tipo      = str(d.get("tipo_cx", "mayor")).strip().lower()
+    momento   = str(d.get("momento", "dia_0")).strip().lower()
+    for valor, validos, campo in ((modalidad, MODALIDADES_CX, "modalidad"), (tipo, TIPOS_CX, "tipo_cx"), (momento, MOMENTOS_SUSPENSION, "momento")):
+        if valor not in validos:
+            return None, {"error": f"{campo} invalido: '{valor}'", "valores_validos": list(validos)}
+    iso = fecha_dt.isocalendar(); ahora = datetime.now(); fr = _fecha(d.get("fecha_reprogramacion"))
+    reg = {
+        "id_caso": str(d.get("id_caso", "")).strip()[:40], "fecha_cx": fecha_dt.isoformat(),
+        "servicio": str(d.get("servicio", "")).strip()[:60], "procedimiento": str(d.get("procedimiento", "")).strip()[:120],
+        "pabellon": str(d.get("pabellon", "")).strip()[:20], "modalidad": modalidad, "tipo_cx": tipo, "momento": momento,
+        "causa": causa, "causa_descripcion": desc, "categoria": cat, "evitabilidad": evit, "evitabilidad_sugerida": evit_sug,
+        "evento_raiz": str(d.get("evento_raiz", "")).strip()[:60], "reprogramada": bool(d.get("reprogramada", False)),
+        "fecha_reprogramacion": fr.isoformat() if fr else "",
+        "oncologico": bool(d.get("oncologico", False)), "detalle": str(d.get("detalle", "")).strip()[:500],
+        "autor": str(d.get("autor", "")).strip()[:60],
+        "dia_semana": DIAS_SEMANA[fecha_dt.weekday()], "habil": fecha_dt.weekday() < 5,
+        "semana": f"{iso[0]}-S{iso[1]:02d}", "mes": fecha_dt.strftime("%Y-%m"),
+        "fecha_registro": str(ahora.date()), "hora_registro": ahora.strftime("%H:%M:%S"),
+    }
+    return reg, None
+
+def _normalizar_programadas(d):
+    fecha_dt = _fecha(d.get("fecha"))
+    if fecha_dt is None: return None, {"error": "fecha invalida: usar AAAA-MM-DD"}
+    try:
+        prog = int(d.get("programadas", 0) or 0); cond = int(d.get("condicionales", 0) or 0); real = int(d.get("realizadas", 0) or 0)
+    except (TypeError, ValueError):
+        return None, {"error": "programadas, condicionales y realizadas deben ser enteros"}
+    if min(prog, cond, real) < 0: return None, {"error": "los conteos no pueden ser negativos"}
+    return {"fecha": fecha_dt.isoformat(), "programadas": prog, "condicionales": cond, "realizadas": real,
+            "habil": fecha_dt.weekday() < 5, "autor": str(d.get("autor", "")).strip()[:60],
+            "fecha_registro": str(date.today())}, None
+
+def _filtrar_suspensiones(susp, f):
+    desde, hasta = _fecha(f.get("desde")), _fecha(f.get("hasta"))
+    out = []
+    for s in susp:
+        fd = _fecha(s.get("fecha_cx"))
+        if fd is None: continue
+        if desde and fd < desde: continue
+        if hasta and fd > hasta: continue
+        if f.get("habil") and not s.get("habil", fd.weekday() < 5): continue
+        if f.get("servicio") and str(s.get("servicio", "")).strip().lower() != str(f["servicio"]).strip().lower(): continue
+        for campo in ("categoria", "modalidad", "causa", "tipo_cx", "momento", "evitabilidad"):
+            if f.get(campo) and s.get(campo) != f[campo]: break
+        else:
+            out.append(s)
+    return out
+
+def _es_cme_normal(s):
+    # numerador homologo al monitoreo: cirugia mayor de programacion directa (normal)
+    return s.get("modalidad") == "directa" and s.get("tipo_cx") == "mayor"
+
+def _rango(susp, prog, desde, hasta):
+    fechas = [_fecha(s.get("fecha_cx")) for s in susp] + [_fecha(k) for k in prog]
+    fechas = [x for x in fechas if x]
+    d = _fecha(desde) or (min(fechas) if fechas else None)
+    h = _fecha(hasta) or (max(fechas) if fechas else None)
+    return d, h
+
+def _tendencia(valores, etiqueta):
+    # comparacion explicable: mitad inicial vs mitad final del rango (>= 4 puntos)
+    vs = [v for v in valores if v is not None]
+    if len(vs) < 4:
+        return {"direccion": "SIN DATOS SUFICIENTES", "nota": "Se requieren al menos 4 periodos con datos"}
+    k = len(vs) // 2
+    m1 = sum(vs[:k]) / k; m2 = sum(vs[k:]) / (len(vs) - k)
+    delta = round((m2 - m1) / m1 * 100, 1) if m1 else (0.0 if m2 == 0 else None)
+    if delta is None: dir_ = "AL ALZA"
+    elif delta <= -15: dir_ = "A LA BAJA"
+    elif delta >= 15: dir_ = "AL ALZA"
+    else: dir_ = "ESTABLE"
+    return {"direccion": dir_, "medida": etiqueta, "media_mitad_inicial": round(m1, 2), "media_mitad_final": round(m2, 2),
+            "delta_pct": delta, "ultimo": vs[-1], "anterior": vs[-2],
+            "nota": "Comparacion de medias entre la mitad inicial y la mitad final del rango; +/-15% se lee como estable"}
+
+def serie_suspensiones(susp, prog, granularidad="mes", desde=None, hasta=None, filtros=None, centro_pct=None):
+    gran = granularidad if granularidad in GRANULARIDADES else "mes"
+    f = dict(filtros or {}); f["desde"] = desde; f["hasta"] = hasta
+    susp_f = _filtrar_suspensiones(susp, f)
+    prog_f = {k: v for k, v in prog.items() if (not f.get("habil") or v.get("habil", True))}
+    d, h = _rango(susp_f, prog_f, desde, hasta)
+    if d is not None and not susp_f and not any(d <= _fecha(k) <= h for k in prog_f):
+        d = None  # rango explicito sin registros ni denominadores: no se fabrican ceros
+    if d is None:
+        return {"granularidad": gran, "desde": desde, "hasta": hasta, "periodos": [], "total_suspensiones": 0, "total_cme_normal": 0,
+                "total_programadas": None, "tasa_pct": None, "carta_p": {"centro_pct": None}, "tendencia": {"direccion": "SIN DATOS"},
+                "nota": "Sin registros ni denominadores en el rango: un dato ausente nunca se interpreta como cero"}
+    periodos, orden = {}, []
+    dia = d
+    while dia <= h:
+        k = _clave_periodo(dia, gran)
+        if k not in periodos:
+            periodos[k] = {"periodo": k, "desde": dia.isoformat(), "hasta": dia.isoformat(), "suspensiones": 0, "cme_normal": 0,
+                           "por_categoria": {}, "evitables": 0, "potencialmente_evitables": 0, "no_evitables": 0, "sin_clasificar": 0,
+                           "programadas": None, "dias_con_denominador": 0}
+            orden.append(k)
+        periodos[k]["hasta"] = dia.isoformat()
+        p = prog_f.get(dia.isoformat())
+        if p:
+            periodos[k]["programadas"] = (periodos[k]["programadas"] or 0) + int(p.get("programadas", 0))
+            periodos[k]["dias_con_denominador"] += 1
+        dia += timedelta(days=1)
+    for s in susp_f:
+        k = _clave_periodo(_fecha(s["fecha_cx"]), gran); b = periodos.get(k)
+        if not b: continue
+        b["suspensiones"] += 1
+        if _es_cme_normal(s): b["cme_normal"] += 1
+        b["por_categoria"][s.get("categoria", "otra")] = b["por_categoria"].get(s.get("categoria", "otra"), 0) + 1
+        ev = s.get("evitabilidad", "sin_clasificar")
+        b[{"evitable": "evitables", "potencialmente_evitable": "potencialmente_evitables", "no_evitable": "no_evitables"}.get(ev, "sin_clasificar")] += 1
+    lista = [periodos[k] for k in orden]
+    con_den = [b for b in lista if b["programadas"]]
+    tot_s = sum(b["suspensiones"] for b in lista); tot_cme = sum(b["cme_normal"] for b in con_den)
+    tot_p = sum(b["programadas"] for b in con_den) if con_den else None
+    tasa = round(tot_cme / tot_p * 100, 2) if tot_p else None
+    centro = float(centro_pct) if centro_pct not in (None, "", 0, "0") else tasa
+    for b in lista:
+        n = b["programadas"]
+        b["tasa_pct"] = round(b["cme_normal"] / n * 100, 2) if n else None
+        if n and centro is not None:
+            pbar = centro / 100.0; sig = (pbar * (1 - pbar) / n) ** 0.5
+            b["lcl_pct"] = round(max(0.0, (pbar - 3 * sig) * 100), 2); b["ucl_pct"] = round((pbar + 3 * sig) * 100, 2)
+            b["senal"] = "BAJO LCL" if b["tasa_pct"] < b["lcl_pct"] else "SOBRE UCL" if b["tasa_pct"] > b["ucl_pct"] else None
+        else:
+            b["lcl_pct"] = b["ucl_pct"] = b["senal"] = None
+    if con_den and len(con_den) == len(lista):
+        tend = _tendencia([b["tasa_pct"] for b in lista], "tasa_pct")
+    else:
+        tend = _tendencia([b["suspensiones"] for b in lista], "suspensiones")
+    return {
+        "granularidad": gran, "desde": d.isoformat(), "hasta": h.isoformat(), "filtros": {k: v for k, v in (filtros or {}).items() if v},
+        "total_suspensiones": tot_s, "total_cme_normal": tot_cme, "total_programadas": tot_p, "tasa_pct": tasa,
+        "carta_p": {"centro_pct": round(centro, 2) if centro is not None else None,
+                    "origen_centro": "centro_pct entregado" if centro_pct not in (None, "", 0, "0") else "tasa acumulada del rango (suma / suma)",
+                    "regla": "limites = centro +/- 3*sqrt(p(1-p)/n) con n = programadas normales del periodo; senal BAJO LCL / SOBRE UCL"},
+        "periodos": lista, "tendencia": tend,
+        "nota": "tasa_pct = cme_normal (mayor + directa) / programadas normales del periodo, homologa al monitoreo hábil; "
+                "suspensiones = todos los registros del filtro (conteo, no tasa). programadas = null cuando el periodo no tiene denominador: "
+                "un dato ausente nunca se interpreta como cero.",
+    }
+
+def resumen_suspensiones(susp, prog, desde=None, hasta=None, filtros=None):
+    f = dict(filtros or {}); f["desde"] = desde; f["hasta"] = hasta
+    susp_f = _filtrar_suspensiones(susp, f)
+    d, h = _rango(susp_f, {k: v for k, v in prog.items() if not f.get("habil") or v.get("habil", True)}, desde, hasta)
+    n = len(susp_f)
+    def conteo(campo, base=None):
+        c = {}
+        for s in susp_f: c[s.get(campo) or ""] = c.get(s.get(campo) or "", 0) + 1
+        if base: c = {k: c.get(k, 0) for k in base}
+        return c
+    causas = {}
+    for s in susp_f:
+        k = s.get("causa", "sin_causal")
+        if k not in causas: causas[k] = {"causa": k, "descripcion": s.get("causa_descripcion", ""), "categoria": s.get("categoria", ""), "n": 0}
+        causas[k]["n"] += 1
+    pareto, acum = [], 0
+    for c in sorted(causas.values(), key=lambda x: -x["n"]):
+        acum += c["n"]; c["pct"] = round(c["n"] / n * 100, 1); c["acumulado_pct"] = round(acum / n * 100, 1)
+        c["pocos_vitales"] = (acum - c["n"]) / n < 0.8; pareto.append(c)
+    evit = conteo("evitabilidad", EVITABILIDADES)
+    clasificados = n - evit["sin_clasificar"]
+    por_dia = conteo("dia_semana", DIAS_SEMANA)
+    habiles = sum(por_dia[x] for x in DIAS_SEMANA[:5]); finde = n - habiles
+    lunes_pct = round(por_dia["lunes"] / habiles * 100, 1) if habiles else None
+    dias_habiles_con = len({s["fecha_cx"] for s in susp_f if s.get("habil")})
+    # tasa habil homologa al monitoreo: CME normal (mayor + directa) L-V / programadas normales L-V con denominador
+    prog_lv = {k: v for k, v in prog.items() if v.get("habil", True) and d and h and d <= _fecha(k) <= h}
+    den = sum(int(v.get("programadas", 0)) for v in prog_lv.values())
+    num = sum(1 for s in susp_f if s.get("habil") and _es_cme_normal(s))
+    tasa_habil = round(num / den * 100, 2) if den else None
+    momentos = conteo("momento", MOMENTOS_SUSPENSION); modalidades = conteo("modalidad", MODALIDADES_CX); tipos = conteo("tipo_cx", TIPOS_CX)
+    raices = [s.get("evento_raiz") for s in susp_f if s.get("evento_raiz")]
+    servicios = sorted(conteo("servicio").items(), key=lambda x: -x[1])[:10]
+    pabellones = sorted(conteo("pabellon").items(), key=lambda x: -x[1])[:10]
+    # periodo anterior de igual longitud, inmediatamente antes del rango
+    comparacion = None
+    if d and h:
+        largo = (h - d).days + 1; d0 = d - timedelta(days=largo); h0 = d - timedelta(days=1)
+        f0 = dict(filtros or {}); f0["desde"] = d0.isoformat(); f0["hasta"] = h0.isoformat()
+        prev = _filtrar_suspensiones(susp, f0)
+        prev_lv = {k: v for k, v in prog.items() if v.get("habil", True) and d0 <= _fecha(k) <= h0}
+        den0 = sum(int(v.get("programadas", 0)) for v in prev_lv.values())
+        num0 = sum(1 for s in prev if s.get("habil") and _es_cme_normal(s))
+        comparacion = {"desde": d0.isoformat(), "hasta": h0.isoformat(), "suspensiones": len(prev), "delta_suspensiones": n - len(prev),
+                       "tasa_habil_pct": round(num0 / den0 * 100, 2) if den0 else None,
+                       "delta_tasa_pp": round(tasa_habil - num0 / den0 * 100, 2) if (den0 and tasa_habil is not None) else None}
+    alertas, plan = [], []
+    if n:
+        sc = evit["sin_clasificar"]
+        if sc / n >= 0.2:
+            alertas.append(f"{sc} de {n} registros sin clasificar ({round(sc/n*100)}%): completar la causal antes de leer evitabilidad")
+            plan.append({"foco": "sin_causal", "registros": sc, "accion": ACCIONES_SUSPENSION["sin_causal"]})
+        if habiles >= 5 and lunes_pct is not None and lunes_pct >= 30:
+            alertas.append(f"Lunes concentra {por_dia['lunes']} de {habiles} registros L-V ({lunes_pct}%)")
+            plan.append({"foco": "lunes", "registros": por_dia["lunes"], "accion": ACCIONES_SUSPENSION["lunes"]})
+        if clasificados and evit["evitable"] / clasificados >= 0.4:
+            alertas.append(f"{evit['evitable']} de {clasificados} clasificados son evitables ({round(evit['evitable']/clasificados*100)}%)")
+        if momentos["en_pabellon"]:
+            alertas.append(f"{momentos['en_pabellon']} suspension(es) con el paciente ya en pabellon: la mas costosa, revision individual")
+        onc = sum(1 for s in susp_f if s.get("oncologico"))
+        if onc: alertas.append(f"{onc} intervencion(es) oncologica(s) suspendida(s): reprogramacion preferente <= 7 dias")
+        for cat, k in sorted(conteo("categoria").items(), key=lambda x: -x[1])[:3]:
+            if cat and cat != "sin_causal" and k:
+                plan.append({"foco": cat, "registros": k, "accion": ACCIONES_SUSPENSION.get(cat, ACCIONES_SUSPENSION["otra"])})
+    return {
+        "desde": d.isoformat() if d else None, "hasta": h.isoformat() if h else None, "filtros": {k: v for k, v in (filtros or {}).items() if v},
+        "total_registros": n, "habiles": habiles, "fin_de_semana": finde, "dias_habiles_con_registro": dias_habiles_con,
+        "tasa_habil_cme_normal": {"suspendidas": num, "programadas": den if den else None, "tasa_pct": tasa_habil,
+                                  "nota": "numerador: cirugia mayor de programacion directa en L-V; denominador: programadas normales L-V registradas en /suspension/programadas"},
+        "pareto_causas": pareto, "por_categoria": conteo("categoria", list(CATEGORIAS_SUSPENSION)),
+        "evitabilidad": {**evit, "clasificados": clasificados,
+                         "evitable_pct_clasificados": round(evit["evitable"] / clasificados * 100, 1) if clasificados else None,
+                         "prevenible_pct_clasificados": round((evit["evitable"] + evit["potencialmente_evitable"]) / clasificados * 100, 1) if clasificados else None,
+                         "sin_clasificar_pct": round(evit["sin_clasificar"] / n * 100, 1) if n else None},
+        "por_dia_semana": por_dia, "lunes_pct_de_habiles": lunes_pct,
+        "por_momento": momentos, "por_modalidad": modalidades, "por_tipo": tipos,
+        "por_servicio": [{"servicio": k or "(sin servicio)", "n": v} for k, v in servicios],
+        "por_pabellon": [{"pabellon": k or "(sin pabellon)", "n": v} for k, v in pabellones],
+        "eventos_raiz": {"registros_con_evento_raiz": len(raices), "eventos_distintos": len(set(raices)),
+                         "nota": "agrupar registros por falla de origen evita sobreestimar la inestabilidad"},
+        "reprogramadas": {"n": sum(1 for s in susp_f if s.get("reprogramada")), "pct": round(sum(1 for s in susp_f if s.get("reprogramada")) / n * 100, 1) if n else None},
+        "comparacion_periodo_anterior": comparacion, "alertas": alertas, "plan_de_accion": plan,
+        "ciclo": "ACTUAR: cada foco con responsable y plazo en el Comite Quirurgico" if plan else ("VERIFICAR: mantener registro y vigilancia mensual" if n else "SIN DATOS: registrar suspensiones y programadas para construir la serie"),
+    }
+
+# ═══════════════════════════════════════════════
 # ENDPOINTS
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.5.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","suspensiones":"/suspensiones","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta","/suspension","/suspension/programadas","/suspension/catalogo","/suspension/lista","/suspension/serie","/suspension/resumen","/suspension/lote"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):
@@ -805,6 +1140,82 @@ def endpoint_cma_mejora(body: dict):
     # Version sin estado del loop: recibe el lote completo (ej. exportado de la planilla del mes)
     try: return indicadores_cma(body.get("eventos", []) or [], int(body.get("total_casos", 0) or 0))
     except Exception as e: raise Exception(str(e))
+
+# ── Suspensiones en el tiempo ──
+def _pin_ok(body):
+    pin = os.environ.get("CMA_PIN", "")
+    return (not pin) or str(body.get("pin", "")) == pin
+
+@app.get("/suspension/catalogo")
+def endpoint_suspension_catalogo():
+    return {"causas": [{"codigo": k, "categoria": v[0], "categoria_nombre": CATEGORIAS_SUSPENSION[v[0]], "descripcion": v[1], "evitabilidad_sugerida": v[2]} for k, v in CAUSAS_SUSPENSION.items()],
+            "categorias": CATEGORIAS_SUSPENSION, "evitabilidades": list(EVITABILIDADES), "modalidades": list(MODALIDADES_CX),
+            "tipos_cx": list(TIPOS_CX), "momentos": list(MOMENTOS_SUSPENSION), "granularidades": list(GRANULARIDADES),
+            "regla_evitabilidad": "Sugerencia del analista por causal (evitable / potencialmente evitable / no evitable); el equipo puede sobrescribirla con validacion clinica y operacional. Sin causal no se clasifica."}
+
+@app.post("/suspension")
+def endpoint_suspension(body: dict):
+    if not _pin_ok(body): return {"error": "PIN del equipo requerido o incorrecto", "pin_requerido": True}
+    reg, err = _normalizar_suspension(body)
+    if err: return err
+    SUSPENSIONES.append(reg)
+    out = {"registrado": reg, "suspensiones_registradas": len(SUSPENSIONES), "persistido_en_disco": _anexar_jsonl(SUSPENSIONES_FILE, reg)}
+    sheets = _enviar_sheets({"tipo_registro": "suspension", **reg})
+    if sheets is not None: out["respaldado_en_sheets"] = sheets
+    return out
+
+@app.post("/suspension/programadas")
+def endpoint_suspension_programadas(body: dict):
+    # Denominador del dia: programadas normales de CME (y condicionales / realizadas) del monitoreo. La ultima version de cada fecha manda.
+    if not _pin_ok(body): return {"error": "PIN del equipo requerido o incorrecto", "pin_requerido": True}
+    reg, err = _normalizar_programadas(body)
+    if err: return err
+    PROGRAMADAS[reg["fecha"]] = reg
+    out = {"registrado": reg, "fechas_con_denominador": len(PROGRAMADAS), "persistido_en_disco": _anexar_jsonl(PROGRAMADAS_FILE, reg)}
+    sheets = _enviar_sheets({"tipo_registro": "programadas", **reg})
+    if sheets is not None: out["respaldado_en_sheets"] = sheets
+    return out
+
+@app.get("/suspension/lista")
+def endpoint_suspension_lista(desde: str = "", hasta: str = "", servicio: str = "", categoria: str = "", limite: int = 100):
+    regs = _filtrar_suspensiones(SUSPENSIONES, {"desde": desde, "hasta": hasta, "servicio": servicio, "categoria": categoria})
+    regs = sorted(regs, key=lambda s: (s.get("fecha_cx", ""), s.get("fecha_registro", ""), s.get("hora_registro", "")), reverse=True)
+    return {"total": len(regs), "suspensiones": regs[:max(1, min(int(limite), 1000))],
+            "programadas_registradas": len(PROGRAMADAS), "nota": "Conteos del registro operativo; no son una tasa"}
+
+@app.get("/suspension/serie")
+def endpoint_suspension_serie(granularidad: str = "mes", desde: str = "", hasta: str = "", servicio: str = "", categoria: str = "",
+                              modalidad: str = "", causa: str = "", habil: int = 0, centro_pct: float = 0):
+    try:
+        return serie_suspensiones(SUSPENSIONES, PROGRAMADAS, granularidad, desde or None, hasta or None,
+                                  {"servicio": servicio, "categoria": categoria, "modalidad": modalidad, "causa": causa, "habil": bool(habil)}, centro_pct or None)
+    except Exception as e: raise Exception(str(e))
+
+@app.get("/suspension/resumen")
+def endpoint_suspension_resumen(desde: str = "", hasta: str = "", servicio: str = "", categoria: str = "", modalidad: str = "", habil: int = 0):
+    try:
+        return resumen_suspensiones(SUSPENSIONES, PROGRAMADAS, desde or None, hasta or None,
+                                    {"servicio": servicio, "categoria": categoria, "modalidad": modalidad, "habil": bool(habil)})
+    except Exception as e: raise Exception(str(e))
+
+@app.post("/suspension/lote")
+def endpoint_suspension_lote(body: dict):
+    # Version sin estado: recibe el lote completo (ej. el informe mensual de suspensiones y el monitoreo diario) y no persiste nada
+    susp, invalidos = [], []
+    for i, d in enumerate(body.get("suspensiones", []) or []):
+        reg, err = _normalizar_suspension(d if isinstance(d, dict) else {})
+        if err: invalidos.append({"indice": i, **err})
+        else: susp.append(reg)
+    prog = {}
+    for i, d in enumerate(body.get("programadas", []) or []):
+        reg, err = _normalizar_programadas(d if isinstance(d, dict) else {})
+        if err: invalidos.append({"indice": i, "programadas": True, **err})
+        else: prog[reg["fecha"]] = reg
+    filtros = body.get("filtros", {}) or {}
+    desde, hasta = body.get("desde") or None, body.get("hasta") or None
+    return {"validos": len(susp), "invalidos": invalidos, "fechas_con_denominador": len(prog),
+            "serie": serie_suspensiones(susp, prog, str(body.get("granularidad", "mes")), desde, hasta, filtros, body.get("centro_pct")),
+            "resumen": resumen_suspensiones(susp, prog, desde, hasta, filtros)}
 
 # ═══════════════════════════════════════════════
 # PROXY ENDPOINT — Railway llama a Google Sheets

@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 eventos_cma.jsonl
 encuestas_cma.jsonl
+suspensiones.jsonl
+programadas.jsonl
