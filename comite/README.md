@@ -1,4 +1,7 @@
-# Comité Quirúrgico · Agosto 2026 (Hospital de Quilpué)
+# Comité Quirúrgico · Agosto 2026
+
+**Versión breve (14 láminas, lectura rápida):** `Comite_Agosto_2026_breve.pptx` / `.pdf` — una idea por lámina; se genera con `node build/breve.js`.
+ (Hospital de Quilpué)
 
 - `Comite_Quirurgico_Agosto_2026_v2.pptx` — presentación completa (49 láminas, con notas y fuentes por lámina).
 - `Comite_Quirurgico_Agosto_2026_v2.pdf` — la misma presentación en PDF para lectura rápida.
