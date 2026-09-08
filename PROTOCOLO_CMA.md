@@ -32,6 +32,15 @@ Este módulo implementa como API la lógica de decisión de la serie documental
 | 7–8 · PROM | `POST /cma/qor15` | QoR-15E: total /150, PASS ≥ 118, MCID Δ ≤ −6 vs basal |
 | 8–9 · Registro | `POST /cma/evento` | Registra caso o evento (taxonomía abajo) |
 | 9 · Mejora | `GET /cma/indicadores` · `POST /cma/mejora` | Tablero con subconjunto K computable, análisis de falla en 3 capas y plan de acción |
+| Todas · Episodio | `POST /cma/registro` | Guarda el resultado de una herramienta en el episodio del caso (`etapa`: elegibilidad, caso_listo, gate0, aldrete, padss, alta, cierre_30d). El cierre a 30 días exige `detalle.causa` |
+| 8 · Seguimiento | `GET /cma/episodio?id_caso=` | Línea de tiempo del caso (registros + eventos + encuestas) y sus pendientes: alarmas P1/P2 sin cierre humano, llamada de 24–48 h, encuestas de 24 h y día 7, cierre a 30 días |
+| 8 · Seguimiento | `GET /cma/pasada` | La pasada del día: todos los episodios activos ordenados por urgencia (P1 → P2 → llamadas vencidas → encuestas → cierres) |
+| 9 · Datos | `GET /cma/exportar.csv?que=` | Exporta `registros`, `eventos` o `encuestas` en CSV plano (puente de nivel 1 con el sistema oficial; solo código de caso) |
+
+**Vía verde (v2.1, §9.4.7 — sujeta a aprobación del comité):** cuando las cuatro
+dimensiones salen verdes, `/cma/elegibilidad` devuelve `via_verde: true` con una
+nota informativa. No cambia ninguna compuerta: H3, H4, Gate 0 y CASO LISTO siguen
+vigentes; solo indica que no se requiere nota resolutiva del Policlínico.
 
 ## Reglas del protocolo que el motor respeta
 
@@ -99,7 +108,7 @@ día 7 ya vinculados al código del caso. Se imprime o se guarda como PDF desde 
 navegador. El nombre del paciente se escribe a mano al entregarla: la página
 solo usa el código del caso (nunca nombre ni RUT).
 
-**Persistencia de eventos** (`POST /cma/evento`), en tres capas:
+**Persistencia** de eventos, encuestas y registros de etapa (`registros_cma.jsonl`), en tres capas:
 
 1. **Disco del servidor** (`eventos_cma.jsonl`): automática, sobrevive reinicios.
    Un *redeploy* de Railway reemplaza el disco — por eso existe la capa 2.
@@ -111,14 +120,23 @@ solo usa el código del caso (nunca nombre ni RUT).
    usuario", y pegar la URL `/exec` en la variable):
 
    ```javascript
+   // Recibe eventos, encuestas y registros de etapa; cada uno va a su pestaña
+   // segun el campo "hoja" que envia la API (EVENTOS_CMA, ENCUESTAS_CMA, REGISTROS_CMA).
+   var COLUMNAS = {
+     EVENTOS_CMA:   ["fecha","hora","id_caso","tipo_evento","detalle","capa","accion","autor"],
+     ENCUESTAS_CMA: ["fecha","hora","id_caso","momento","total","delta","prioridad","motivo","alarma","quiere_llamada","dolor_eva","comentario"],
+     REGISTROS_CMA: ["fecha","hora","id_caso","etapa","resumen","detalle","autor"]
+   };
    function doPost(e) {
-     var ss = SpreadsheetApp.getActiveSpreadsheet();
-     var hoja = ss.getSheetByName("EVENTOS_CMA") || ss.insertSheet("EVENTOS_CMA");
-     if (hoja.getLastRow() === 0)
-       hoja.appendRow(["timestamp","fecha","hora","id_caso","tipo_evento","detalle","capa","accion","autor"]);
      var d = JSON.parse(e.postData.contents);
-     hoja.appendRow([new Date(), d.fecha||"", d.hora||"", d.id_caso||"", d.tipo_evento||"",
-                     d.detalle||"", d.capa||"", d.accion||"", d.autor||""]);
+     var nombre = COLUMNAS[d.hoja] ? d.hoja : "EVENTOS_CMA";
+     var ss = SpreadsheetApp.getActiveSpreadsheet();
+     var hoja = ss.getSheetByName(nombre) || ss.insertSheet(nombre);
+     var cols = COLUMNAS[nombre];
+     if (hoja.getLastRow() === 0) hoja.appendRow(["timestamp"].concat(cols));
+     hoja.appendRow([new Date()].concat(cols.map(function (c) {
+       var v = d[c]; return (v === undefined || v === null) ? "" : (typeof v === "object" ? JSON.stringify(v) : v);
+     })));
      return ContentService.createTextOutput(JSON.stringify({ok:true}))
             .setMimeType(ContentService.MimeType.JSON);
    }

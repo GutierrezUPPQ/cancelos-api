@@ -462,7 +462,7 @@ def score_qor15(d):
 TIPOS_EVENTO_CMA = ["caso_cma","alta_mismo_dia","pernoctacion_no_planificada","conversion_hospitalizacion",
                     "suspension_dia0","pausa_cma","rescate_activado","evento_adverso",
                     "reconsulta_7d","readmision_30d","reoperacion_30d",
-                    "seguimiento_24h_ok","seguimiento_24h_fallido","qor15_deterioro"]
+                    "seguimiento_24h_ok","seguimiento_24h_fallido","qor15_deterioro","alerta_cerrada"]
 CAPAS_FALLA = ["seleccion","proceso","no_prevenible"]  # 9.11.1: toda pernoctacion no planificada se clasifica en 3 capas
 
 # Persistencia: cada evento se anexa a disco (sobrevive reinicios; un redeploy
@@ -492,12 +492,14 @@ def _guardar_evento(e):
     except Exception:
         return False
 
-def _enviar_sheets(e):
-    # Respaldo durable en la planilla del equipo (Apps Script doPost, ver PROTOCOLO_CMA.md)
+def _enviar_sheets(e, hoja="EVENTOS_CMA"):
+    # Respaldo durable en la planilla del equipo (Apps Script doPost, ver PROTOCOLO_CMA.md).
+    # "hoja" le dice al script en que pestana anexar la fila (eventos, encuestas o registros).
     url = os.environ.get("CMA_SHEETS_WEBHOOK", "")
     if not url: return None
     try:
-        req = urllib.request.Request(url, data=json.dumps(e, ensure_ascii=False).encode("utf-8"),
+        carga = dict(e); carga["hoja"] = hoja
+        req = urllib.request.Request(url, data=json.dumps(carga, ensure_ascii=False).encode("utf-8"),
                                      headers={"Content-Type": "application/json", "User-Agent": "CancelOS/4.3"})
         with urllib.request.urlopen(req, timeout=8) as r: r.read()
         return True
@@ -688,7 +690,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.5.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/encuesta"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/cma/registro","/cma/episodio","/cma/pasada","/cma/exportar.csv","/encuesta"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):
@@ -721,7 +723,15 @@ def endpoint_completo(body: dict):
 
 @app.post("/cma/elegibilidad")
 def endpoint_cma_elegibilidad(body: dict):
-    try: return score_cma_elegibilidad(body)
+    try:
+        r = score_cma_elegibilidad(body)
+        todo_verde = all(v.get("color") == "VERDE" for v in r.get("dimensiones", {}).values())
+        r["via_verde"] = bool(todo_verde and r.get("disposicion") == "AVANZA")
+        if r["via_verde"]:
+            r["via_verde_nota"] = ("Cumple criterios de via verde (9.4.7, v2.1 propuesta): no requiere nota resolutiva "
+                                   "del Policlinico. Mantiene H3, H4, Gate 0 y CASO LISTO; el anestesiologo del caso conserva "
+                                   "la autoridad de detener el dia 0. Sujeta a aprobacion del comite.")
+        return r
     except Exception as e: raise Exception(str(e))
 
 @app.post("/cma/caso-listo")
@@ -782,7 +792,12 @@ def endpoint_cma_evento(body: dict):
 @app.post("/cma/encuesta")
 def endpoint_cma_encuesta(body: dict):
     # Publico: lo contesta el paciente desde el enlace. Solo id de episodio, sin datos personales.
-    try: return registrar_encuesta(body)
+    try:
+        r = registrar_encuesta(body)
+        if r.get("registrado") and ENCUESTAS_CMA:
+            sheets = _enviar_sheets(ENCUESTAS_CMA[-1], "ENCUESTAS_CMA")
+            if sheets is not None: r["respaldado_en_sheets"] = sheets
+        return r
     except Exception as e: raise Exception(str(e))
 
 @app.get("/cma/encuestas")
@@ -805,6 +820,194 @@ def endpoint_cma_mejora(body: dict):
     # Version sin estado del loop: recibe el lote completo (ej. exportado de la planilla del mes)
     try: return indicadores_cma(body.get("eventos", []) or [], int(body.get("total_casos", 0) or 0))
     except Exception as e: raise Exception(str(e))
+
+
+# ── Episodio CMA: un solo hilo por paciente ──
+# Cada herramienta puede dejar su resultado en el episodio (registro de etapa). El episodio
+# junta registros + eventos + encuestas por id_caso y deriva lo que esta pendiente: la
+# llamada de 24-48 h, las encuestas de 24 h y dia 7, las alarmas P1/P2 sin cierre humano y el
+# cierre a 30 dias con causa (etapa 8 del protocolo). Sigue sin nombre ni RUT (O.5).
+ETAPAS_REGISTRO = ["elegibilidad","caso_listo","gate0","aldrete","padss","alta","cierre_30d"]
+CAUSAS_CIERRE_30D = ["sin_eventos","reconsulta","readmision","reoperacion","evento_adverso","incontactable","otro"]
+REGISTROS_FILE = os.path.join(os.path.dirname(__file__), "registros_cma.jsonl")
+
+def _cargar_registros():
+    regs = []
+    try:
+        with open(REGISTROS_FILE, encoding="utf-8") as f:
+            for linea in f:
+                linea = linea.strip()
+                if linea:
+                    try: regs.append(json.loads(linea))
+                    except Exception: pass
+    except FileNotFoundError:
+        pass
+    return regs
+
+def _guardar_registro(r):
+    try:
+        with _ev_lock, open(REGISTROS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        return True
+    except Exception:
+        return False
+
+REGISTROS_CMA = _cargar_registros()
+
+def _ts(x):
+    # "fecha hora" -> datetime; tolera registros antiguos sin hora
+    try: return datetime.strptime(f"{x.get('fecha','')} {x.get('hora','00:00:00')}", "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        try: return datetime.strptime(str(x.get("fecha","")), "%Y-%m-%d")
+        except Exception: return None
+
+def _linea_de_tiempo(id_caso):
+    items = []
+    for r in REGISTROS_CMA:
+        if r.get("id_caso") == id_caso:
+            items.append({"clase":"registro","tipo":r.get("etapa"),"resumen":r.get("resumen",""),
+                          "autor":r.get("autor",""),"fecha":r.get("fecha"),"hora":r.get("hora"),"detalle":r.get("detalle")})
+    for e in EVENTOS_CMA:
+        if e.get("id_caso") == id_caso:
+            items.append({"clase":"evento","tipo":e.get("tipo_evento"),"resumen":e.get("detalle",""),
+                          "autor":e.get("autor",""),"fecha":e.get("fecha"),"hora":e.get("hora"),
+                          "detalle":{k:e[k] for k in ("capa","accion") if k in e} or None})
+    for q in ENCUESTAS_CMA:
+        if q.get("id_caso") == id_caso:
+            res = f"QoR-15E {q['total']}/150" if q.get("total") is not None else "sin puntaje"
+            if q.get("delta") is not None: res += f" · cambio {q['delta']}"
+            items.append({"clase":"encuesta","tipo":f"encuesta_{q.get('momento')}","resumen":res,
+                          "autor":"paciente","fecha":q.get("fecha"),"hora":q.get("hora"),
+                          "detalle":{"prioridad":q.get("prioridad"),"motivo":q.get("motivo"),
+                                     "alarma":q.get("alarma"),"quiere_llamada":q.get("quiere_llamada")}})
+    items.sort(key=lambda x: _ts(x) or datetime.min)
+    return items
+
+def _pendientes(id_caso, linea, ahora=None):
+    ahora = ahora or datetime.now()
+    alta = next((_ts(x) for x in linea if (x["clase"]=="registro" and x["tipo"]=="alta")
+                 or (x["clase"]=="evento" and x["tipo"]=="alta_mismo_dia")), None)
+    tipos_ev = [x["tipo"] for x in linea if x["clase"]=="evento"]
+    etapas   = [x["tipo"] for x in linea if x["clase"]=="registro"]
+    pend = []
+    # Alarmas P1/P2 sin cierre humano posterior
+    ult_cierre = max([_ts(x) for x in linea if x["clase"]=="evento" and x["tipo"]=="alerta_cerrada"] or [None], key=lambda d: d or datetime.min)
+    for x in linea:
+        if x["clase"]=="encuesta" and (x["detalle"] or {}).get("prioridad") in ("P1","P2"):
+            t = _ts(x)
+            if not ult_cierre or (t and t > ult_cierre):
+                pend.append({"que": f"alarma_{x['detalle']['prioridad']}", "urgencia": 1 if x['detalle']['prioridad']=="P1" else 2,
+                             "texto": f"Encuesta {x['tipo'].replace('encuesta_','')} con prioridad {x['detalle']['prioridad']}: llamar y cerrar la alerta"})
+    if alta:
+        horas = (ahora - alta).total_seconds() / 3600
+        if horas >= 24 and not any(t in ("seguimiento_24h_ok","seguimiento_24h_fallido") for t in tipos_ev):
+            pend.append({"que":"llamada_24_48h","urgencia": 2 if horas > 48 else 3,
+                         "texto": "Llamada de 24-48 h no registrada" + (" (vencida)" if horas > 48 else "")})
+        contest = {x["tipo"] for x in linea if x["clase"]=="encuesta" and (x["detalle"] or {}).get("prioridad") != "GRIS"}
+        if horas >= 24 and "encuesta_h24" not in contest:
+            pend.append({"que":"encuesta_24h","urgencia":3,"texto":"Encuesta de 24 h sin respuesta completa (reenviar enlace; incontactable no es evolucion normal)"})
+        if horas >= 24*7 and "encuesta_d7" not in contest:
+            pend.append({"que":"encuesta_d7","urgencia":4,"texto":"Encuesta del dia 7 sin respuesta"})
+        if horas >= 24*30 and "cierre_30d" not in etapas:
+            pend.append({"que":"cierre_30d","urgencia":4,"texto":"Episodio sin cierre a 30 dias con causa codificada"})
+    if not alta and "gate0" in etapas and "padss" not in etapas and "alta" not in etapas:
+        t0 = next((_ts(x) for x in linea if x["clase"]=="registro" and x["tipo"]=="gate0"), None)
+        if t0 and (ahora - t0).total_seconds() > 24*3600:
+            pend.append({"que":"sin_alta_registrada","urgencia":3,"texto":"Gate 0 cerrado hace mas de 24 h y sin alta ni pernoctacion registradas"})
+    pend.sort(key=lambda x: x["urgencia"])
+    return alta, pend
+
+def episodio_cma(id_caso):
+    linea = _linea_de_tiempo(id_caso)
+    alta, pend = _pendientes(id_caso, linea)
+    etapas = [x["tipo"] for x in linea if x["clase"]=="registro"]
+    return {"id_caso": id_caso, "n_items": len(linea),
+            "ultima_etapa": etapas[-1] if etapas else None,
+            "alta": alta.strftime("%Y-%m-%d %H:%M") if alta else None,
+            "cerrado_30d": "cierre_30d" in etapas,
+            "pendientes": pend, "linea_de_tiempo": linea,
+            "nota": "El episodio junta registros, eventos y encuestas por codigo de caso. La ficha clinica sigue siendo la fuente primaria."}
+
+def pasada_del_dia(dias=45):
+    ahora = datetime.now()
+    ids = []
+    for coleccion in (REGISTROS_CMA, EVENTOS_CMA, ENCUESTAS_CMA):
+        for x in coleccion:
+            i = x.get("id_caso")
+            if i and i not in ids:
+                t = _ts(x)
+                if t and (ahora - t).days <= dias: ids.append(i)
+    filas, resumen = [], {"P1":0,"P2":0,"llamadas_pendientes":0,"encuestas_sin_respuesta":0,"cierres_pendientes":0,"episodios":0}
+    for i in ids:
+        linea = _linea_de_tiempo(i)
+        alta, pend = _pendientes(i, linea, ahora)
+        etapas = [x["tipo"] for x in linea if x["clase"]=="registro"]
+        if "cierre_30d" in etapas and not pend: continue
+        ques = [p["que"] for p in pend]
+        resumen["episodios"] += 1
+        resumen["P1"] += "alarma_P1" in ques; resumen["P2"] += "alarma_P2" in ques
+        resumen["llamadas_pendientes"] += "llamada_24_48h" in ques
+        resumen["encuestas_sin_respuesta"] += ("encuesta_24h" in ques) + ("encuesta_d7" in ques)
+        resumen["cierres_pendientes"] += "cierre_30d" in ques
+        ult = linea[-1] if linea else None
+        filas.append({"id_caso": i, "ultima_etapa": etapas[-1] if etapas else None,
+                      "ultimo_movimiento": f"{ult['fecha']} {ult['hora'] or ''}".strip() if ult else None,
+                      "alta": alta.strftime("%Y-%m-%d") if alta else None,
+                      "pendientes": pend, "urgencia": min([p["urgencia"] for p in pend] or [9])})
+    filas.sort(key=lambda f: (f["urgencia"], f["ultimo_movimiento"] or ""))
+    return {"fecha": str(ahora.date()), "resumen": resumen, "episodios": filas,
+            "orden": "P1 primero, luego P2, llamadas vencidas, encuestas y cierres; el cierre de cada alerta es humano."}
+
+@app.post("/cma/registro")
+def endpoint_cma_registro(body: dict):
+    pin = os.environ.get("CMA_PIN", "")
+    if pin and str(body.get("pin","")) != pin:
+        return {"error": "PIN del equipo CMA requerido o incorrecto", "pin_requerido": True}
+    etapa = str(body.get("etapa",""))
+    if etapa not in ETAPAS_REGISTRO:
+        return {"error": f"etapa invalida: '{etapa}'", "etapas_validas": ETAPAS_REGISTRO}
+    id_caso = str(body.get("id_caso","")).strip()
+    if not id_caso:
+        return {"error": "id_caso requerido: el episodio se identifica solo por su codigo (sin nombre ni RUT)"}
+    detalle = body.get("detalle") if isinstance(body.get("detalle"), dict) else {}
+    if etapa == "cierre_30d" and str(detalle.get("causa","")) not in CAUSAS_CIERRE_30D:
+        return {"error": "cierre_30d requiere detalle.causa", "causas_validas": CAUSAS_CIERRE_30D}
+    ahora = datetime.now()
+    reg = {"id_caso": id_caso, "etapa": etapa, "resumen": str(body.get("resumen",""))[:300],
+           "detalle": detalle, "autor": str(body.get("autor","")), "fecha": str(ahora.date()), "hora": ahora.strftime("%H:%M:%S")}
+    REGISTROS_CMA.append(reg)
+    out = {"registrado": reg, "registros": len(REGISTROS_CMA), "persistido_en_disco": _guardar_registro(reg)}
+    sheets = _enviar_sheets({k: (json.dumps(v, ensure_ascii=False) if isinstance(v, dict) else v) for k, v in reg.items()}, "REGISTROS_CMA")
+    if sheets is not None: out["respaldado_en_sheets"] = sheets
+    out["episodio"] = episodio_cma(id_caso)
+    return out
+
+@app.get("/cma/episodio")
+def endpoint_cma_episodio(id_caso: str = ""):
+    if not id_caso.strip(): return {"error": "id_caso requerido"}
+    return episodio_cma(id_caso.strip())
+
+@app.get("/cma/pasada")
+def endpoint_cma_pasada(dias: int = 45):
+    return pasada_del_dia(max(1, min(int(dias), 365)))
+
+@app.get("/cma/exportar.csv")
+def endpoint_cma_exportar(que: str = "eventos"):
+    # Puente de nivel 1 con el sistema oficial: planilla plana, solo con codigo de caso.
+    import csv, io
+    from fastapi.responses import Response
+    fuentes = {"eventos": EVENTOS_CMA, "encuestas": ENCUESTAS_CMA, "registros": REGISTROS_CMA}
+    if que not in fuentes: return {"error": "que debe ser eventos, encuestas o registros"}
+    filas = fuentes[que]
+    columnas = []
+    for f in filas:
+        for k in f:
+            if k not in columnas and k != "respuestas": columnas.append(k)
+    buf = io.StringIO(); w = csv.DictWriter(buf, fieldnames=columnas, extrasaction="ignore"); w.writeheader()
+    for f in filas:
+        w.writerow({k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v) for k, v in f.items()})
+    return Response(content="﻿" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="cma_{que}_{date.today()}.csv"'})
 
 # ═══════════════════════════════════════════════
 # PROXY ENDPOINT — Railway llama a Google Sheets

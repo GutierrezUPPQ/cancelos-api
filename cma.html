@@ -121,7 +121,8 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <div class="aviso">ESTA PÁGINA AYUDA A DECIDIR, PERO NO DECIDE: EL JUICIO CLÍNICO DEL EQUIPO SIEMPRE MANDA · NINGÚN RESULTADO EXCLUYE AUTOMÁTICAMENTE A UN PACIENTE · LA FICHA CLÍNICA SIGUE SIENDO EL REGISTRO OFICIAL</div>
 
 <nav id="tabs">
-  <button data-t="eleg" class="on">¿ES CANDIDATO?</button>
+  <button data-t="pasada" class="on">PASADA DEL DÍA</button>
+  <button data-t="eleg">¿ES CANDIDATO?</button>
   <button data-t="listo">CASO LISTO</button>
   <button data-t="gate0">DÍA 0 · CONTROL FINAL</button>
   <button data-t="recu">RECUPERACIÓN Y ALTA</button>
@@ -131,8 +132,26 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
   <button data-t="guia">GUÍA</button>
 </nav>
 
+<!-- ═══════════ PASADA DEL DÍA ═══════════ -->
+<section id="pasada" class="on">
+  <div class="card">
+    <div class="sec-title">── PASADA DEL DÍA · LO QUE ESTÁ PENDIENTE HOY, ORDENADO POR URGENCIA (ETAPA 8)</div>
+    <div class="hint">Cada paciente es un <b>episodio</b>: aquí se juntan el semáforo, el CASO LISTO, el Gate 0, el alta, sus encuestas y sus eventos, todo por código de caso. El sistema ordena la cola; la llamada y el cierre de cada alerta son del equipo.</div>
+    <div class="grid" style="margin-top:10px">
+      <button class="btn sec" style="margin-top:0" onclick="verPasada()">🔄 ACTUALIZAR LA PASADA</button>
+      <label class="f">ABRIR UN EPISODIO POR CÓDIGO<input type="text" id="pd_id" placeholder="EP-001" onkeydown="if(event.key==='Enter')verEpisodio(this.value)"></label>
+    </div>
+    <div class="res" id="pd_resumen"></div>
+    <div class="res" id="pd_lista"></div>
+  </div>
+  <div class="card" id="pd_card_ep" style="display:none">
+    <div class="sec-title">── EPISODIO <span id="pd_ep_titulo" class="mono"></span></div>
+    <div class="res" id="pd_ep"></div>
+  </div>
+</section>
+
 <!-- ═══════════ ELEGIBILIDAD ═══════════ -->
-<section id="eleg" class="on">
+<section id="eleg">
   <div class="card">
     <div class="grid">
       <label class="f" data-h="id">ID CASO / EPISODIO<input type="text" id="e_id" placeholder="EP-001"></label>
@@ -309,6 +328,11 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
       <label class="f">TOTAL DE CASOS CMA OPERADOS (OPCIONAL)<input type="number" id="t_total" min="0" placeholder="vacío = usa los casos registrados aquí"></label>
     </div>
     <button class="btn sec" onclick="verIndicadores()">VER TABLERO</button>
+    <div class="grid" style="margin-top:10px">
+      <a class="btn sec" style="margin-top:0;text-align:center;text-decoration:none" href="/cma/exportar.csv?que=registros">⬇ EPISODIOS (CSV)</a>
+      <a class="btn sec" style="margin-top:0;text-align:center;text-decoration:none" href="/cma/exportar.csv?que=eventos">⬇ EVENTOS (CSV)</a>
+      <a class="btn sec" style="margin-top:0;text-align:center;text-decoration:none" href="/cma/exportar.csv?que=encuestas">⬇ ENCUESTAS (CSV)</a>
+    </div>
     <div class="res" id="t_res"></div>
     <div class="hint">Los eventos quedan guardados en el servidor y, si el equipo lo activó, también en su planilla Google. La ficha clínica sigue siendo el registro oficial. El análisis mensual del comité se hace con el lote completo de la planilla.</div>
   </div>
@@ -597,7 +621,9 @@ async function evaluarElegibilidad() {
       h += `<li style="padding-left:0;margin-top:4px">${esc(m.conducta)}</li></ul></div>`;
     }
     h += `<div class="hint">${esc(r.regla)}</div>`;
+    if (r.via_verde) h += `<div class="banner bVERDE" style="margin-top:8px"><div class="t">VÍA VERDE · NO REQUIERE NOTA DEL POLICLÍNICO</div><div class="a">${esc(r.via_verde_nota)}</div></div>`;
     if (r.disposicion === 'AVANZA') h += `<button class="btn sec" onclick="irA('listo')">SIGUIENTE PASO: CASO LISTO →</button>`;
+    h += botonGuardar('e_res', 'elegibilidad', `${r.disposicion}${r.via_verde ? ' · vía verde' : ''} · ` + Object.entries(r.dimensiones).map(([k,v]) => `${(NOMBRE_DIM[k]||k).toLowerCase()}: ${v.color}`).join(', '), {disposicion: r.disposicion, via_verde: !!r.via_verde, dimensiones: Object.fromEntries(Object.entries(r.dimensiones).map(([k,v]) => [k, v.color])), imc: d.imc ?? null, asa: d.asa, stop_bang: d.stop_bang});
     document.getElementById('e_res').innerHTML = h;
   } catch(e) { fallo('e_res', e); }
 }
@@ -641,7 +667,8 @@ async function evaluarCasoListo() {
     document.getElementById('l_res').innerHTML =
       `<div class="banner ${ok?'bVERDE':'bROJO'}"><div class="t">${esc(r.estado)}</div><div class="a">${esc(r.accion)}</div></div>` +
       (r.faltantes.length ? `<ul class="faltantes">${r.faltantes.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>` : '') +
-      `<div class="hint">${esc(r.nota)}</div>`;
+      `<div class="hint">${esc(r.nota)}</div>` +
+      botonGuardar('l_res', 'caso_listo', `${r.estado}${r.faltantes.length ? ' · faltan ' + r.faltantes.length : ''}`, {estado: r.estado, faltantes: r.faltantes});
   } catch(e) { fallo('l_res', e); }
 }
 
@@ -677,7 +704,8 @@ async function evaluarGate0() {
       `<div class="banner ${ok?'bVERDE':'bROJO'}"><div class="t">${esc(r.resultado)}</div><div class="a">${esc(r.accion)}</div></div>` +
       (r.bloqueadores.length ? `<ul class="faltantes">${r.bloqueadores.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : '') +
       (r.decide ? `<div class="banner bAMAR" style="margin-top:8px"><div class="a">DECIDE: ${esc(r.decide)}</div></div>` : '') +
-      (ok ? '' : `<button class="btn sec" onclick="registrarDesde('pausa_cma')">REGISTRAR LA PAUSA EN "REGISTRO Y MEJORA" →</button>`);
+      (ok ? '' : `<button class="btn sec" onclick="registrarDesde('pausa_cma')">REGISTRAR LA PAUSA EN "REGISTRO Y MEJORA" →</button>`) +
+      botonGuardar('g_res', 'gate0', r.resultado + (r.bloqueadores.length ? ' · ' + r.bloqueadores.length + ' bloqueador(es)' : ''), {resultado: r.resultado, bloqueadores: r.bloqueadores, hallazgo_nuevo: d.hallazgo_nuevo});
   } catch(e) { fallo('g_res', e); }
 }
 
@@ -727,7 +755,8 @@ async function evaluarPadss() {
     const r = await post('/cma/padss', d);
     document.getElementById('p_res').innerHTML =
       `<div class="banner ${r.apto_alta?'bVERDE':'bROJO'}"><div class="t">${r.escala} ${r.total}/10 — ${r.apto_alta?'CUMPLE CRITERIOS':'BLOQUEO DE ALTA'}</div><div class="a">${esc(r.accion)}</div></div>` +
-      (r.bloqueos.length ? `<ul class="faltantes">${r.bloqueos.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : '');
+      (r.bloqueos.length ? `<ul class="faltantes">${r.bloqueos.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : '') +
+      botonGuardar('p_res', 'padss', `${r.escala} ${r.total}/10 · ${r.apto_alta ? 'cumple' : 'bloqueo'}`, {escala: r.escala, total: r.total, apto_alta: r.apto_alta, bloqueos: r.bloqueos});
   } catch(e) { fallo('p_res', e); }
 }
 
@@ -769,6 +798,7 @@ const TIPOS = [
   ['reconsulta_7d','Reconsulta no programada 7 d (K16)'],['readmision_30d','Readmisión 30 d (K17)'],
   ['reoperacion_30d','Reoperación 30 d (K17)'],['seguimiento_24h_ok','Llamada de 24 h: contactado (K18)'],
   ['seguimiento_24h_fallido','Llamada de 24 h: no se pudo contactar (K18)'],['qor15_deterioro','Recuperación deteriorada en QoR-15E (K19)'],
+  ['alerta_cerrada','Alerta de encuesta P1/P2 cerrada por el equipo (cierre humano)'],
 ];
 const selTipo = document.getElementById('m_tipo');
 selTipo.innerHTML = TIPOS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
@@ -879,11 +909,12 @@ function evaluarDeberes() {
   const faltan = DEBERES.map((t, i) => chk('d8_' + i) ? null : (i + 1) + ' · ' + t).filter(Boolean);
   document.getElementById('d8_res').innerHTML = faltan.length
     ? `<div class="banner bROJO"><div class="t">AÚN NO HAY ALTA — FALTAN ${faltan.length}</div><div class="a">Completa lo pendiente; si un requisito no se puede cumplir, revisión presencial según la guía "¿A quién llamo?"</div></div><ul class="faltantes">${faltan.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`
-    : `<div class="banner bVERDE"><div class="t">LOS 8 REQUISITOS CUMPLIDOS</div><div class="a">Enfermería puede ejecutar el alta dentro del paquete aprobado. Entregar la tarjeta de seguimiento y activar la llamada de 24 h.</div></div>`;
+    : `<div class="banner bVERDE"><div class="t">LOS 8 REQUISITOS CUMPLIDOS</div><div class="a">Enfermería puede ejecutar el alta dentro del paquete aprobado. Entregar la tarjeta de seguimiento y activar la llamada de 24 h.</div></div>` +
+      botonGuardar('d8_res', 'alta', 'Alta con los 8 requisitos documentados', {requisitos: 8}, 'REGISTRAR EL ALTA EN EL EPISODIO · ACTIVA EL SEGUIMIENTO');
 }
 
 // ─── ID del caso compartido entre pestañas ───
-const CAMPOS_ID = ['e_id', 'l_id', 'g_id', 'm_id', 's_id'];
+const CAMPOS_ID = ['e_id', 'l_id', 'g_id', 'm_id', 's_id', 'pd_id'];
 function idCaso() { return val('e_id'); }
 CAMPOS_ID.forEach(id => document.getElementById(id).addEventListener('input', e => {
   CAMPOS_ID.forEach(o => { if (o !== id) document.getElementById(o).value = e.target.value; });
@@ -982,6 +1013,90 @@ async function verEncuestas() {
     document.getElementById('s_lista').innerHTML = h;
   } catch (e) { fallo('s_lista', e); }
 }
+
+
+// ─── Episodio y pasada del día ───
+const NOMBRE_ETAPA = {elegibilidad:'Semáforo', caso_listo:'CASO LISTO', gate0:'Gate 0', aldrete:'Aldrete', padss:'PADSS', alta:'Alta', cierre_30d:'Cierre 30 d'};
+const NOMBRE_PEND = {alarma_P1:'P1', alarma_P2:'P2', llamada_24_48h:'LLAMADA 24–48 H', encuesta_24h:'ENCUESTA 24 H', encuesta_d7:'ENCUESTA DÍA 7', cierre_30d:'CIERRE 30 D', sin_alta_registrada:'SIN ALTA'};
+const CLASE_URG = u => u === 1 ? 'cROJO' : u <= 3 ? 'cAMARILLO' : 'cVERDE';
+
+function botonGuardar(resEl, etapa, resumen, detalle, texto) {
+  const id = 'gs_' + etapa + '_' + Math.random().toString(36).slice(2, 7);
+  window._guardarPend = window._guardarPend || {};
+  window._guardarPend[id] = {resEl, etapa, resumen, detalle};
+  return `<button class="btn sec" id="${id}" onclick="guardarRegistro('${id}')">💾 ${esc(texto || 'GUARDAR EN EL EPISODIO')}</button><div id="${id}_r"></div>`;
+}
+async function guardarRegistro(bid, reintento) {
+  const g = window._guardarPend[bid]; if (!g) return;
+  const id = idCaso();
+  const out = document.getElementById(bid + '_r');
+  if (!id) { out.innerHTML = '<div class="err">Escribe el código del caso (EP-001) arriba para guardar en su episodio.</div>'; return; }
+  try {
+    const r = await post('/cma/registro', {id_caso: id, etapa: g.etapa, resumen: g.resumen, detalle: g.detalle,
+      autor: localStorage.getItem('cma_autor') || '', pin: localStorage.getItem('cma_pin') || ''});
+    if (r.pin_requerido && !reintento) {
+      const p = prompt('Ingresa el PIN del equipo CMA:');
+      if (p !== null) { localStorage.setItem('cma_pin', p); return guardarRegistro(bid, true); }
+    }
+    if (r.error) { if (r.pin_requerido) localStorage.removeItem('cma_pin'); out.innerHTML = `<div class="err">⚠ ${esc(r.error)}</div>`; return; }
+    const pend = (r.episodio.pendientes || []).length;
+    out.innerHTML = `<div class="banner bAZUL"><div class="t">GUARDADO EN EL EPISODIO ${esc(id)}</div><div class="a">${esc(NOMBRE_ETAPA[g.etapa] || g.etapa)} · ${esc(r.registrado.hora)}${r.persistido_en_disco ? '' : ' · ⚠ no se pudo guardar en disco'}${pend ? ' · ' + pend + ' pendiente(s) en la pasada del día' : ''}</div></div>`;
+    document.getElementById(bid).style.display = 'none';
+  } catch (e) { fallo(bid + '_r', e); }
+}
+
+function chipsPend(pend) {
+  return pend.length ? pend.map(p => `<span class="chip ${CLASE_URG(p.urgencia)}" title="${esc(p.texto)}">${esc(NOMBRE_PEND[p.que] || p.que)}</span>`).join(' ') : '<span class="chip cVERDE">AL DÍA</span>';
+}
+async function verPasada() {
+  try {
+    const r = await fetch('/cma/pasada').then(x => x.json());
+    const s = r.resumen;
+    document.getElementById('pd_resumen').innerHTML =
+      `<div class="banner ${s.P1 ? 'bROJO' : s.P2 || s.llamadas_pendientes ? 'bAMAR' : 'bVERDE'}"><div class="t">${s.episodios} EPISODIO(S) ACTIVO(S) · P1: ${s.P1} · P2: ${s.P2} · LLAMADAS PENDIENTES: ${s.llamadas_pendientes} · ENCUESTAS SIN RESPUESTA: ${s.encuestas_sin_respuesta} · CIERRES 30 D: ${s.cierres_pendientes}</div><div class="a">${esc(r.orden)}</div></div>`;
+    if (!r.episodios.length) { document.getElementById('pd_lista').innerHTML = '<div class="hint">Todavía no hay episodios. Empieza guardando el semáforo de un caso desde "¿Es candidato?".</div>'; return; }
+    let h = '<div class="tbl"><table><tr><th>CÓDIGO</th><th>ÚLTIMA ETAPA</th><th>ALTA</th><th>PENDIENTE</th><th></th></tr>';
+    for (const f of r.episodios) {
+      h += `<tr><td class="mono">${esc(f.id_caso)}</td><td>${esc(NOMBRE_ETAPA[f.ultima_etapa] || f.ultima_etapa || '—')}</td><td class="mono">${esc(f.alta || '—')}</td><td>${chipsPend(f.pendientes)}</td><td><button class="btn sec" style="margin:0;padding:6px 10px" onclick="verEpisodio('${esc(f.id_caso)}')">VER</button></td></tr>`;
+    }
+    document.getElementById('pd_lista').innerHTML = h + '</table></div>';
+  } catch (e) { fallo('pd_lista', e); }
+}
+async function verEpisodio(id) {
+  id = (id || '').trim(); if (!id) return;
+  CAMPOS_ID.forEach(c => document.getElementById(c).value = id);
+  try {
+    const r = await fetch('/cma/episodio?id_caso=' + encodeURIComponent(id)).then(x => x.json());
+    document.getElementById('pd_card_ep').style.display = 'block';
+    document.getElementById('pd_ep_titulo').textContent = id;
+    let h = `<div class="banner ${r.pendientes.some(p => p.urgencia === 1) ? 'bROJO' : r.pendientes.length ? 'bAMAR' : 'bVERDE'}"><div class="t">${r.pendientes.length ? r.pendientes.length + ' PENDIENTE(S)' : 'AL DÍA'}${r.cerrado_30d ? ' · CERRADO A 30 D' : ''}</div><div class="a">${r.pendientes.map(p => esc(p.texto)).join(' · ') || 'Nada pendiente en este episodio.'}</div></div>`;
+    h += `<div class="grid" style="margin-top:10px">` +
+      `<button class="btn sec" style="margin-top:0" onclick="registrarDesde('seguimiento_24h_ok')">📞 REGISTRAR LLAMADA 24 H</button>` +
+      `<button class="btn sec" style="margin-top:0" onclick="registrarDesde('alerta_cerrada')">✅ CERRAR ALERTA (HUMANO)</button>` +
+      `<button class="btn sec" style="margin-top:0" onclick="irA('segui')">📨 REENVIAR ENCUESTA</button>` +
+      (r.cerrado_30d ? '' : `<button class="btn sec" style="margin-top:0" onclick="cerrarEpisodio('${esc(id)}')">🔒 CERRAR A 30 DÍAS</button>`) + `</div>`;
+    h += '<div class="tbl" style="margin-top:10px"><table><tr><th>FECHA</th><th>QUÉ</th><th>RESUMEN</th><th>QUIÉN</th></tr>';
+    for (const x of r.linea_de_tiempo) {
+      const det = x.detalle || {};
+      const extra = det.prioridad ? ` <span class="chip ${det.prioridad === 'P1' ? 'cROJO' : det.prioridad === 'P2' || det.prioridad === 'GRIS' ? 'cAMARILLO' : 'cVERDE'}">${esc(det.prioridad)}</span>` : det.capa ? ` · capa: ${esc(det.capa)}` : '';
+      h += `<tr><td class="mono">${esc(x.fecha || '')} ${esc(x.hora || '')}</td><td>${esc(NOMBRE_ETAPA[x.tipo] || String(x.tipo || '').replace(/_/g, ' '))}</td><td>${esc(x.resumen || '')}${extra}</td><td>${esc(x.autor || '')}</td></tr>`;
+    }
+    document.getElementById('pd_ep').innerHTML = h + '</table></div>';
+    document.getElementById('pd_card_ep').scrollIntoView({behavior: 'smooth'});
+  } catch (e) { fallo('pd_ep', e); }
+}
+async function cerrarEpisodio(id, reintento) {
+  const causas = ['sin_eventos', 'reconsulta', 'readmision', 'reoperacion', 'evento_adverso', 'incontactable', 'otro'];
+  const c = prompt('Causa del cierre a 30 días:\n' + causas.map((x, i) => `${i + 1} · ${x}`).join('\n') + '\n\nEscribe el número:');
+  if (c === null) return;
+  const causa = causas[Number(c) - 1]; if (!causa) { alert('Número inválido'); return; }
+  const r = await post('/cma/registro', {id_caso: id, etapa: 'cierre_30d', resumen: 'Cierre a 30 días: ' + causa, detalle: {causa},
+    autor: localStorage.getItem('cma_autor') || '', pin: localStorage.getItem('cma_pin') || ''});
+  if (r.pin_requerido && !reintento) { const p = prompt('Ingresa el PIN del equipo CMA:'); if (p !== null) { localStorage.setItem('cma_pin', p); return cerrarEpisodio(id, true); } }
+  if (r.error) { alert(r.error); return; }
+  verEpisodio(id); verPasada();
+}
+verPasada();
 
 function calcVolumen() {
   const csa = Number(document.getElementById('pv_csa').value);
