@@ -1,7 +1,7 @@
 """
 CancelOS IA v4 - API Python + Torre de Control
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -44,11 +44,31 @@ def hoja_alta():
 def cierre_ugcq():
     return _html("ugcq.html", "<h1>Cierre UGCQ - archivo ugcq.html no encontrado</h1>")
 
+def _js(nombre, cache="no-store"):
+    with open(os.path.join(os.path.dirname(__file__), *nombre.split("/")), "rb") as f:
+        return Response(f.read(), media_type="text/javascript", headers={"Cache-Control": cache})
+
+# Motor de cotejo y lector de Excel: corren en el navegador, los archivos de pacientes nunca llegan al servidor
 @app.get("/ugcq_core.js")
 def ugcq_core():
-    # Motor de cotejo: corre en el navegador, los archivos de pacientes nunca llegan al servidor
-    with open(os.path.join(os.path.dirname(__file__), "ugcq_core.js"), "r", encoding="utf-8") as f:
-        return Response(f.read(), media_type="application/javascript; charset=utf-8", headers={"Cache-Control": "no-store"})
+    return _js("ugcq_core.js")
+
+@app.get("/ugcq_xlsx.js")
+def ugcq_xlsx():
+    return _js("ugcq_xlsx.js")
+
+@app.get("/vendor/pdfjs/{archivo}")
+def pdfjs(archivo: str):
+    if archivo not in ("pdf.min.mjs", "pdf.worker.min.mjs"):
+        raise HTTPException(404, "No encontrado")
+    return _js("vendor/pdfjs/" + archivo, "public, max-age=604800")
+
+@app.get("/ugcq/portable")
+def ugcq_portable_descarga():
+    # Un solo archivo HTML para usar con doble clic, sin internet ni servidor
+    from ugcq_portable import armar
+    return Response(armar(), media_type="text/html",
+                    headers={"Cache-Control": "no-store", "Content-Disposition": 'attachment; filename="Cierre_UGCQ.html"'})
 
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO

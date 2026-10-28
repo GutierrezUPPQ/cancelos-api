@@ -148,7 +148,8 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     </div>
   </div>
   <div class="hdr-der">
-    <a class="volver" href="/torre">← TORRE DE CONTROL</a>
+    <a class="volver" href="/torre" id="lnkTorre">← TORRE DE CONTROL</a>
+    <a class="volver" href="/ugcq/portable" id="lnkPortable" title="Un solo archivo que funciona sin internet ni servidor">⬇ VERSIÓN PORTÁTIL</a>
     <button type="button" id="phiBtn" class="tbtn" aria-pressed="false" title="Ocultar nombres y RUN en pantalla">👁 Ocultar nombres</button>
     <button type="button" id="themeBtn" class="tbtn" aria-label="Cambiar tema claro/oscuro">🌙</button>
   </div>
@@ -269,14 +270,19 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
   </div>
 </section>
 
-<footer>CANCELOS IA v4 · CIERRE DIARIO UGCQ · HOSPITAL DE QUILPUÉ</footer>
+<footer>CANCELOS IA v4 · CIERRE DIARIO UGCQ <span id="verTxt"></span> · HOSPITAL DE QUILPUÉ</footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="/ugcq_core.js"></script>
+<!--PORTATIL-->
+<script src="ugcq_core.js"></script>
+<script src="ugcq_xlsx.js"></script>
 <script>
 'use strict';
 const U = window.UGCQ;
+const VERSION = '1.0';
+if (window.UGCQ_PORTABLE) { document.getElementById('lnkTorre').remove(); document.getElementById('lnkPortable').remove(); }
+document.getElementById('verTxt').textContent = 'v' + VERSION + (window.UGCQ_PORTABLE ? ' PORTÁTIL' : '');
 
 // ─── TEMA CLARO / OSCURO (mismo ajuste que el módulo CMA) ───
 function aplicarTema(t) {
@@ -317,29 +323,17 @@ function toast(msg) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => t.classList.remove('on'), 2600);
 }
-function cargarScript(url) {
-  return new Promise((ok, ko) => {
-    const s = document.createElement('script');
-    s.src = url; s.onload = ok; s.onerror = () => { s.remove(); ko(new Error(url)); };
-    document.head.appendChild(s);
-  });
-}
-async function libXLSX() {
-  if (window.XLSX) return window.XLSX;
-  for (const u of ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
-                   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js']) {
-    try { await cargarScript(u); if (window.XLSX) return window.XLSX; } catch (e) {}
-  }
-  throw new Error('No se pudo cargar el lector de Excel (¿sin internet?).');
-}
+// Lector de PDF (pdf.js): incrustado en la versión portátil, servido junto a la página o, en último caso, desde internet
 let _pdfjs = null;
 async function libPDF() {
   if (_pdfjs) return _pdfjs;
-  const fuentes = [
+  const fuentes = [];
+  if (window.UGCQ_PDFJS) { const u = window.UGCQ_PDFJS(); fuentes.push([u.lib, u.worker]); }
+  else fuentes.push([new URL('vendor/pdfjs/pdf.min.mjs', location.href).href, new URL('vendor/pdfjs/pdf.worker.min.mjs', location.href).href]);
+  fuentes.push(
     ['https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs'],
-    ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs'],
     ['https://unpkg.com/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs', 'https://unpkg.com/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs'],
-  ];
+  );
   for (const [lib, worker] of fuentes) {
     try {
       const m = await import(lib);
@@ -348,7 +342,14 @@ async function libPDF() {
       return m;
     } catch (e) {}
   }
-  throw new Error('No se pudo cargar el lector de PDF (¿sin internet?).');
+  throw new Error('No se pudo cargar el lector de PDF.');
+}
+function descargarArchivo(bytes, nombre) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 // ─── ESTADO ───
@@ -388,11 +389,10 @@ async function cargarArchivos(lista) {
         reg.tipo = 'tabla'; reg.filas = r.filas; reg.avisos = r.avisos;
         if (!r.filas.length) { reg.tipo = 'error'; reg.error = r.avisos.join(' '); }
       } else {
-        const XLSX = await libXLSX();
-        const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: false });
+        const hojas = await window.UGCQ_XLSX.leerPlanilla(new Uint8Array(await file.arrayBuffer()), file.name);
         let hecho = false;
-        for (const hoja of wb.SheetNames) {
-          const aoa = XLSX.utils.sheet_to_json(wb.Sheets[hoja], { header: 1, raw: true, defval: null });
+        for (const hoja of hojas) {
+          const aoa = hoja.filas;
           const tipo = U.detectarTipoPlanilla(aoa);
           if (!tipo) continue;
           reg.tipo = tipo;
@@ -688,12 +688,8 @@ document.addEventListener('click', e => {
 
 // ─── DESCARGAS ───
 function slug(s) { return U.clave(s).replace(/ /g, '_') || 'hospital'; }
-async function descargarUGCQ(filas, nombre) {
-  const XLSX = await libXLSX();
-  const ws = XLSX.utils.aoa_to_sheet([U.ENCABEZADOS].concat(filas));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'hoja1');
-  XLSX.writeFile(wb, nombre);
+function descargarUGCQ(filas, nombre) {
+  descargarArchivo(window.UGCQ_XLSX.escribirXlsx([{ nombre: 'hoja1', filas: [U.ENCABEZADOS].concat(filas) }]), nombre);
 }
 $('resultado').addEventListener('click', async e => {
   const b = e.target.closest('button');
@@ -702,7 +698,7 @@ $('resultado').addEventListener('click', async e => {
   if (!r) return;
   try {
     if (b.id === 'bDescargar') {
-      await descargarUGCQ([filaActual()], `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(r.fecha)}.xlsx`);
+      descargarUGCQ([filaActual()], `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(r.fecha)}.xlsx`);
       guardarHistorial(r, true);
     } else if (b.id === 'bCopiar') {
       const tsv = filaActual().map(v => v == null ? '' : String(v)).join('\t');
@@ -715,7 +711,7 @@ $('resultado').addEventListener('click', async e => {
     } else if (b.id === 'bGuardar') {
       guardarHistorial(r, false);
     } else if (b.id === 'bCotejo') {
-      await descargarCotejo(r);
+      descargarCotejo(r);
     }
   } catch (err) { toast('⚠ ' + (err.message || err)); }
 });
@@ -729,8 +725,7 @@ function guardarHistorial(r, silencioso) {
   if (!silencioso || !ya) toast(ya ? `Día ${U.fmtFecha(r.fecha)} actualizado en el historial` : `Día ${U.fmtFecha(r.fecha)} guardado en el historial`);
 }
 
-async function descargarCotejo(r) {
-  const XLSX = await libXLSX();
+function descargarCotejo(r) {
   const fila = filaActual();
   const resumen = [['Cierre diario UGCQ', U.fmtFecha(r.fecha)], ['Establecimiento', fila[8]], ['Generado', new Date().toLocaleString('es-CL')], [],
     ['Campo UGCQ', 'Valor']].concat(U.CONTEOS.map(([, col]) => [U.ENCABEZADOS[col], fila[col]]))
@@ -747,13 +742,10 @@ async function descargarCotejo(r) {
   const sus = [['Paciente', 'RUN', 'Causal MINSAL', 'Descripción causal', 'Columna UGCQ', 'Intervención', 'Tipo intervención', 'Agendamiento', 'Avisos']]
     .concat(r.suspensiones.map(s => [s.nombre, s.ident.run, s.categoria, s.descripcion, s.paciente && s.paciente.causalCol != null ? U.ENCABEZADOS[s.paciente.causalCol] : (s.causal ? U.ENCABEZADOS[s.causal.col] : ''),
       s.intervencion, s.intervTxt, s.agendamientoTxt, s.avisos.join(' | ')]));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prog), 'Programados');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(encs), 'Registro SITGEQ');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sus), 'Suspensiones');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([U.ENCABEZADOS, fila]), 'Fila UGCQ');
-  XLSX.writeFile(wb, `Cotejo_UGCQ_${U.fmtFecha(r.fecha)}.xlsx`);
+  descargarArchivo(window.UGCQ_XLSX.escribirXlsx([
+    { nombre: 'Resumen', filas: resumen }, { nombre: 'Programados', filas: prog }, { nombre: 'Registro SITGEQ', filas: encs },
+    { nombre: 'Suspensiones', filas: sus }, { nombre: 'Fila UGCQ', filas: [U.ENCABEZADOS, fila] },
+  ]), `Cotejo_UGCQ_${U.fmtFecha(r.fecha)}.xlsx`);
 }
 
 // ─── HISTORIAL ───
@@ -782,7 +774,7 @@ $('hDescargar').addEventListener('click', async () => {
   const d = $('hDesde').value || '0000-00-00', a = $('hHasta').value || '9999-99-99';
   const fechas = Object.keys(h).sort().filter(f => f >= d && f <= a);
   if (!fechas.length) { toast('No hay días guardados en ese rango'); return; }
-  try { await descargarUGCQ(fechas.map(f => h[f].fila), `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(fechas[0])}_al_${U.fmtFecha(fechas[fechas.length - 1])}.xlsx`); }
+  try { descargarUGCQ(fechas.map(f => h[f].fila), `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(fechas[0])}_al_${U.fmtFecha(fechas[fechas.length - 1])}.xlsx`); }
   catch (err) { toast('⚠ ' + (err.message || err)); }
 });
 $('hBorrar').addEventListener('click', () => {
