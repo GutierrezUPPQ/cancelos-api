@@ -32,7 +32,7 @@ Dos formas de usarla, sin depender de Claude:
 | Pacientes Programados Cx Mayor Electiva | Pacientes de la tabla *Electivo Normal* (directa), cirugía mayor |
 | Pacientes Condicionales Cx Mayor Electiva | Pacientes de la tabla *Electivo Condicional* |
 | Pacientes Suspendidos | **Cirugía mayor electiva directa programada en horario hábil** que se suspendió |
-| Porcentaje de Pacientes Suspendidos | suspendidos ÷ programados × 100, redondeado |
+| Porcentaje de Pacientes Suspendidos | suspendidos ÷ **programados en horario hábil** × 100, redondeado (los de fin de semana, feriado o fuera de horario se cuentan como programados, pero no entran al %) |
 | Programadas / Condicionales realizadas | Programados / condicionales con cirugía mayor registrada ese día |
 | Agregadas realizadas | Cirugías mayores electivas de pacientes que no están en la tabla |
 | Urgencia realizadas | Cirugías mayores con tipo de cirugía *Urgencia* |

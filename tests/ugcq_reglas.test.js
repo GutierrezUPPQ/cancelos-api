@@ -301,3 +301,28 @@ test('Horario hábil: días, horas y feriados', () => {
   assert.equal(U.enHorarioHabil('2026-10-16', '16:00'), false);
   assert.equal(U.enHorarioHabil('2026-10-13', ''), null);
 });
+
+test('% de suspensión solo sobre programados en horario hábil', () => {
+  // Martes: 2 programados en horario hábil (uno suspendido) y 1 programado a las 18:00 (operado)
+  const f = fuentes({
+    tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), hora: '09:00' }), filaTabla({ fecha: MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '11:00' }),
+      filaTabla({ fecha: MAR, nombre: 'EVA MORA LARA', run: run(7654321), hora: '18:00' })],
+    enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '11:10' }, { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'EVA MORA LARA', run: run(7654321), hora: '18:05' }],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), desc: 'Rechaza operación' }],
+  });
+  const r = U.cotejarDia(MAR, f, {});
+  assert.equal(r.conteos.programados, 3);
+  assert.equal(r.conteos.programadosHabiles, 2);
+  assert.equal(r.conteos.suspendidos, 1);
+  assert.equal(r.conteos.pctSuspendidos, 50);
+  assert.ok(r.controles.every(c => c.ok));
+  // Sábado con operativo: se cuentan como programados, pero el % es 0 (no hay horario hábil)
+  const sab = fuentes({ tabla: [filaTabla({ fecha: SAB, nombre: 'ANA SOTO PEREZ', run: run(15234567), hora: '09:00' }), filaTabla({ fecha: SAB, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '10:00' })],
+    enc: [{ fecha: D_SAB, pab: 'Pabellón 2', nombre: 'LUIS ROJAS DIAZ', run: run(9876543) }], sus: [{ fecha: D_SAB, nombre: 'ANA SOTO PEREZ', run: run(15234567) }] });
+  const r2 = U.cotejarDia(SAB, sab, {});
+  assert.equal(r2.conteos.programados, 2);
+  assert.equal(r2.conteos.programadosHabiles, 0);
+  assert.equal(r2.conteos.suspendidos, 0);
+  assert.equal(r2.conteos.pctSuspendidos, 0);
+  assert.equal(r2.gestion.suspFueraHorario, 1);
+});

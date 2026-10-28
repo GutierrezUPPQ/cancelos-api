@@ -283,7 +283,8 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     </ul>
     <h4>Totales y controles</h4>
     <ul>
-      <li>% suspendidos = suspendidos UGCQ ÷ programados × 100, redondeado.</li>
+      <li>Los programados de fin de semana, feriado o fuera de horario <b>sí se cuentan como programados</b>, pero <b>no entran al % de suspensión</b>:
+        % suspendidos = suspendidos UGCQ ÷ programados en horario hábil × 100, redondeado.</li>
       <li>Total Cx Mayores Electivas = programadas + condicionales + agregadas realizadas. Total realizado = ese total + urgencias + menores + procedimientos.</li>
       <li>Semana: de sábado a viernes, con el número ISO del sábado que la inicia (calza con el reporte UGCQ de octubre 2026).</li>
     </ul>
@@ -600,7 +601,7 @@ function pintarPendientes(r) {
 
 const CAMPOS_FICHA = {
   programados: 'Programados (Electivo Normal) en tabla', condicionales: 'Electivo Condicional en tabla',
-  suspendidos: 'Cx mayor electiva directa, en horario hábil', pctSuspendidos: 'Suspendidos ÷ programados × 100',
+  suspendidos: 'Cx mayor electiva directa, en horario hábil', pctSuspendidos: 'Suspendidos ÷ programados en horario hábil × 100',
   progRealizadas: 'Programados operados', condRealizadas: 'Condicionales operados', agregadas: 'Electivas mayores fuera de tabla',
   urgencias: 'Cirugías mayores de urgencia', menores: 'Códigos de cirugía menor', procedimientos: 'Códigos de procedimiento (incluye anestesia)',
   totalMayoresElectivas: 'Programadas + condicionales + agregadas', totalRealizado: 'Mayores electivas + urgencias + menores + procedimientos',
@@ -618,7 +619,8 @@ function pintarResultado(r) {
   const filaFicha = (k, etiqueta, valor, ayuda) => `<tr data-hecho="${esc(k)}" class="${hechos[k] ? 'hecho' : ''}"><td class="c"><span class="chk">${hechos[k] ? '✓' : ''}</span></td><td class="l">${esc(etiqueta)}${ayuda ? `<div class="det">${esc(ayuda)}</div>` : ''}</td><td class="v">${esc(valor)}</td></tr>`;
   const causas = Object.entries(r.causas).filter(([, v]) => v);
   const ficha = `<table class="ficha">` +
-    U.CONTEOS.map(([k, col]) => filaFicha(k, U.ENCABEZADOS[col], fila[col] + (k === 'pctSuspendidos' ? '%' : ''), CAMPOS_FICHA[k])).join('') +
+    U.CONTEOS.map(([k, col]) => filaFicha(k, U.ENCABEZADOS[col], fila[col] + (k === 'pctSuspendidos' ? '%' : ''),
+      CAMPOS_FICHA[k] + (k === 'pctSuspendidos' ? ` (${r.conteos.suspendidos} ÷ ${r.conteos.programadosHabiles})` : ''))).join('') +
     `<tr class="sep"><td colspan="3">CAUSALES DE SUSPENSIÓN ${causas.length ? '' : '· NINGUNA'}</td></tr>` +
     causas.map(([col, v]) => filaFicha('c' + col, U.ENCABEZADOS[col], v)).join('') + '</table>';
   $('resultado').innerHTML = banner + avisosExtra + ficha +

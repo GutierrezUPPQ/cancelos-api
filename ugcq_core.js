@@ -1072,7 +1072,7 @@
 
     // 6) Conteos UGCQ
     const c = { programados: 0, condicionales: 0, suspendidos: 0, pctSuspendidos: 0, progRealizadas: 0, condRealizadas: 0,
-      agregadas: 0, urgencias: 0, menores: 0, procedimientos: 0, totalMayoresElectivas: 0, totalRealizado: 0 };
+      agregadas: 0, urgencias: 0, menores: 0, procedimientos: 0, totalMayoresElectivas: 0, totalRealizado: 0, programadosHabiles: 0 };
     const causas = {};
     const pendientes = [];
     for (const p of pacientes) {
@@ -1086,6 +1086,7 @@
         continue;
       }
       c.programados++;
+      if (p.habil !== false) c.programadosHabiles++;
       if (p.estado === 'REALIZADA') c.progRealizadas++;
       else if (p.suspUGCQ) {
         c.suspendidos++;
@@ -1105,7 +1106,8 @@
       c.menores += e.cMenor;
       c.procedimientos += e.cProc;
     }
-    c.pctSuspendidos = c.programados > 0 ? Math.round(c.suspendidos * 100 / c.programados) : 0;
+    // El % de suspensión mira solo el horario hábil: fines de semana, feriados y fuera de horario no entran al denominador
+    c.pctSuspendidos = c.programadosHabiles > 0 ? Math.round(c.suspendidos * 100 / c.programadosHabiles) : 0;
     c.totalMayoresElectivas = c.progRealizadas + c.condRealizadas + c.agregadas;
     c.totalRealizado = c.totalMayoresElectivas + c.urgencias + c.menores + c.procedimientos;
 
@@ -1213,6 +1215,9 @@
           (suspFuera ? ` + suspendidos fuera de horario hábil (${suspFuera})` : '') + (sinReg ? ` + sin registro (${sinReg})` : '') },
       { ok: sinReg === 0, texto: sinReg ? `${sinReg} programado(s) sin cirugía ni suspensión en SITGEQ` : 'Todos los programados tienen cirugía o suspensión registrada' },
       { ok: sumaCausas === c.suspendidos, texto: `Causales asignadas (${sumaCausas}) = suspendidos UGCQ (${c.suspendidos})` },
+      { ok: c.pctSuspendidos === (c.programadosHabiles ? Math.round(c.suspendidos * 100 / c.programadosHabiles) : 0),
+        texto: `% suspensión = ${c.suspendidos} ÷ ${c.programadosHabiles} programados en horario hábil = ${c.pctSuspendidos}%` +
+          (c.programados > c.programadosHabiles ? ` (${c.programados - c.programadosHabiles} programado(s) fuera de horario hábil no entran al %)` : '') },
       { ok: c.condRealizadas <= c.condicionales, texto: `Condicionales realizadas (${c.condRealizadas}) ≤ condicionales (${c.condicionales})` },
       { ok: c.totalMayoresElectivas === c.progRealizadas + c.condRealizadas + c.agregadas, texto: `Total Cx Mayores Electivas = ${c.progRealizadas} + ${c.condRealizadas} + ${c.agregadas} = ${c.totalMayoresElectivas}` },
       { ok: c.totalRealizado === c.totalMayoresElectivas + c.urgencias + c.menores + c.procedimientos, texto: `Total realizado = ${c.totalMayoresElectivas} + ${c.urgencias} + ${c.menores} + ${c.procedimientos} = ${c.totalRealizado}` },
