@@ -449,7 +449,7 @@
 
   // ═══════════════════════════════════════════════
   // LECTURA DE LA TABLA QUIRÚRGICA EN PDF (SITGEQ, generada con dompdf)
-  // Entrada: páginas con los textos posicionados de pdf.js: [{items:[{str,x,y,w}]}]
+  // Entrada: páginas con los textos posicionados de pdf.js: [{items:[{str,x,y,w}]}] (y crece hacia arriba)
   // ═══════════════════════════════════════════════
   const COLUMNAS_TABLA = [
     ['pabellon', 'pabellon'], ['hora', 'hora'], ['nombre', 'nombre'], ['run', 'run'], ['edad', 'edad'],
@@ -458,140 +458,254 @@
     ['tipoAnest', 'tipo anest'], ['ges', 'ges'], ['tiempo', 'tiempo ocupacion'],
     ['condicionalidad', 'condicionalidad'], ['agendamiento', 'tipo agendamiento'],
   ];
-  const ES_HORA = /^\d{1,2}:\d{2}$/;
+  const HORA_RE = /^(\d{1,2})[:.](\d{2})\b/;
+  const CUERPO_RUN = /^\d{1,2}\.?\d{3}\.?\d{3}-?/;
+  function horaDe(s) {
+    const m = String(s).match(HORA_RE);
+    return m && Number(m[1]) < 24 && Number(m[2]) < 60 ? m[1].padStart(2, '0') + ':' + m[2] : '';
+  }
+  const seccionTexto = (s) => String(s).trim().replace(/^PABELL[ÓO]N/i, 'Pabellón');
+
+  // Distancia típica entre líneas de una misma celda; se mide en la página para tolerar otra escala.
+  // 1º: en el encabezado (rótulos de dos líneas: "Ayud./2", "Tiempo/Ocupación"); 2º: lo más frecuente en la página
+  function pasoEncabezado(items) {
+    for (const it of items) {
+      if (norm(it.str) !== 'pabellon' || !it.w) continue;
+      const tol = it.w * 0.1;
+      const misma = items.filter(o => Math.abs(o.y - it.y) < tol);
+      if (!misma.some(o => norm(o.str) === 'hora') || !misma.some(o => norm(o.str) === 'run')) continue;
+      const banda = items.filter(o => Math.abs(o.y - it.y) < it.w * 0.45 && o !== it);
+      const difs = [];
+      for (const a of banda) for (const b of banda) {
+        const dy = a.y - b.y;
+        if (dy > it.w * 0.15 && Math.abs(a.cx - b.cx) < it.w * 0.4) difs.push(dy);
+      }
+      if (difs.length) return difs.sort((a, b) => a - b)[Math.floor(difs.length / 2)];
+      return 11.235 * it.w / 33.23; // proporción medida en la tabla real (rótulo "Pabellón" de 33,23 pt)
+    }
+    return 0;
+  }
+  function pasoLinea(items) {
+    const cuenta = new Map();
+    for (const a of items) {
+      let menor = 0;
+      for (const b of items) {
+        const dy = a.y - b.y;
+        if (dy <= 0.5 || dy > 40 || (Math.abs(a.cx - b.cx) > 3 && Math.abs(a.x - b.x) > 1)) continue;
+        if (!menor || dy < menor) menor = dy;
+      }
+      if (menor) { const k = Math.round(menor * 4) / 4; cuenta.set(k, (cuenta.get(k) || 0) + 1); }
+    }
+    let paso = 11.235, max = 0;
+    for (const [k, n] of cuenta) if (n > max || (n === max && k < paso)) { max = n; paso = k; }
+    return max >= 3 ? paso : 11.235;
+  }
+
+  function columnasDeEncabezado(banda, tolX) {
+    const grupos = [];
+    for (const o of banda.slice().sort((a, b) => a.cx - b.cx)) {
+      const g = grupos.find(gr => Math.abs(gr.cx - o.cx) < tolX);
+      if (g) { g.items.push(o); g.cx = g.items.reduce((s, q) => s + q.cx, 0) / g.items.length; }
+      else grupos.push({ cx: o.cx, items: [o] });
+    }
+    const cols = grupos.map(g => {
+      const txt = clave(g.items.slice().sort((a, b) => b.y - a.y || a.x - b.x).map(q => q.str).join(' '));
+      const def = COLUMNAS_TABLA.find(([, n]) => n === txt);
+      return {
+        campo: def ? def[0] : 'col_' + txt.replace(/ /g, '_'), cx: g.cx,
+        izq: Math.min(...g.items.map(q => q.x)), der: Math.max(...g.items.map(q => q.x + q.w)),
+      };
+    }).sort((a, b) => a.cx - b.cx);
+    for (let k = 0; k < cols.length; k++) {
+      cols[k].desde = k === 0 ? -Infinity : (cols[k - 1].der + cols[k].izq) / 2;
+      cols[k].hasta = k === cols.length - 1 ? Infinity : (cols[k].der + cols[k + 1].izq) / 2;
+    }
+    return cols;
+  }
 
   function parsearTablaPDF(paginas, archivo) {
     const res = { archivo: archivo || 'tabla.pdf', fecha: null, filas: [], avisos: [] };
-    let columnasPrevias = null;
+    let columnas = null;   // se heredan si una página no repite el encabezado
     let seccion = '';
-    let nFila = 0;
+    let trozoPendiente = null; // parte de una fila cortada al pie de una página (sin hora ni RUN)
+    let pasoPrevio = 0;
+
+    const armarFila = (celdas, obs, pagina, sec) => {
+      const txt = (campo, sep = ' ') => (celdas[campo] || []).join(sep).replace(/\s+/g, ' ').trim();
+      const agTxt = txt('agendamiento'), condTxt = txt('condicionalidad');
+      const nAg = norm(agTxt);
+      let agend = 'NORMAL';
+      if (nAg.includes('condicional')) agend = 'CONDICIONAL';
+      else if (nAg && !nAg.includes('electivo') && !nAg.includes('normal') && !nAg.includes('directo')) agend = 'OTRO';
+      else if (!nAg && /^s/.test(norm(condTxt))) agend = 'CONDICIONAL';
+      const runTxt = txt('run', '');
+      const fila = {
+        pagina, pabellon: txt('pabellon') || sec, hora: (celdas.hora || []).map(horaDe).find(Boolean) || '',
+        nombre: txt('nombre'), run: runTxt, edad: parseInt(txt('edad'), 10) || null,
+        diagnostico: txt('diagnostico'), operacion: txt('operacion'), cirujano: txt('cirujano'),
+        ayudantes: [txt('ayud1'), txt('ayud2')].filter(v => v && v !== '-'),
+        anestesista: txt('anest'), tipoAnestesia: txt('tipoAnest'), ges: txt('ges'), tiempo: parseInt(txt('tiempo'), 10) || null,
+        condicionalidad: condTxt, agendamiento: agTxt, agend, obs: obs || '', avisos: [],
+      };
+      if (condTxt && agTxt && /^s/.test(norm(condTxt)) !== (agend === 'CONDICIONAL')) {
+        fila.avisos.push(`Condicionalidad "${condTxt}" no calza con tipo de agendamiento "${agTxt}"`);
+      }
+      if (agend === 'OTRO') fila.avisos.push(`Tipo de agendamiento "${agTxt}" no es electivo`);
+      if ((runTxt.match(/\d{6,8}-?[\dkK]/g) || []).length > 1) fila.avisos.push('Dos RUN en la misma fila de la tabla: revisar');
+      return fila;
+    };
+    const agregarCeldas = (destino, origen, alInicio) => {
+      for (const [k, v] of Object.entries(origen)) destino[k] = alInicio ? v.concat(destino[k] || []) : (destino[k] || []).concat(v);
+    };
+    const celdasDe = (grupo) => {
+      const celdas = {};
+      for (const it of grupo.slice().sort((a, b) => b.y - a.y || a.x - b.x)) if (it.col) (celdas[it.col] = celdas[it.col] || []).push(it.str);
+      return celdas;
+    };
+    const filasCeldas = []; // {celdas, obs, pagina, seccion}
 
     paginas.forEach((pag, ip) => {
       const items = (pag.items || []).filter(it => it && String(it.str).trim() !== '')
-        .map(it => ({ str: String(it.str).trim(), x: it.x, y: it.y, w: it.w || 0, cx: it.x + (it.w || 0) / 2, usado: false }));
-
-      for (const it of items) {
-        const m = it.str.match(/Fecha:\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
-        if (m && !res.fecha) res.fecha = parseFecha(m[1]);
-      }
+        .map(it => ({ str: String(it.str).replace(/\s+/g, ' ').trim(), x: Number(it.x), y: Number(it.y), w: Number(it.w) || 0, usado: false }))
+        .map(it => Object.assign(it, { cx: it.x + it.w / 2 }))
+        .sort((a, b) => b.y - a.y || a.x - b.x);
+      if (!items.length) return;
+      const paso = pasoEncabezado(items) || pasoPrevio || pasoLinea(items);
+      pasoPrevio = paso;
+      const tolLinea = paso * 0.25;
+      const cortes = [];
 
       // 1) Encabezados de columnas: "Pabellón" con "Hora" y "Run" en la misma línea
-      const separadores = [];
-      const encabezados = [];
       for (const it of items) {
-        if (norm(it.str) !== 'pabellon') continue;
-        const misma = items.filter(o => Math.abs(o.y - it.y) < 2.5);
+        if (it.usado || norm(it.str) !== 'pabellon') continue;
+        const misma = items.filter(o => !o.usado && Math.abs(o.y - it.y) < tolLinea);
         if (!misma.some(o => norm(o.str) === 'hora') || !misma.some(o => norm(o.str) === 'run')) continue;
-        const banda = items.filter(o => Math.abs(o.y - it.y) <= 9);
+        const banda = items.filter(o => !o.usado && Math.abs(o.y - it.y) <= paso * 0.8);
         banda.forEach(o => { o.usado = true; });
-        const grupos = [];
-        for (const o of banda.slice().sort((a, b) => a.cx - b.cx)) {
-          const g = grupos.find(gr => Math.abs(gr.cx - o.cx) < 10);
-          if (g) { g.items.push(o); g.cx = g.items.reduce((s, q) => s + q.cx, 0) / g.items.length; }
-          else grupos.push({ cx: o.cx, items: [o] });
-        }
-        const cols = grupos.map(g => {
-          const txt = clave(g.items.slice().sort((a, b) => b.y - a.y || a.x - b.x).map(q => q.str).join(' '));
-          const def = COLUMNAS_TABLA.find(([, n]) => n === txt);
-          return {
-            campo: def ? def[0] : 'col_' + txt.replace(/ /g, '_'), cx: g.cx,
-            izq: Math.min(...g.items.map(q => q.x)), der: Math.max(...g.items.map(q => q.x + q.w)),
-          };
-        }).sort((a, b) => a.cx - b.cx);
-        for (let k = 0; k < cols.length; k++) {
-          cols[k].desde = k === 0 ? -Infinity : (cols[k - 1].der + cols[k].izq) / 2;
-          cols[k].hasta = k === cols.length - 1 ? Infinity : (cols[k].der + cols[k + 1].izq) / 2;
-        }
         const ys = banda.map(o => o.y);
-        encabezados.push({ y: it.y, cols });
-        separadores.push({ tipo: 'encabezado', arriba: Math.max(...ys) + 1, abajo: Math.min(...ys) - 1 });
+        cortes.push({ tipo: 'encabezado', arriba: Math.max(...ys) + tolLinea, abajo: Math.min(...ys) - tolLinea, cols: columnasDeEncabezado(banda, paso * 0.9) });
       }
 
-      // 2) Títulos de sección ("PABELLÓN 2")
-      for (const it of items) {
-        if (it.usado) continue;
-        if (/^PABELL[ÓO]N\s+\S+/.test(it.str) || /^TABLA QUIR/i.test(it.str) || /^Fecha:/i.test(it.str)) {
-          it.usado = true;
-          separadores.push({ tipo: 'titulo', arriba: it.y + 1, abajo: it.y - 1, texto: it.str });
-        }
-      }
-
-      // 3) Observaciones ("Obs:" + líneas de continuación alineadas a la izquierda)
-      const obsItems = items.filter(it => !it.usado && /^obs:?$/i.test(it.str));
-      for (const ob of obsItems) {
-        const linea = items.filter(o => !o.usado && Math.abs(o.y - ob.y) < 2 && o.x >= ob.x - 1);
+      // 2) Observaciones: "Obs:" y sus líneas de continuación (alineadas a "Obs:", a menos de una línea)
+      for (const ob of items.filter(o => !o.usado && /^obs\s*(?:[:.]|$)/i.test(o.str))) {
+        if (ob.usado) continue;
+        const linea = items.filter(o => !o.usado && Math.abs(o.y - ob.y) < tolLinea && o.x >= ob.x - 1).sort((a, b) => a.x - b.x);
         linea.forEach(o => { o.usado = true; });
-        const textos = [linea.filter(o => o !== ob).sort((a, b) => a.x - b.x).map(o => o.str).join(' ')];
+        const textos = [linea.map(o => o === ob ? o.str.replace(/^obs\s*[:.]?\s*/i, '') : o.str).filter(Boolean).join(' ')];
         let yPrev = ob.y, abajo = ob.y;
         for (;;) {
-          const cont = items.filter(o => !o.usado && yPrev - o.y > 3 && yPrev - o.y < 13.5 && Math.abs(o.x - ob.x) < 4 && !ES_HORA.test(o.str));
+          const cont = items.filter(o => !o.usado && yPrev - o.y > tolLinea && yPrev - o.y < paso * 1.17 && Math.abs(o.x - ob.x) < paso * 0.35);
           if (!cont.length) break;
-          const yc = cont[0].y;
-          const lineaC = items.filter(o => !o.usado && Math.abs(o.y - yc) < 2 && o.x >= ob.x - 1);
+          const yc = Math.max(...cont.map(o => o.y));
+          const lineaC = items.filter(o => !o.usado && Math.abs(o.y - yc) < tolLinea && o.x >= ob.x - 1).sort((a, b) => a.x - b.x);
           lineaC.forEach(o => { o.usado = true; });
-          textos.push(lineaC.sort((a, b) => a.x - b.x).map(o => o.str).join(' '));
+          textos.push(lineaC.map(o => o.str).join(' '));
           yPrev = yc; abajo = yc;
         }
-        separadores.push({ tipo: 'obs', arriba: ob.y + 1, abajo: abajo - 1, texto: textos.join(' ').trim() });
+        cortes.push({ tipo: 'obs', arriba: ob.y + tolLinea, abajo: abajo - tolLinea, texto: textos.join(' ').replace(/\s+/g, ' ').trim() });
       }
 
-      // 4) Bandas de filas: lo que queda entre separadores consecutivos
-      separadores.sort((a, b) => b.arriba - a.arriba);
-      const cuerpo = items.filter(it => !it.usado);
-      const limites = separadores.concat([{ tipo: 'fin', arriba: -Infinity, abajo: -Infinity }]);
-      for (let s = 0; s < limites.length - 1; s++) {
-        if (limites[s].tipo === 'titulo' && /^PABELL/i.test(limites[s].texto)) seccion = limites[s].texto;
-        const techo = limites[s].abajo, piso = limites[s + 1].arriba;
-        const banda = cuerpo.filter(it => it.y < techo && it.y > piso);
-        if (!banda.length) continue;
-        const enc = encabezados.filter(e => e.y > techo - 0.5).sort((a, b) => a.y - b.y)[0];
-        const cols = enc ? enc.cols : columnasPrevias;
-        if (!cols) { res.avisos.push(`Página ${ip + 1}: hay texto antes del primer encabezado de columnas; se omitió.`); continue; }
-        const colDe = (it) => cols.find(c => it.cx >= c.desde && it.cx < c.hasta);
-        const anclas = banda.filter(it => { const c = colDe(it); return c && c.campo === 'hora' && ES_HORA.test(it.str); });
-        const grupos = anclas.length <= 1 ? [banda]
-          : anclas.map(a => banda.filter(it => anclas.reduce((m, b) => Math.abs(b.y - it.y) < Math.abs(m.y - it.y) ? b : m) === a));
-        const obsDebajo = limites[s + 1].tipo === 'obs' && anclas.length <= 1 ? limites[s + 1].texto : '';
-        for (const g of grupos) {
-          const celdas = {};
-          for (const it of g.slice().sort((a, b) => b.y - a.y || a.x - b.x)) {
-            const c = colDe(it);
-            if (!c) continue;
-            (celdas[c.campo] = celdas[c.campo] || []).push(it.str);
-          }
-          const txt = (campo, sep = ' ') => (celdas[campo] || []).join(sep).replace(/\s+/g, ' ').trim();
-          if (!celdas.run && !celdas.nombre) continue;
-          nFila++;
-          const agTxt = txt('agendamiento'), condTxt = txt('condicionalidad');
-          let agend = 'NORMAL';
-          const nAg = norm(agTxt);
-          if (nAg.includes('condicional')) agend = 'CONDICIONAL';
-          else if (nAg && !nAg.includes('electivo') && !nAg.includes('normal')) agend = 'OTRO';
-          else if (!nAg && /^s/.test(norm(condTxt))) agend = 'CONDICIONAL';
-          const fila = {
-            id: res.archivo + '#' + nFila, archivo: res.archivo, pagina: ip + 1,
-            pabellon: txt('pabellon') || seccion.charAt(0) + seccion.slice(1).toLowerCase(), hora: txt('hora'), nombre: txt('nombre'), run: txt('run', ''),
-            edad: parseInt(txt('edad'), 10) || null, diagnostico: txt('diagnostico'), operacion: txt('operacion'),
-            cirujano: txt('cirujano'), ayudantes: [txt('ayud1'), txt('ayud2')].filter(v => v && v !== '-'),
-            anestesista: txt('anest'), tipoAnestesia: txt('tipoAnest'),
-            ges: txt('ges'), tiempo: parseInt(txt('tiempo'), 10) || null,
-            condicionalidad: condTxt, agendamiento: agTxt, agend, obs: obsDebajo, avisos: [],
-          };
-          if (/^s/.test(norm(condTxt)) !== (agend === 'CONDICIONAL') && condTxt && agTxt) {
-            fila.avisos.push(`Condicionalidad "${condTxt}" no calza con tipo de agendamiento "${agTxt}"`);
-          }
-          if (agend === 'OTRO') fila.avisos.push(`Tipo de agendamiento "${agTxt}" no es electivo`);
-          if (anclas.length > 1) fila.avisos.push('Fila separada sin línea de observaciones; revisar datos');
-          if (!fila.run || !fila.hora) {
-            fila.avisos.push('Fila de la tabla incompleta (¿cortada entre páginas?): revisar');
-            res.avisos.push(`Página ${ip + 1}: fila incompleta${fila.nombre ? ' (' + fila.nombre + ')' : ''}`);
-          }
-          res.filas.push(fila);
+      // 3) Título del documento, fecha y títulos de sección ("PABELLÓN 2"), solos en su línea y fuera de la columna Pabellón
+      const encPag = cortes.filter(c => c.tipo === 'encabezado');
+      for (const it of items) {
+        if (it.usado) continue;
+        const solo = !items.some(o => o !== it && !o.usado && Math.abs(o.y - it.y) < tolLinea && !/^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(o.str));
+        if (/^TABLA QUIR/i.test(it.str)) {
+          it.usado = true;
+          cortes.push({ tipo: 'titulo', arriba: it.y + tolLinea, abajo: it.y - tolLinea, texto: it.str });
+        } else if (/^fecha\s*:/i.test(it.str)) {
+          let m = it.str.match(/(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/);
+          const vecina = items.filter(o => o !== it && !o.usado && Math.abs(o.y - it.y) < tolLinea && o.x > it.x).sort((a, b) => a.x - b.x)[0];
+          if (!m && vecina) { m = vecina.str.match(/^(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/); if (m) vecina.usado = true; }
+          it.usado = true;
+          if (m && !res.fecha) res.fecha = parseFecha(m[1]);
+          cortes.push({ tipo: 'titulo', arriba: it.y + tolLinea, abajo: it.y - tolLinea, texto: it.str });
+        } else if (/^PABELL[ÓO]N\s+\S/i.test(it.str) && it.str.length <= 40 && !/\/\//.test(it.str) && solo) {
+          const enc = encPag.filter(e => e.abajo > it.y).sort((a, b) => a.abajo - b.abajo)[0];
+          const cols = enc ? enc.cols : columnas;
+          const colPab = cols && cols.find(c => c.campo === 'pabellon');
+          if (colPab && it.cx < colPab.hasta) continue; // celda de la fila, no título
+          it.usado = true;
+          cortes.push({ tipo: 'titulo', arriba: it.y + tolLinea, abajo: it.y - tolLinea, texto: it.str, seccion: seccionTexto(it.str) });
         }
       }
-      if (encabezados.length) columnasPrevias = encabezados.sort((a, b) => a.y - b.y)[0].cols;
+
+      // 4) Segmentos: lo que queda entre cortes. Una fila termina donde terminan sus observaciones
+      cortes.sort((a, b) => b.arriba - a.arriba);
+      const libres = items.filter(it => !it.usado);
+      const segmentos = [];
+      let techo = Infinity, cols = columnas;
+      for (const c of cortes.concat([{ tipo: 'fin', arriba: -Infinity, abajo: -Infinity }])) {
+        const piso = c.tipo === 'obs' ? c.abajo : c.arriba;
+        segmentos.push({ items: libres.filter(it => it.y < techo && it.y > piso), obs: c.tipo === 'obs' ? c.texto : null, cols, seccion, ultimo: c.tipo === 'fin' });
+        techo = c.abajo;
+        if (c.tipo === 'encabezado') cols = c.cols;
+        if (c.seccion) seccion = c.seccion;
+      }
+      if (cols) columnas = cols;
+
+      let conDatos = false; // ¿ya hubo filas en esta página?
+      segmentos.forEach((seg) => {
+        const ult = filasCeldas[filasCeldas.length - 1];
+        // Al comienzo de una página, una fila que viene de la anterior sin sus observaciones puede continuar aquí
+        const continua = !conDatos && ult && ult.pagina === ip && !ult.obs;
+        if (!seg.items.length) {
+          if (seg.obs && continua) ult.obs = seg.obs;
+          return;
+        }
+        if (!seg.cols) return; // texto antes de la tabla (membrete)
+        for (const it of seg.items) { const c = seg.cols.find(k => it.cx >= k.desde && it.cx < k.hasta); it.col = c ? c.campo : null; }
+        const anclasHora = seg.items.filter(it => it.col === 'hora' && horaDe(it.str));
+        const anclasRun = seg.items.filter(it => it.col === 'run' && CUERPO_RUN.test(it.str));
+        const anclas = [anclasHora, anclasRun].sort((a, b) => b.length - a.length)[0].slice();
+        if (!seg.items.some(it => it.col === 'nombre' || it.col === 'run')) return; // pie de página u otro texto suelto
+        conDatos = true;
+        if (!anclas.length) {
+          const celdas = celdasDe(seg.items);
+          // Resto de la última fila de la página anterior (fila cortada entre páginas)
+          if (continua) { agregarCeldas(ult.celdas, celdas, false); if (seg.obs) ult.obs = seg.obs; ult.partida = true; return; }
+          // Comienzo de una fila que sigue en la página siguiente
+          if (seg.ultimo && !seg.obs) { trozoPendiente = { celdas, pagina: ip + 1 }; return; }
+        }
+        if (!anclas.length) anclas.push(seg.items.filter(it => it.col === 'nombre' || it.col === 'run').sort((a, b) => b.y - a.y)[0]);
+        // Varias filas sin línea de observaciones entre ellas: se separan por el mayor hueco entre anclas
+        const ys = [...new Set(anclas.map(a => a.y))].sort((a, b) => b - a);
+        // La celda Pabellón se centra distinto (abarca también las observaciones): no sirve para medir huecos
+        const lineas = [...new Set(seg.items.filter(it => it.col !== 'pabellon').map(it => it.y))].sort((a, b) => b - a);
+        const cortesY = [];
+        for (let k = 0; k < ys.length - 1; k++) {
+          const entre = lineas.filter(y => y <= ys[k] && y >= ys[k + 1]);
+          let corte = (ys[k] + ys[k + 1]) / 2, hueco = -1;
+          for (let j = 0; j < entre.length - 1; j++) {
+            const h = entre[j] - entre[j + 1];
+            if (h > hueco + 0.01) { hueco = h; corte = (entre[j] + entre[j + 1]) / 2; }
+          }
+          cortesY.push(corte);
+        }
+        ys.forEach((_, k) => {
+          const arriba = k === 0 ? Infinity : cortesY[k - 1], abajo = k === ys.length - 1 ? -Infinity : cortesY[k];
+          const grupo = seg.items.filter(it => it.y < arriba && it.y > abajo);
+          const celdas = celdasDe(grupo);
+          let partida = false;
+          if (trozoPendiente) { agregarCeldas(celdas, trozoPendiente.celdas, true); trozoPendiente = null; partida = true; }
+          filasCeldas.push({ celdas, obs: k === ys.length - 1 ? seg.obs : '', pagina: ip + 1, seccion: seg.seccion, partida });
+        });
+      });
     });
 
+    filasCeldas.forEach((fc, i) => {
+      const fila = armarFila(fc.celdas, fc.obs, fc.pagina, fc.seccion);
+      if (!fila.nombre && !fila.run) return;
+      fila.id = res.archivo + '#' + (i + 1);
+      fila.archivo = res.archivo;
+      if (fc.partida) fila.avisos.push('Fila cortada entre páginas: se unieron sus partes (revisar)');
+      if (!fila.run) {
+        fila.avisos.push('Fila de la tabla sin RUN: revisar');
+        res.avisos.push(`Página ${fila.pagina}: fila sin RUN${fila.nombre ? ' (' + fila.nombre + ')' : ''}`);
+      }
+      res.filas.push(fila);
+    });
+    if (trozoPendiente) res.avisos.push(`Página ${trozoPendiente.pagina}: texto al pie de la tabla que no pude asignar a una fila`);
     if (!res.fecha) res.avisos.push('No encontré la fecha ("Fecha: dd-mm-aaaa") en la tabla.');
     res.filas.forEach(f => { f.fecha = res.fecha; });
     if (!res.filas.length) res.avisos.push('No encontré pacientes en la tabla. ¿Es la "Tabla Quirúrgica" de SITGEQ?');
