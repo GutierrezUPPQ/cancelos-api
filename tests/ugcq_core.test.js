@@ -152,12 +152,13 @@ test('Cotejo automático: conteos UGCQ del día', () => {
     pctSuspendidos: 43,      // 3/7
     progRealizadas: 3,       // ANA, SALAS (registrada condicional en SITGEQ), MOLINA (enlazada por nombre)
     condRealizadas: 1,       // PABLO
-    agregadas: 1, urgencias: 1, menores: 1, procedimientos: 1,
-    totalMayoresElectivas: 5, totalRealizado: 8,
+    agregadas: 1, urgencias: 1,
+    menores: 1, procedimientos: 8,   // por código: la cirugía menor y un código de procedimiento por cirugía
+    totalMayoresElectivas: 5, totalRealizado: 15,
   });
   assert.deepEqual(r.causas, { [col('(Paciente) No se presenta / No se ubica')]: 1, [col('(Unidades de apoyo logístico) Instrumental incompleto o no dis')]: 1 });
-  // Pendientes: Vera (sin registro) y la causal desconocida
-  assert.deepEqual(r.pendientes.map(x => x.tipo).sort(), ['causal', 'estado']);
+  // Pendientes: Vera (sin registro), la causal desconocida y el Pabellón 3, que no tiene tabla
+  assert.deepEqual(r.pendientes.map(x => x.tipo).sort(), ['causal', 'estado', 'pabellon']);
   assert.equal(pac(r, '12345678-5').estado, 'SIN_REGISTRO');
   assert.ok(pac(r, '12345678-5').avisos.some(a => a.includes('18-03-2026')), 'pista: operado otro día');
   assert.equal(pac(r, '7654321-6').estado, 'NO_REALIZADA'); // condicional no operado: no es suspensión
@@ -176,7 +177,7 @@ test('Cotejo con decisiones manuales: queda listo y cuadra', () => {
   const ajustes = { pac: {
     [sinReg.id]: { estado: 'SUSPENDIDA', causalCol: col('(Paciente) Rechaza operación') },
     [raro.id]: { causalCol: col('(otros) otros') },
-  }, enc: {} };
+  }, enc: {}, conf: { 'pab:3': true } };
   const r = U.cotejarDia(DIA, fuentes, ajustes);
   assert.equal(r.pendientes.length, 0);
   assert.equal(r.conteos.suspendidos, 4);
@@ -191,7 +192,7 @@ test('Cotejo: "no contar" un programado pasa su cirugía a agregada', () => {
   assert.equal(r.conteos.programados, 6);
   assert.equal(r.conteos.progRealizadas, 2);
   assert.equal(r.conteos.agregadas, 2);
-  assert.equal(r.conteos.totalRealizado, 8);
+  assert.equal(r.conteos.totalRealizado, 15);
 });
 
 test('Cotejo: una agregada marcada como "faltaba en la tabla" pasa a programada', () => {
@@ -229,13 +230,16 @@ test('Cotejo: registros sin RUN ni nombre no se fusionan', () => {
   assert.equal(r.conteos.urgencias, 2);
 });
 
-test('Sin tabla: lo programado se reconstruye desde SITGEQ', () => {
+test('Sin tabla: pendiente hasta confirmar; luego lo programado se reconstruye desde SITGEQ', () => {
   const r = U.cotejarDia('2026-03-18', fuentes, {});
   assert.equal(r.conTabla, false);
-  assert.equal(r.conteos.programados, 1);
-  assert.equal(r.conteos.progRealizadas, 1);
-  assert.equal(r.conteos.agregadas, 0);
-  assert.ok(r.avisos.some(a => a.includes('no se pueden identificar las agregadas')));
+  assert.ok(r.pendientes.some(x => x.clave === 'sinTabla'));
+  const r2 = U.cotejarDia('2026-03-18', fuentes, { conf: { sinTabla: true } });
+  assert.equal(r2.pendientes.length, 0);
+  assert.equal(r2.conteos.programados, 1);
+  assert.equal(r2.conteos.progRealizadas, 1);
+  assert.equal(r2.conteos.agregadas, 0);
+  assert.ok(r2.avisos.some(a => a.includes('no se distinguen agregadas')));
 });
 
 // ═══════════════ Fila UGCQ ═══════════════
@@ -244,7 +248,7 @@ test('Fila UGCQ: 119 columnas, tipos y datos fijos como el reporte', () => {
   const fila = U.filaUGCQ(DIA, r.conteos, r.causas, {});
   assert.equal(fila.length, 119);
   assert.deepEqual(fila.slice(0, 11), ['17-03-2026', '17', '3', '2026', U.semanaUGCQ(DIA), 'Macrocentro Norte', '              V', 'Servicio de Salud Viña del Mar Quillota', 'Hospital de Quilpué', 'Alta', 'EAR']);
-  assert.deepEqual(fila.slice(11, 23), [7, 2, 3, 43, 3, 1, 1, 1, 1, 1, 5, 8]);
+  assert.deepEqual(fila.slice(11, 23), [7, 2, 3, 43, 3, 1, 1, 1, 1, 8, 5, 15]);
   assert.equal(fila[col('(Paciente) No se presenta / No se ubica')], 1);
   assert.equal(fila[col('(Paciente) Rechaza operación')], null);
   const otro = U.filaUGCQ(DIA, r.conteos, r.causas, { hospital: 'Hospital Marga Marga' });
