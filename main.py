@@ -3,7 +3,7 @@ CancelOS IA v4 - API Python + Torre de Control
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from datetime import date, datetime, timedelta
 import os, json, threading, urllib.request
@@ -39,6 +39,16 @@ def encuesta():
 @app.get("/alta", response_class=HTMLResponse)
 def hoja_alta():
     return _html("alta.html", "<h1>Hoja de alta - archivo alta.html no encontrado</h1>")
+
+@app.get("/ugcq", response_class=HTMLResponse)
+def cierre_ugcq():
+    return _html("ugcq.html", "<h1>Cierre UGCQ - archivo ugcq.html no encontrado</h1>")
+
+@app.get("/ugcq_core.js")
+def ugcq_core():
+    # Motor de cotejo: corre en el navegador, los archivos de pacientes nunca llegan al servidor
+    with open(os.path.join(os.path.dirname(__file__), "ugcq_core.js"), "r", encoding="utf-8") as f:
+        return Response(f.read(), media_type="application/javascript; charset=utf-8", headers={"Cache-Control": "no-store"})
 
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
@@ -690,7 +700,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/cma/registro","/cma/episodio","/cma/pasada","/cma/exportar.csv","/encuesta"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","cierre_ugcq":"/ugcq","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/cma/registro","/cma/episodio","/cma/pasada","/cma/exportar.csv","/encuesta"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):

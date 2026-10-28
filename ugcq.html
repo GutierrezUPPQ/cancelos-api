@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CancelOS — Cierre diario UGCQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#F5F8FA;--panel:#FFFFFF;--border:#DCE5EA;--dim:#F1F5F8;
+  --rojo:#C02E28;--amar:#96690A;--verde:#1F7A41;
+  --rojo-bg:#FAE9E8;--amar-bg:#F8EFD8;--verde-bg:#E6F2EA;--azul-bg:#E3F0F7;
+  --text:#20313C;--text-suave:#4B5D6A;--muted:#647684;
+  --accent:#0B76A6;--accent-soft:#E3F0F7;--grid:#E7EEF2;
+  --btn1:#0E7DB0;--btn2:#155FBF;--sombra:0 1px 3px rgba(26,43,54,.10);
+}
+html[data-theme="dark"]{
+  --paper:#020b18;--panel:#040f1f;--border:#0d2137;--dim:#0a1a2e;
+  --rojo:#ef4444;--amar:#eab308;--verde:#22c55e;
+  --rojo-bg:rgba(239,68,68,.09);--amar-bg:rgba(234,179,8,.09);--verde-bg:rgba(34,197,94,.09);--azul-bg:rgba(14,165,233,.09);
+  --text:#e2e8f0;--text-suave:#b8c6d4;--muted:#6b86a6;
+  --accent:#0ea5e9;--accent-soft:rgba(14,165,233,.08);--grid:#0d2137;
+  --btn1:#0369a1;--btn2:#1d4ed8;--sombra:none;
+}
+html{background:var(--paper)}
+body{min-height:100vh;background:var(--paper);color:var(--text);font-family:'Barlow',sans-serif}
+body::after{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:40px 40px;opacity:.4;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:0 14px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--btn1),var(--btn2));display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.logo-title{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:900;letter-spacing:3px}
+.logo-title span{color:var(--accent)}
+.logo-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px}
+.hdr-der{display:flex;align-items:center;gap:12px}
+.tbtn{min-width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:15px;cursor:pointer;box-shadow:var(--sombra);padding:0 10px}
+.tbtn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+a.volver{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:2px}
+.aviso{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;line-height:1.7;padding:10px 4px;border-bottom:1px solid var(--border)}
+nav{display:flex;gap:7px;overflow-x:auto;padding:12px 0;position:sticky;top:0;background:var(--paper);z-index:5;border-bottom:1px solid var(--border)}
+nav button{flex:0 0 auto;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--muted);background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:10px 15px;cursor:pointer;box-shadow:var(--sombra)}
+nav button.on{color:#fff;border-color:var(--accent);background:linear-gradient(135deg,var(--btn1),var(--btn2))}
+section{display:none;padding-top:6px}
+section.on{display:block}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:3px;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:var(--sombra)}
+.drop{border:2px dashed var(--accent);border-radius:12px;background:var(--accent-soft);padding:22px 16px;text-align:center;cursor:pointer;transition:background .15s}
+.drop.sobre{background:var(--azul-bg);border-style:solid}
+.drop .t{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;color:var(--accent)}
+.drop .s{font-size:13px;color:var(--text-suave);margin-top:5px;line-height:1.6}
+.archivos{display:grid;gap:7px;margin-top:12px}
+.arch{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--dim);border:1px solid var(--border);border-radius:9px;padding:9px 12px}
+.arch .n{font-size:13.5px;font-weight:600;word-break:break-all}
+.arch .d{font-size:12px;color:var(--muted);margin-top:2px}
+.arch .x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 8px}
+.tag{font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:1px;padding:3px 8px;border-radius:6px;border:1px solid;white-space:nowrap}
+.tTABLA{color:var(--accent);border-color:var(--accent);background:var(--azul-bg)}
+.tENC{color:var(--verde);border-color:var(--verde);background:var(--verde-bg)}
+.tSUS{color:var(--amar);border-color:var(--amar);background:var(--amar-bg)}
+.tUGCQ{color:var(--text-suave);border-color:var(--border);background:var(--panel)}
+.tERR{color:var(--rojo);border-color:var(--rojo);background:var(--rojo-bg)}
+.fechas{display:flex;gap:8px;flex-wrap:wrap}
+.fbtn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:8px 13px;cursor:pointer;box-shadow:var(--sombra);text-align:left}
+.fbtn small{display:block;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:400;margin-top:2px}
+.fbtn.on{border-color:var(--accent);outline:2px solid var(--accent)}
+.banner{border-radius:10px;padding:14px 16px;border-left:5px solid;font-weight:600;margin-bottom:12px}
+.banner .t{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:900;letter-spacing:2px;margin-bottom:3px}
+.banner .a{font-size:13.5px;font-weight:400;color:var(--text);line-height:1.55}
+.bVERDE{border-color:var(--verde);background:var(--verde-bg);color:var(--verde)}
+.bAMAR{border-color:var(--amar);background:var(--amar-bg);color:var(--amar)}
+.bROJO{border-color:var(--rojo);background:var(--rojo-bg);color:var(--rojo)}
+.bAZUL{border-color:var(--accent);background:var(--azul-bg);color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:9px}
+.kpi{background:var(--dim);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.kpi .l{font-size:11.5px;line-height:1.35;color:var(--text-suave);min-height:31px}
+.kpi .v{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1.05;color:var(--text)}
+.kpi .f{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.5px}
+.kpi.clave{border-color:var(--accent)}
+.kpi.clave .v{color:var(--accent)}
+.controles{list-style:none;display:grid;gap:4px;margin-top:12px}
+.controles li{font-size:13px;padding-left:22px;position:relative;line-height:1.5}
+.controles li::before{position:absolute;left:0;top:0;font-weight:800}
+.controles li.ok::before{content:'✓';color:var(--verde)}
+.controles li.no{color:var(--rojo)}
+.controles li.no::before{content:'✗';color:var(--rojo)}
+.controles li.causa{padding-left:0}
+.controles li.causa::before{content:none}
+.acciones{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,var(--btn1),var(--btn2));border:none;border-radius:9px;color:#fff;padding:11px 20px;cursor:pointer;box-shadow:var(--sombra)}
+.btn.sec{background:var(--panel);border:1px solid var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.peq{font-size:13px;padding:6px 11px;letter-spacing:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:1px;color:var(--muted);text-align:left;padding:7px 8px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+td.n{text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700}
+.tbl{overflow-x:auto}
+tr.pend td{background:var(--rojo-bg)}
+tr.manual td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+td select,.card select,.card input[type=text],.card input[type=date]{background:var(--dim);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;padding:6px 7px;max-width:260px}
+.card input[type=text]{max-width:none;width:100%;font-size:14px;padding:8px 10px}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.est{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:6px;border:1px solid;white-space:nowrap;display:inline-block}
+.eVERDE{color:var(--verde);border-color:var(--verde);background:var(--verde-bg)}
+.eAMAR{color:var(--amar);border-color:var(--amar);background:var(--amar-bg)}
+.eROJO{color:var(--rojo);border-color:var(--rojo);background:var(--rojo-bg)}
+.eGRIS{color:var(--muted);border-color:var(--border);background:var(--dim)}
+.eAZUL{color:var(--accent);border-color:var(--accent);background:var(--azul-bg)}
+.det{font-size:12px;color:var(--muted);margin-top:3px}
+.av{list-style:none;margin-top:3px}
+.av li{font-size:12px;color:var(--amar);padding-left:12px;position:relative;line-height:1.45}
+.av li::before{content:'▲';position:absolute;left:0;font-size:8px;top:3px}
+.run{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted)}
+.pends{display:grid;gap:8px}
+.pendc{border:1px solid var(--rojo);border-left:5px solid var(--rojo);background:var(--rojo-bg);border-radius:9px;padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.pendc .q{font-size:13.5px;color:var(--text)}
+.pendc .q b{font-weight:800}
+.pendc .ops{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px}
+.hint b{color:var(--text-suave)}
+.vacio{font-size:13px;color:var(--muted);padding:12px 4px}
+.reglas{font-size:13.5px;line-height:1.65;color:var(--text-suave)}
+.reglas h4{font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:1px;color:var(--text);margin:14px 0 4px}
+.reglas ul{padding-left:20px}
+.reglas code{font-family:'Share Tech Mono',monospace;font-size:12px;background:var(--dim);padding:1px 5px;border-radius:4px}
+details.ayuda{margin-top:10px;font-size:13px;color:var(--text-suave)}
+details.ayuda summary{cursor:pointer;color:var(--accent);font-weight:600}
+details.ayuda ol{padding-left:20px;margin-top:6px;line-height:1.7}
+.cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.cfg label{display:flex;flex-direction:column;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:1px;color:var(--muted)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--paper);padding:10px 18px;border-radius:9px;font-size:13.5px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1}
+body.ocultar .phi{filter:blur(5px)}
+footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-align:center;padding:26px 10px;line-height:2}
+@media (max-width:640px){.wrap{padding:0 16px 60px}.kpi .v{font-size:27px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚕</div>
+    <div>
+      <div class="logo-title">CANCEL<span>OS</span> · CIERRE UGCQ</div>
+      <div class="logo-sub">TABLA QUIRÚRGICA vs SITGEQ · HOSPITAL DE QUILPUÉ</div>
+    </div>
+  </div>
+  <div class="hdr-der">
+    <a class="volver" href="/torre">← TORRE DE CONTROL</a>
+    <button type="button" id="phiBtn" class="tbtn" aria-pressed="false" title="Ocultar nombres y RUN en pantalla">👁 Ocultar nombres</button>
+    <button type="button" id="themeBtn" class="tbtn" aria-label="Cambiar tema claro/oscuro">🌙</button>
+  </div>
+</header>
+<div class="aviso">LOS ARCHIVOS SE LEEN SOLO EN ESTE COMPUTADOR: NO SE ENVÍAN AL SERVIDOR · EL HISTORIAL GUARDA SOLO NÚMEROS, SIN DATOS DE PACIENTES</div>
+
+<nav id="tabs">
+  <button type="button" data-s="cierre" class="on">CIERRE DEL DÍA</button>
+  <button type="button" data-s="historial">HISTORIAL</button>
+  <button type="button" data-s="config">CONFIGURACIÓN Y REGLAS</button>
+</nav>
+
+<!-- ═══════════════ CIERRE DEL DÍA ═══════════════ -->
+<section id="s-cierre" class="on">
+  <div class="sec-title">1 · ARCHIVOS DEL DÍA</div>
+  <div class="card">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Cargar archivos">
+      <div class="t">ARRASTRA AQUÍ LOS ARCHIVOS · O HAZ CLIC PARA ELEGIRLOS</div>
+      <div class="s">Tabla quirúrgica (PDF) · Encuentros quirúrgicos (Excel) · Informe de suspensiones (Excel)<br>Opcional: reporte UGCQ ya subido (Excel), para comparar. Se reconoce cada archivo solo; puedes cargar varios días.</div>
+      <input type="file" id="fileIn" multiple accept=".pdf,.xlsx,.xls,.csv" hidden>
+    </div>
+    <div class="archivos" id="archivos"></div>
+    <details class="ayuda">
+      <summary>¿Qué exportar desde SITGEQ cada día?</summary>
+      <ol>
+        <li><b>Tabla quirúrgica</b> del día (PDF "Tabla Quirúrgica"): es la lista de lo programado. Idealmente la tabla oficial publicada el día anterior.</li>
+        <li><b>Encuentros quirúrgicos</b> del día (export Excel): todo lo que se operó, incluidas urgencias, cirugías menores y procedimientos.</li>
+        <li><b>Informe de suspensiones</b> del día (Excel): pacientes suspendidos con su causal MINSAL.</li>
+      </ol>
+      Si un programado no aparece ni operado ni suspendido, la herramienta te lo muestra como pendiente para que decidas.
+    </details>
+  </div>
+
+  <div id="zonaDia" hidden>
+    <div class="sec-title">2 · DÍA A CERRAR</div>
+    <div class="fechas" id="fechas"></div>
+
+    <div class="sec-title" id="tituloRes">3 · RESULTADO PARA UGCQ</div>
+    <div class="card" id="resultado"></div>
+
+    <div id="zonaPend">
+      <div class="sec-title">4 · PENDIENTES POR RESOLVER</div>
+      <div class="pends" id="pendientes"></div>
+    </div>
+
+    <div class="sec-title">5 · COTEJO PACIENTE A PACIENTE</div>
+    <div class="card">
+      <h3 class="reglas" style="margin:0 0 6px"><b>Programados en tabla</b></h3>
+      <div class="tbl" id="tProgramados"></div>
+    </div>
+    <div class="card">
+      <h3 class="reglas" style="margin:0 0 6px"><b>Registro de pabellón en SITGEQ (lo realizado)</b></h3>
+      <div class="tbl" id="tEncuentros"></div>
+    </div>
+    <div class="card">
+      <h3 class="reglas" style="margin:0 0 6px"><b>Suspensiones registradas en SITGEQ</b></h3>
+      <div class="tbl" id="tSuspensiones"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ HISTORIAL ═══════════════ -->
+<section id="s-historial">
+  <div class="sec-title">DÍAS CERRADOS (SOLO NÚMEROS)</div>
+  <div class="card">
+    <div class="acciones" style="margin-top:0;align-items:center">
+      <label class="hint" style="margin:0">Desde <input type="date" id="hDesde"></label>
+      <label class="hint" style="margin:0">Hasta <input type="date" id="hHasta"></label>
+      <button type="button" class="btn sec peq" id="hDescargar">Descargar rango (formato UGCQ)</button>
+      <button type="button" class="btn sec peq" id="hBorrar">Borrar historial</button>
+    </div>
+    <div class="tbl" id="tHistorial" style="margin-top:12px"></div>
+    <div class="hint">Si cargas el reporte UGCQ ya subido ("Cirugía por rangos de fecha"), cada día se compara con lo que quedó en UGCQ.</div>
+  </div>
+</section>
+
+<!-- ═══════════════ CONFIGURACIÓN Y REGLAS ═══════════════ -->
+<section id="s-config">
+  <div class="sec-title">DATOS FIJOS DEL ESTABLECIMIENTO</div>
+  <div class="card">
+    <div class="cfg" id="cfg"></div>
+    <div class="acciones"><button type="button" class="btn sec peq" id="cfgReset">Restaurar valores</button></div>
+    <div class="hint">Se guardan en este navegador. Úsalos al cambiar de establecimiento (p. ej., Hospital Marga Marga).</div>
+  </div>
+  <div class="sec-title">CÓMO CUENTA LA HERRAMIENTA</div>
+  <div class="card reglas">
+    <h4>Programados y condicionales</h4>
+    <ul>
+      <li><b>Programados</b> = pacientes de la tabla con agendamiento <code>Electivo Normal</code>. <b>Condicionales</b> = <code>Electivo Condicional</code>.</li>
+      <li>Solo cuentan las <b>cirugías mayores</b>: si SITGEQ registra al paciente como cirugía menor o procedimiento, no suma a programados (su registro va a menores o procedimientos).</li>
+      <li>Si el informe de suspensiones trae a un paciente que no está en la tabla cargada, se cuenta como programado y suspendido (se asume que la tabla impresa ya no lo mostraba). Queda marcado para revisar.</li>
+    </ul>
+    <h4>Cotejo con lo que ocurrió</h4>
+    <ul>
+      <li>Cada paciente se busca en SITGEQ por <b>RUN</b>; si no calza, por <b>nombre</b> (queda marcado).</li>
+      <li>Operado ese día (cirugía mayor) → <b>programada realizada</b> o <b>condicional realizada</b>.</li>
+      <li>En el informe de suspensiones → <b>suspendido</b>, con su causal traducida a la columna UGCQ.</li>
+      <li>Programado sin cirugía ni suspensión → <b>pendiente</b>: tú decides (suspendido con causal, realizado sin registro o no contar). No se puede descargar hasta resolverlo.</li>
+      <li>Condicional no operado → no es suspensión (no suma a suspendidos). Si quieres contarlo, cámbialo a "Normal".</li>
+    </ul>
+    <h4>Lo realizado fuera de tabla</h4>
+    <ul>
+      <li>Cirugía mayor electiva de paciente que no está en tabla → <b>agregada</b>.</li>
+      <li>Tipo de cirugía "Urgencia" → <b>urgencia</b>. Tipo "Cirugía Menor" → <b>menor</b>. Tipo "Procedimiento" → <b>procedimiento</b> (sean electivas o de urgencia).</li>
+      <li>Sin tabla cargada para el día, lo programado se reconstruye desde SITGEQ (electivas operadas + suspendidas) y no se pueden distinguir las agregadas.</li>
+    </ul>
+    <h4>Totales y controles</h4>
+    <ul>
+      <li>% suspendidos = suspendidos ÷ programados × 100, redondeado a entero.</li>
+      <li>Total Cx Mayores Electivas = programadas + condicionales + agregadas realizadas. Total realizado = ese total + urgencias + menores + procedimientos.</li>
+      <li>Se verifica que programados = realizados + suspendidos y que la suma de causales = suspendidos.</li>
+      <li>Semana: de sábado a viernes, con el número ISO del sábado que la inicia (calza con el reporte UGCQ de octubre 2026).</li>
+    </ul>
+    <h4>Decisiones manuales</h4>
+    <ul>
+      <li>Toda corrección queda marcada con una línea azul y se exporta en el cotejo detallado. Las decisiones viven solo mientras la página esté abierta: descarga el cotejo detallado si necesitas respaldo.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>CANCELOS IA v4 · CIERRE DIARIO UGCQ · HOSPITAL DE QUILPUÉ</footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/ugcq_core.js"></script>
+<script>
+'use strict';
+const U = window.UGCQ;
+
+// ─── TEMA CLARO / OSCURO (mismo ajuste que el módulo CMA) ───
+function aplicarTema(t) {
+  if (t === 'oscuro') document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
+  document.getElementById('themeBtn').textContent = t === 'oscuro' ? '☀️' : '🌙';
+}
+function leerLS(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } }
+function guardarLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+aplicarTema((() => { try { return localStorage.getItem('cma_tema') || 'claro'; } catch (e) { return 'claro'; } })());
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const t = document.documentElement.dataset.theme === 'dark' ? 'claro' : 'oscuro';
+  try { localStorage.setItem('cma_tema', t); } catch (e) {}
+  aplicarTema(t);
+});
+document.getElementById('phiBtn').addEventListener('click', e => {
+  const on = !document.body.classList.contains('ocultar');
+  document.body.classList.toggle('ocultar', on);
+  e.currentTarget.setAttribute('aria-pressed', String(on));
+});
+
+// ─── NAVEGACIÓN ───
+document.getElementById('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-s]');
+  if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 's-' + b.dataset.s));
+  if (b.dataset.s === 'historial') pintarHistorial();
+});
+
+// ─── UTILIDADES ───
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = id => document.getElementById(id);
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('on'), 2600);
+}
+function cargarScript(url) {
+  return new Promise((ok, ko) => {
+    const s = document.createElement('script');
+    s.src = url; s.onload = ok; s.onerror = () => { s.remove(); ko(new Error(url)); };
+    document.head.appendChild(s);
+  });
+}
+async function libXLSX() {
+  if (window.XLSX) return window.XLSX;
+  for (const u of ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+                   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js']) {
+    try { await cargarScript(u); if (window.XLSX) return window.XLSX; } catch (e) {}
+  }
+  throw new Error('No se pudo cargar el lector de Excel (¿sin internet?).');
+}
+let _pdfjs = null;
+async function libPDF() {
+  if (_pdfjs) return _pdfjs;
+  const fuentes = [
+    ['https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs'],
+    ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs'],
+    ['https://unpkg.com/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs', 'https://unpkg.com/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs'],
+  ];
+  for (const [lib, worker] of fuentes) {
+    try {
+      const m = await import(lib);
+      m.GlobalWorkerOptions.workerSrc = worker;
+      _pdfjs = m;
+      return m;
+    } catch (e) {}
+  }
+  throw new Error('No se pudo cargar el lector de PDF (¿sin internet?).');
+}
+
+// ─── ESTADO ───
+const estado = {
+  archivos: [],   // {id, nombre, tamano, tipo, filas, fechas, avisos, error}
+  fecha: null,
+  ajustes: {},    // por fecha: {pac:{}, enc:{}}
+  ultimo: null,   // último resultado calculado
+};
+let nArch = 0;
+
+// ─── CARGA DE ARCHIVOS ───
+const drop = $('drop'), fileIn = $('fileIn');
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileIn.click(); } });
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('sobre'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('sobre'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('sobre'); cargarArchivos(e.dataTransfer.files); });
+fileIn.addEventListener('change', () => { cargarArchivos(fileIn.files); fileIn.value = ''; });
+
+async function cargarArchivos(lista) {
+  for (const file of Array.from(lista || [])) {
+    if (estado.archivos.some(a => a.nombre === file.name && a.tamano === file.size)) { toast(`"${file.name}" ya estaba cargado`); continue; }
+    const reg = { id: ++nArch, nombre: file.name, tamano: file.size, tipo: 'cargando', filas: [], fechas: [], avisos: [] };
+    estado.archivos.push(reg);
+    pintarArchivos();
+    try {
+      if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+        const pdfjs = await libPDF();
+        const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+        const paginas = [];
+        for (let i = 1; i <= doc.numPages; i++) {
+          const tc = await (await doc.getPage(i)).getTextContent();
+          paginas.push({ items: tc.items.filter(it => 'str' in it).map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width })) });
+        }
+        const r = U.parsearTablaPDF(paginas, reg.id + ':' + file.name);
+        reg.tipo = 'tabla'; reg.filas = r.filas; reg.avisos = r.avisos;
+        if (!r.filas.length) { reg.tipo = 'error'; reg.error = r.avisos.join(' '); }
+      } else {
+        const XLSX = await libXLSX();
+        const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: false });
+        let hecho = false;
+        for (const hoja of wb.SheetNames) {
+          const aoa = XLSX.utils.sheet_to_json(wb.Sheets[hoja], { header: 1, raw: true, defval: null });
+          const tipo = U.detectarTipoPlanilla(aoa);
+          if (!tipo) continue;
+          reg.tipo = tipo;
+          if (tipo === 'encuentros') reg.filas = U.leerEncuentros(aoa, reg.id + ':' + file.name);
+          else if (tipo === 'suspensiones') reg.filas = U.leerSuspensiones(aoa, reg.id + ':' + file.name);
+          else reg.filas = U.leerUGCQ(aoa);
+          hecho = true;
+          break;
+        }
+        if (!hecho) { reg.tipo = 'error'; reg.error = 'No reconozco este Excel: no es export de encuentros, informe de suspensiones ni reporte UGCQ.'; }
+      }
+    } catch (err) {
+      reg.tipo = 'error';
+      reg.error = err && err.message ? err.message : String(err);
+    }
+    reg.fechas = [...new Set(reg.filas.map(f => f.fecha).filter(Boolean))].sort();
+    pintarArchivos();
+  }
+  elegirFechaInicial();
+  recalcular();
+}
+
+const ETQ_TIPO = { tabla: ['TABLA QUIRÚRGICA', 'tTABLA'], encuentros: ['ENCUENTROS SITGEQ', 'tENC'], suspensiones: ['SUSPENSIONES SITGEQ', 'tSUS'], ugcq: ['REPORTE UGCQ', 'tUGCQ'], error: ['NO RECONOCIDO', 'tERR'], cargando: ['LEYENDO…', 'tUGCQ'] };
+function pintarArchivos() {
+  $('archivos').innerHTML = estado.archivos.map(a => {
+    const [etq, cls] = ETQ_TIPO[a.tipo] || ETQ_TIPO.error;
+    const unidad = a.tipo === 'tabla' ? 'pacientes' : a.tipo === 'encuentros' ? 'cirugías' : a.tipo === 'suspensiones' ? 'suspensiones' : 'días';
+    const fechas = a.fechas.length ? (a.fechas.length === 1 ? U.fmtFecha(a.fechas[0]) : U.fmtFecha(a.fechas[0]) + ' al ' + U.fmtFecha(a.fechas[a.fechas.length - 1])) : '';
+    const detalle = a.tipo === 'error' ? esc(a.error) : a.tipo === 'cargando' ? '' :
+      `${a.filas.length} ${unidad}${fechas ? ' · ' + fechas : ''}${a.avisos && a.avisos.length ? ' · ⚠ ' + esc(a.avisos.join(' · ')) : ''}`;
+    return `<div class="arch"><span class="tag ${cls}">${etq}</span><div><div class="n">${esc(a.nombre)}</div><div class="d">${detalle}</div></div>
+      <button type="button" class="x" data-quitar="${a.id}" aria-label="Quitar ${esc(a.nombre)}" title="Quitar">✕</button></div>`;
+  }).join('');
+}
+$('archivos').addEventListener('click', e => {
+  const b = e.target.closest('[data-quitar]');
+  if (!b) return;
+  estado.archivos = estado.archivos.filter(a => a.id !== Number(b.dataset.quitar));
+  pintarArchivos();
+  elegirFechaInicial();
+  recalcular();
+});
+
+// Une las fuentes y descarta filas repetidas (el mismo export cargado dos veces o rangos que se traslapan)
+function fuentes() {
+  const unir = (tipo, firma) => {
+    const vistos = new Set(), filas = [];
+    for (const a of estado.archivos.filter(x => x.tipo === tipo)) {
+      for (const f of a.filas) { const k = firma(f); if (vistos.has(k)) continue; vistos.add(k); filas.push(f); }
+    }
+    return { cargada: estado.archivos.some(x => x.tipo === tipo), cargado: estado.archivos.some(x => x.tipo === tipo), filas };
+  };
+  return {
+    tabla: unir('tabla', f => [f.fecha, U.normRun(f.run) || U.norm(f.nombre), f.pabellon, f.hora].join('|')),
+    encuentros: unir('encuentros', f => [f.fecha, U.normRun(f.run) || U.norm(f.nombre), f.hora, f.pabellon, f.intervencion].join('|')),
+    suspensiones: unir('suspensiones', f => [f.fecha, U.normRun(f.run) || U.norm(f.nombre), f.categoria, f.descripcion, f.intervencion].join('|')),
+    ugcq: unir('ugcq', f => f.fecha),
+  };
+}
+
+function fechasDisponibles() {
+  const f = fuentes();
+  const m = new Map();
+  const marcar = (lista, k) => lista.filas.forEach(x => { if (!x.fecha) return; const o = m.get(x.fecha) || { tabla: 0, encuentros: 0, suspensiones: 0 }; o[k]++; m.set(x.fecha, o); });
+  marcar(f.tabla, 'tabla'); marcar(f.encuentros, 'encuentros'); marcar(f.suspensiones, 'suspensiones');
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+function elegirFechaInicial() {
+  const fs = fechasDisponibles();
+  if (estado.fecha && fs.some(([f]) => f === estado.fecha)) return;
+  const conTabla = fs.filter(([, o]) => o.tabla > 0);
+  estado.fecha = conTabla.length ? conTabla[conTabla.length - 1][0] : (fs.length ? fs[fs.length - 1][0] : null);
+}
+
+// ─── CÁLCULO Y PINTADO ───
+function ajustesDia() {
+  if (!estado.ajustes[estado.fecha]) estado.ajustes[estado.fecha] = { pac: {}, enc: {} };
+  return estado.ajustes[estado.fecha];
+}
+function recalcular() {
+  const fs = fechasDisponibles();
+  $('zonaDia').hidden = !estado.fecha;
+  if (!estado.fecha) { estado.ultimo = null; return; }
+  $('fechas').innerHTML = fs.map(([f, o]) => {
+    const partes = [o.tabla ? o.tabla + ' en tabla' : 'sin tabla', o.encuentros + ' cx', o.suspensiones + ' susp'];
+    return `<button type="button" class="fbtn${f === estado.fecha ? ' on' : ''}" data-fecha="${f}">${U.fmtFecha(f)}<small>${esc(partes.join(' · '))}</small></button>`;
+  }).join('');
+  const r = U.cotejarDia(estado.fecha, fuentes(), ajustesDia());
+  const nTablas = estado.archivos.filter(a => a.tipo === 'tabla' && a.fechas.includes(estado.fecha)).length;
+  if (nTablas > 1) r.avisos.unshift(`Hay ${nTablas} tablas cargadas para este día y se usan todas juntas. Si una es una versión antigua, quítala.`);
+  estado.ultimo = r;
+  pintarResultado(r);
+  pintarPendientes(r);
+  pintarProgramados(r);
+  pintarEncuentros(r);
+  pintarSuspensiones(r);
+}
+$('fechas').addEventListener('click', e => {
+  const b = e.target.closest('[data-fecha]');
+  if (!b) return;
+  estado.fecha = b.dataset.fecha;
+  recalcular();
+});
+
+const ETQ_CONTEO = {
+  programados: 'Programados (Electivo Normal) en tabla',
+  condicionales: 'Electivo Condicional en tabla',
+  suspendidos: 'Programados no operados por suspensión',
+  pctSuspendidos: 'Suspendidos ÷ programados × 100',
+  progRealizadas: 'Programados operados',
+  condRealizadas: 'Condicionales operados',
+  agregadas: 'Electivas mayores fuera de tabla',
+  urgencias: 'Cirugías mayores de urgencia',
+  menores: 'Todas las cirugías menores',
+  procedimientos: 'Todos los procedimientos',
+  totalMayoresElectivas: 'Programadas + condicionales + agregadas',
+  totalRealizado: 'Mayores electivas + urgencias + menores + procedimientos',
+};
+function fijos() { return Object.assign({}, U.FIJOS_DEF, leerLS('ugcq_fijos', {})); }
+function filaActual() { const r = estado.ultimo; return r ? U.filaUGCQ(r.fecha, r.conteos, r.causas, fijos()) : null; }
+
+function pintarResultado(r) {
+  $('tituloRes').textContent = '3 · RESULTADO PARA UGCQ — ' + U.fmtFecha(r.fecha);
+  const fila = U.filaUGCQ(r.fecha, r.conteos, r.causas, fijos());
+  const n = r.pendientes.length;
+  const banner = n
+    ? `<div class="banner bROJO"><div class="t">${n} PENDIENTE${n > 1 ? 'S' : ''} ANTES DE SUBIR</div><div class="a">Resuelve los pendientes (sección 4) para habilitar la descarga. Los números de abajo ya incluyen lo que está claro.</div></div>`
+    : r.avisos.length
+      ? `<div class="banner bAMAR"><div class="t">LISTO, CON AVISOS</div><div class="a">${r.avisos.map(esc).join('<br>')}</div></div>`
+      : `<div class="banner bVERDE"><div class="t">LISTO PARA SUBIR A UGCQ</div><div class="a">Todo lo programado quedó cotejado con lo registrado en SITGEQ.</div></div>`;
+  const avisosExtra = n && r.avisos.length ? `<div class="banner bAMAR"><div class="a">${r.avisos.map(esc).join('<br>')}</div></div>` : '';
+  const kpis = U.CONTEOS.map(([k, col]) => {
+    const clave = ['programados', 'suspendidos', 'pctSuspendidos', 'totalRealizado'].includes(k);
+    return `<div class="kpi${clave ? ' clave' : ''}"><div class="l">${esc(U.ENCABEZADOS[col])}</div><div class="v">${fila[col]}${k === 'pctSuspendidos' ? '<small style="font-size:16px">%</small>' : ''}</div><div class="f">${esc(ETQ_CONTEO[k])}</div></div>`;
+  }).join('');
+  const causas = Object.entries(r.causas).filter(([, v]) => v).map(([col, v]) => `<li class="causa">${v} × ${esc(U.ENCABEZADOS[col])}</li>`).join('');
+  $('resultado').innerHTML = banner + avisosExtra + `<div class="kpis">${kpis}</div>
+    <div class="hint" style="margin-top:12px"><b>Causales de suspensión:</b></div>
+    <ul class="controles" style="margin-top:4px">${causas || '<li class="causa" style="color:var(--muted)">Sin suspensiones</li>'}</ul>
+    <div class="hint"><b>Controles:</b></div>
+    <ul class="controles" style="margin-top:4px">${r.controles.map(c => `<li class="${c.ok ? 'ok' : 'no'}">${esc(c.texto)}</li>`).join('')}</ul>
+    <div class="hint">Semana ${fila[4]} · ${esc(fila[8])} · ${r.conTabla ? 'cotejado contra la tabla quirúrgica' : 'sin tabla: reconstruido desde SITGEQ'}</div>
+    <div class="acciones">
+      <button type="button" class="btn" id="bDescargar" ${n ? 'disabled' : ''}>⬇ Descargar planilla UGCQ</button>
+      <button type="button" class="btn sec" id="bCopiar" ${n ? 'disabled' : ''}>Copiar fila</button>
+      <button type="button" class="btn sec" id="bGuardar" ${n ? 'disabled' : ''}>Guardar en historial</button>
+      <button type="button" class="btn sec" id="bCotejo">Descargar cotejo detallado</button>
+    </div>
+    <div class="hint">La planilla UGCQ trae las 119 columnas en el orden del reporte. El cotejo detallado incluye nombres y RUN: guárdalo solo en equipos institucionales.</div>`;
+}
+
+const ESTADO_UI = {
+  REALIZADA: ['Realizada', 'eVERDE'], SUSPENDIDA: ['Suspendida', 'eROJO'], SIN_REGISTRO: ['Sin registro', 'eROJO'],
+  NO_REALIZADA: ['Condicional no operado', 'eGRIS'], NO_MAYOR: ['Menor / procedimiento', 'eGRIS'], NO_CONTAR: ['No se cuenta', 'eGRIS'],
+};
+const CLASE_UI = {
+  PROG: ['Programada realizada', 'eVERDE'], AGREG: ['Electiva agregada', 'eAZUL'], URG: ['Urgencia', 'eAMAR'],
+  MENOR: ['Cirugía menor', 'eGRIS'], PROC: ['Procedimiento', 'eGRIS'], NO_CONTAR: ['No se cuenta', 'eGRIS'],
+};
+const est = (par) => `<span class="est ${par[1]}">${esc(par[0])}</span>`;
+const avisos = (lista) => lista && lista.length ? `<ul class="av">${lista.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : '';
+const persona = (nombre, run) => `<div class="phi">${esc(nombre || '—')}</div><div class="run phi">${esc(run || 'sin RUN')}</div>`;
+
+function opcionesCausal(sel) {
+  const grupos = new Map();
+  for (const c of U.CAUSAS) { if (!grupos.has(c.categoria)) grupos.set(c.categoria, []); grupos.get(c.categoria).push(c); }
+  let html = `<option value="">— Elegir causal UGCQ —</option>`;
+  for (const [cat, lista] of grupos) {
+    html += `<optgroup label="${esc(cat)}">` + lista.map(c => `<option value="${c.col}"${c.col === sel ? ' selected' : ''}>${esc(c.encabezado.replace(/^\([^)]*\)\s*/, ''))}</option>`).join('') + '</optgroup>';
+  }
+  return html;
+}
+function selectEstadoPac(p) {
+  const ops = [['', 'Automático'], ['REALIZADA', 'Realizada (falta registro en SITGEQ)'], ['SUSPENDIDA', 'Suspendida'], ['NO_CONTAR', 'No contar (error de tabla / no era Cx mayor)']];
+  return `<select data-pac-estado="${esc(p.id)}" aria-label="Decisión">${ops.map(([v, t]) => `<option value="${v}"${p.ajuste === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+}
+function selectAgend(p) {
+  const ops = [['NORMAL', 'Normal'], ['CONDICIONAL', 'Condicional']];
+  if (p.agendTabla !== 'NORMAL' && p.agendTabla !== 'CONDICIONAL') ops.unshift([p.agendTabla, 'No electivo']);
+  return `<select data-pac-agend="${esc(p.id)}" aria-label="Agendamiento">${ops.map(([v, t]) => `<option value="${v}"${p.agend === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+}
+function selectCausal(p) {
+  return `<select data-pac-causal="${esc(p.id)}" aria-label="Causal UGCQ">${opcionesCausal(p.causalCol)}</select>` +
+    (p.causalConfianza === 'sugerida' ? ` <button type="button" class="btn sec peq" data-confirmar="${esc(p.id)}" data-col="${p.causalCol}">Confirmar</button>` : '');
+}
+
+function pintarPendientes(r) {
+  $('zonaPend').hidden = !r.pendientes.length;
+  $('pendientes').innerHTML = r.pendientes.map(x => {
+    const p = r.pacientes.find(q => q.id === x.pacienteId);
+    if (!p) return '';
+    const donde = [p.pabellon, p.hora].filter(Boolean).join(' · ');
+    const sus = p.suspensiones[0];
+    const causalSitgeq = sus ? `<div class="det">SITGEQ: ${esc(sus.categoria)} — ${esc(sus.descripcion)}</div>` : '';
+    const ops = x.tipo === 'estado' ? selectEstadoPac(p) : selectCausal(p);
+    return `<div class="pendc"><div class="q"><b class="phi">${esc(p.nombre)}</b> <span class="run phi">${esc(p.run)}</span>${donde ? ' · ' + esc(donde) : ''}<div>${esc(x.texto)}</div>${causalSitgeq}${avisos(p.avisos)}</div><div class="ops">${ops}</div></div>`;
+  }).join('');
+}
+
+function pintarProgramados(r) {
+  const filas = r.pacientes;
+  if (!filas.length) { $('tProgramados').innerHTML = `<div class="vacio">${r.conTabla ? 'Sin pacientes en la tabla.' : 'No hay tabla quirúrgica para este día.'}</div>`; return; }
+  const origenTxt = { tabla: '', suspension: 'Desde informe de suspensiones', manual: 'Agregado a mano', sitgeq: 'Desde SITGEQ (sin tabla)' };
+  $('tProgramados').innerHTML = `<table><thead><tr><th>PABELLÓN / HORA</th><th>PACIENTE</th><th>INTERVENCIÓN PROGRAMADA</th><th>AGENDAMIENTO</th><th>RESULTADO</th><th>DECISIÓN</th><th>CAUSAL UGCQ</th></tr></thead><tbody>` +
+    filas.map(p => {
+      const enc = p.encuentros.filter(e => e.claseFinal === 'PROG')[0] || p.encuentros[0];
+      const sus = p.suspensiones[0];
+      let detalle = '';
+      if (enc) detalle += `<div class="det">SITGEQ: ${esc(enc.pabellon)} ${esc(enc.hora)} · ${esc(enc.tipoCirugiaTxt)}${enc.tipoTxt ? ' · ' + esc(enc.tipoTxt) : ''}</div>`;
+      if (sus) detalle += `<div class="det">Suspensión: ${esc(sus.categoria)} — ${esc(sus.descripcion)}</div>`;
+      const pend = r.pendientes.some(x => x.pacienteId === p.id);
+      const cuentaTxt = p.cuenta ? '' : `<div class="det">No suma a UGCQ</div>`;
+      const causal = p.estado === 'SUSPENDIDA' && p.cuenta && p.agend === 'NORMAL' ? selectCausal(p) : '<span class="det">—</span>';
+      return `<tr class="${pend ? 'pend' : ''}${p.ajuste || p.encuentros.some(e => e.ajuste) ? ' manual' : ''}">
+        <td>${esc(p.pabellon || '—')}<div class="det">${esc(p.hora || '')}</div>${origenTxt[p.origen] ? `<div class="det">${esc(origenTxt[p.origen])}</div>` : ''}</td>
+        <td>${persona(p.nombre, p.run)}</td>
+        <td>${esc(p.intervencion || '—')}${p.obs ? `<div class="det" title="${esc(p.obs)}">Obs: ${esc(p.obs.length > 90 ? p.obs.slice(0, 90) + '…' : p.obs)}</div>` : ''}</td>
+        <td>${selectAgend(p)}</td>
+        <td>${est(ESTADO_UI[p.estado] || ['?', 'eGRIS'])}${detalle}${cuentaTxt}${avisos(p.avisos)}</td>
+        <td>${selectEstadoPac(p)}</td>
+        <td>${causal}</td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function pintarEncuentros(r) {
+  if (!r.encuentros.length) { $('tEncuentros').innerHTML = '<div class="vacio">No hay cirugías registradas en SITGEQ para este día.</div>'; return; }
+  $('tEncuentros').innerHTML = `<table><thead><tr><th>HORA</th><th>PABELLÓN</th><th>PACIENTE</th><th>INTERVENCIÓN REALIZADA</th><th>SITGEQ</th><th>EN TABLA</th><th>CUENTA COMO</th></tr></thead><tbody>` +
+    r.encuentros.map(e => {
+      const enTabla = !e.paciente ? 'No'
+        : e.paciente.origen === 'suspension' ? 'No (suspendido en SITGEQ ese día)'
+        : e.paciente.origen === 'sitgeq' ? 'Sin tabla'
+        : `Sí${e.paciente.pabellon ? ' · ' + esc(e.paciente.pabellon) : ''}${e.paciente.hora ? ' ' + esc(e.paciente.hora) : ''}`;
+      const clase = e.claseFinal === 'PROG' && e.paciente && e.paciente.agend === 'CONDICIONAL' ? ['Condicional realizada', 'eVERDE'] : (CLASE_UI[e.claseFinal] || ['?', 'eGRIS']);
+      const ops = [['', 'Automático: ' + (CLASE_UI[e.claseAuto] || ['?'])[0]]];
+      if (e.paciente) ops.push(['PROG', 'Cirugía del programado']);
+      if (!e.paciente || e.ajuste === 'NUEVO_NORMAL' || e.ajuste === 'NUEVO_COND') ops.push(['NUEVO_NORMAL', 'Programado (faltaba en la tabla)'], ['NUEVO_COND', 'Condicional (faltaba en la tabla)']);
+      ops.push(['AGREG', 'Electiva agregada'], ['URG', 'Urgencia'], ['MENOR', 'Cirugía menor'], ['PROC', 'Procedimiento'], ['NO_CONTAR', 'No contar (duplicado / error)']);
+      const sel = `<select data-enc="${esc(e.id)}" aria-label="Cuenta como">${ops.map(([v, t]) => `<option value="${v}"${e.ajuste === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+      return `<tr class="${e.ajuste ? 'manual' : ''}"><td>${esc(e.hora || '—')}</td><td>${esc(e.pabellon || '—')}</td>
+        <td>${persona(e.nombre, e.ident.run)}</td>
+        <td>${esc(e.intervencion || '—')}<div class="det">${esc([e.servicio, e.especialidad].filter(Boolean).join(' · '))}</div></td>
+        <td>${esc(e.tipoCirugiaTxt || '—')}<div class="det">${esc(e.tipoTxt || '')}</div></td>
+        <td>${enTabla}</td>
+        <td>${est(clase)}<div style="margin-top:5px">${sel}</div>${avisos(e.avisos)}</td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function pintarSuspensiones(r) {
+  if (!r.suspensiones.length) { $('tSuspensiones').innerHTML = '<div class="vacio">No hay suspensiones registradas para este día.</div>'; return; }
+  $('tSuspensiones').innerHTML = `<table><thead><tr><th>PACIENTE</th><th>CAUSAL SITGEQ</th><th>COLUMNA UGCQ</th><th>INTERVENCIÓN</th><th>AGENDAMIENTO</th><th>¿CUENTA?</th></tr></thead><tbody>` +
+    r.suspensiones.map(s => {
+      const p = s.paciente;
+      const col = p && p.causalCol != null ? p.causalCol : (s.causal ? s.causal.col : null);
+      const cuenta = p && p.cuenta && p.agend === 'NORMAL' && p.estado === 'SUSPENDIDA'
+        ? est(['Suma a suspendidos', 'eROJO'])
+        : est([p && p.estado === 'REALIZADA' ? 'Se operó igual' : p && p.agend === 'CONDICIONAL' ? 'Condicional: no suma' : 'No suma', 'eGRIS']);
+      return `<tr><td>${persona(s.nombre, s.ident.run)}</td>
+        <td>${esc(s.categoria)}<div class="det">${esc(s.descripcion)}</div></td>
+        <td>${col != null ? esc(U.ENCABEZADOS[col]) : '<span class="est eROJO">Sin equivalente</span>'}${s.causal ? `<div class="det">Coincidencia ${esc(s.causal.confianza)}</div>` : ''}</td>
+        <td>${esc(s.intervencion || '—')}<div class="det">${esc(s.intervTxt || '')}</div></td>
+        <td>${esc(s.agendamientoTxt || '—')}</td>
+        <td>${cuenta}${avisos(s.avisos)}</td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+// ─── DECISIONES MANUALES ───
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (!t.matches('select')) return;
+  const aj = ajustesDia();
+  if (t.dataset.pacEstado !== undefined) {
+    const id = t.dataset.pacEstado;
+    aj.pac[id] = Object.assign({}, aj.pac[id], { estado: t.value });
+  } else if (t.dataset.pacAgend !== undefined) {
+    const id = t.dataset.pacAgend;
+    aj.pac[id] = Object.assign({}, aj.pac[id], { agend: t.value });
+  } else if (t.dataset.pacCausal !== undefined) {
+    const id = t.dataset.pacCausal;
+    aj.pac[id] = Object.assign({}, aj.pac[id], { causalCol: t.value === '' ? null : Number(t.value) });
+  } else if (t.dataset.enc !== undefined) {
+    aj.enc[t.dataset.enc] = { clase: t.value };
+  } else return;
+  recalcular();
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-confirmar]');
+  if (!b) return;
+  const aj = ajustesDia();
+  const id = b.dataset.confirmar;
+  aj.pac[id] = Object.assign({}, aj.pac[id], { causalCol: Number(b.dataset.col) });
+  recalcular();
+});
+
+// ─── DESCARGAS ───
+function slug(s) { return U.clave(s).replace(/ /g, '_') || 'hospital'; }
+async function descargarUGCQ(filas, nombre) {
+  const XLSX = await libXLSX();
+  const ws = XLSX.utils.aoa_to_sheet([U.ENCABEZADOS].concat(filas));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'hoja1');
+  XLSX.writeFile(wb, nombre);
+}
+$('resultado').addEventListener('click', async e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  const r = estado.ultimo;
+  if (!r) return;
+  try {
+    if (b.id === 'bDescargar') {
+      await descargarUGCQ([filaActual()], `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(r.fecha)}.xlsx`);
+      guardarHistorial(r, true);
+    } else if (b.id === 'bCopiar') {
+      const tsv = filaActual().map(v => v == null ? '' : String(v)).join('\t');
+      try { await navigator.clipboard.writeText(tsv); }
+      catch (err) {
+        const ta = document.createElement('textarea'); ta.value = tsv; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+      }
+      toast('Fila copiada: pégala en Excel en la fila del día');
+    } else if (b.id === 'bGuardar') {
+      guardarHistorial(r, false);
+    } else if (b.id === 'bCotejo') {
+      await descargarCotejo(r);
+    }
+  } catch (err) { toast('⚠ ' + (err.message || err)); }
+});
+
+function guardarHistorial(r, silencioso) {
+  const h = leerLS('ugcq_historial', {});
+  const ya = h[r.fecha];
+  const fila = filaActual();
+  h[r.fecha] = { fila, guardado: new Date().toISOString() };
+  if (!guardarLS('ugcq_historial', h)) { toast('⚠ Este navegador no permite guardar el historial'); return; }
+  if (!silencioso || !ya) toast(ya ? `Día ${U.fmtFecha(r.fecha)} actualizado en el historial` : `Día ${U.fmtFecha(r.fecha)} guardado en el historial`);
+}
+
+async function descargarCotejo(r) {
+  const XLSX = await libXLSX();
+  const fila = filaActual();
+  const resumen = [['Cierre diario UGCQ', U.fmtFecha(r.fecha)], ['Establecimiento', fila[8]], ['Generado', new Date().toLocaleString('es-CL')], [],
+    ['Campo UGCQ', 'Valor']].concat(U.CONTEOS.map(([, col]) => [U.ENCABEZADOS[col], fila[col]]))
+    .concat([[], ['Causales de suspensión', 'Cantidad']]).concat(Object.entries(r.causas).map(([col, n]) => [U.ENCABEZADOS[col], n]))
+    .concat([[], ['Controles', '']]).concat(r.controles.map(c => [c.texto, c.ok ? 'OK' : 'NO CUADRA']))
+    .concat([[], ['Pendientes', '']]).concat(r.pendientes.map(x => { const p = r.pacientes.find(q => q.id === x.pacienteId); return [(p ? p.nombre + ': ' : '') + x.texto, '']; }))
+    .concat([[], ['Avisos', '']]).concat(r.avisos.map(a => [a, '']));
+  const prog = [['Pabellón', 'Hora', 'Paciente', 'RUN', 'Intervención programada', 'Agendamiento tabla', 'Agendamiento usado', 'Resultado', 'Decisión', 'Suma a UGCQ', 'Causal UGCQ', 'Origen', 'Avisos', 'Obs tabla']]
+    .concat(r.pacientes.map(p => [p.pabellon, p.hora, p.nombre, p.run, p.intervencion, p.agendamientoTxt, p.agend, (ESTADO_UI[p.estado] || [p.estado])[0],
+      p.estadoOrigen === 'manual' ? 'Manual' : 'Automática', p.cuenta ? 'Sí' : 'No', p.causalCol != null ? U.ENCABEZADOS[p.causalCol] : '', p.origen, p.avisos.join(' | '), p.obs]));
+  const encs = [['Hora', 'Pabellón', 'Paciente', 'RUN', 'Intervención realizada', 'Servicio', 'Tipo de cirugía SITGEQ', 'Tipo SITGEQ', 'Cuenta como', 'Ajuste manual', 'Paciente de tabla', 'Avisos']]
+    .concat(r.encuentros.map(e => [e.hora, e.pabellon, e.nombre, e.ident.run, e.intervencion, e.servicio, e.tipoCirugiaTxt, e.tipoTxt, (CLASE_UI[e.claseFinal] || [e.claseFinal])[0],
+      e.ajuste || '', e.paciente ? 'Sí' : 'No', e.avisos.join(' | ')]));
+  const sus = [['Paciente', 'RUN', 'Causal MINSAL', 'Descripción causal', 'Columna UGCQ', 'Intervención', 'Tipo intervención', 'Agendamiento', 'Avisos']]
+    .concat(r.suspensiones.map(s => [s.nombre, s.ident.run, s.categoria, s.descripcion, s.paciente && s.paciente.causalCol != null ? U.ENCABEZADOS[s.paciente.causalCol] : (s.causal ? U.ENCABEZADOS[s.causal.col] : ''),
+      s.intervencion, s.intervTxt, s.agendamientoTxt, s.avisos.join(' | ')]));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prog), 'Programados');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(encs), 'Registro SITGEQ');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sus), 'Suspensiones');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([U.ENCABEZADOS, fila]), 'Fila UGCQ');
+  XLSX.writeFile(wb, `Cotejo_UGCQ_${U.fmtFecha(r.fecha)}.xlsx`);
+}
+
+// ─── HISTORIAL ───
+function pintarHistorial() {
+  const h = leerLS('ugcq_historial', {});
+  const fechas = Object.keys(h).sort();
+  const reporte = new Map(fuentes().ugcq.filas.map(x => [x.fecha, x.fila]));
+  if (!fechas.length) { $('tHistorial').innerHTML = '<div class="vacio">Aún no hay días guardados. Usa "Guardar en historial" o "Descargar planilla UGCQ" al cerrar cada día.</div>'; return; }
+  const cols = U.CONTEOS.map(([, c]) => c);
+  $('tHistorial').innerHTML = `<table><thead><tr><th>FECHA</th>${['PROG', 'COND', 'SUSP', '%', 'PROG R', 'COND R', 'AGREG', 'URG', 'MEN', 'PROC', 'MAY EL', 'TOTAL'].map(t => `<th>${t}</th>`).join('')}<th>CAUSALES</th><th>VS UGCQ</th></tr></thead><tbody>` +
+    fechas.slice().reverse().map(f => {
+      const fila = h[f].fila;
+      const nCaus = fila.slice(U.PRIMERA_CAUSA).reduce((a, v) => a + Number(v || 0), 0);
+      let vs = '<span class="det">—</span>';
+      if (reporte.has(f)) {
+        const dif = U.compararFilas(fila, reporte.get(f));
+        vs = dif.length ? `<span class="est eROJO" title="${esc(dif.map(d => `${d.encabezado}: calculado ${d.calculado} / UGCQ ${d.ugcq}`).join('\n'))}">${dif.length} diferencia${dif.length > 1 ? 's' : ''}</span><div class="det">${esc(dif.slice(0, 3).map(d => `${d.encabezado.slice(0, 32)}: ${d.calculado} vs ${d.ugcq}`).join(' · '))}</div>` : '<span class="est eVERDE">Igual</span>';
+      }
+      return `<tr><td>${U.fmtFecha(f)}</td>${cols.map(c => `<td class="n">${fila[c] == null ? '' : esc(fila[c])}</td>`).join('')}<td class="n">${nCaus}</td><td>${vs}</td></tr>`;
+    }).join('') + '</tbody></table>';
+  if (!$('hDesde').value) $('hDesde').value = fechas[0];
+  if (!$('hHasta').value) $('hHasta').value = fechas[fechas.length - 1];
+}
+$('hDescargar').addEventListener('click', async () => {
+  const h = leerLS('ugcq_historial', {});
+  const d = $('hDesde').value || '0000-00-00', a = $('hHasta').value || '9999-99-99';
+  const fechas = Object.keys(h).sort().filter(f => f >= d && f <= a);
+  if (!fechas.length) { toast('No hay días guardados en ese rango'); return; }
+  try { await descargarUGCQ(fechas.map(f => h[f].fila), `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(fechas[0])}_al_${U.fmtFecha(fechas[fechas.length - 1])}.xlsx`); }
+  catch (err) { toast('⚠ ' + (err.message || err)); }
+});
+$('hBorrar').addEventListener('click', () => {
+  if (!confirm('¿Borrar todos los días guardados en este navegador? Esta acción no se puede deshacer.')) return;
+  try { localStorage.removeItem('ugcq_historial'); } catch (e) {}
+  pintarHistorial();
+});
+
+// ─── CONFIGURACIÓN ───
+const CAMPOS_FIJOS = [['macroregion', 'MACROREGIÓN'], ['region', 'REGIÓN (tal como aparece en UGCQ)'], ['servicio', 'SERVICIO DE SALUD'], ['hospital', 'HOSPITAL'], ['complejidad', 'COMPLEJIDAD'], ['certificacion', 'CERTIFICACIÓN (EAR)']];
+function pintarConfig() {
+  const fx = fijos();
+  $('cfg').innerHTML = CAMPOS_FIJOS.map(([k, t]) => `<label>${t}<input type="text" data-fijo="${k}" value="${esc(fx[k])}"></label>`).join('');
+}
+$('cfg').addEventListener('input', e => {
+  const k = e.target.dataset.fijo;
+  if (!k) return;
+  const fx = leerLS('ugcq_fijos', {});
+  fx[k] = e.target.value;
+  guardarLS('ugcq_fijos', fx);
+  if (estado.ultimo) pintarResultado(estado.ultimo);
+});
+$('cfgReset').addEventListener('click', () => {
+  try { localStorage.removeItem('ugcq_fijos'); } catch (e) {}
+  pintarConfig();
+  if (estado.ultimo) pintarResultado(estado.ultimo);
+});
+pintarConfig();
+
+window.addEventListener('beforeunload', e => {
+  const hay = Object.values(estado.ajustes).some(a => Object.keys(a.pac).length || Object.keys(a.enc).length);
+  if (hay) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+</body>
+</html>
