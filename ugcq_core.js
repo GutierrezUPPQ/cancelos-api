@@ -376,6 +376,24 @@
     return '?';
   }
 
+  // Identificador estable de un registro (no depende del archivo ni del orden de carga):
+  // así las decisiones manuales sobreviven a volver a cargar un export
+  function hashTexto(t) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return h.toString(36);
+  }
+  function idsEstables(regs, prefijo, firma) {
+    const vistos = new Map();
+    for (const r of regs) {
+      const base = prefijo + hashTexto(firma(r));
+      const n = (vistos.get(base) || 0) + 1;
+      vistos.set(base, n);
+      r.id = n > 1 ? base + '-' + n : base;
+    }
+    return regs;
+  }
+
   function leerEncuentros(aoa, archivo) {
     const h = filaEncabezado(aoa, ['fecha intervencion', 'tipo de cirugia']);
     if (h < 0) throw new Error('No encontré los encabezados del export de encuentros quirúrgicos.');
@@ -415,7 +433,7 @@
         cma: celdaTexto(g(f, 'cma')),
       });
     }
-    return out;
+    return idsEstables(out, 'e', r => [r.fecha, normRun(r.run) || norm(r.nombre), horaDe(r.hora), clave(r.pabellon), clave(r.intervencion)].join('|'));
   }
 
   function leerSuspensiones(aoa, archivo) {
@@ -450,7 +468,7 @@
         agendamientoTxt: agendTxt, agend: agendamientoSuspension(agendTxt),
       });
     }
-    return out;
+    return idsEstables(out, 's', r => [r.fecha, normRun(r.run) || norm(r.nombre), clave(r.categoria), clave(r.descripcion), clave(r.intervencion)].join('|'));
   }
 
   // "DIRECTO"/"NORMAL" = electiva directa; "CONDICIONAL"; urgencias o agregados no son suspensiones UGCQ

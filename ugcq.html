@@ -33,7 +33,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .logo-title{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:900;letter-spacing:3px}
 .logo-title span{color:var(--accent)}
 .logo-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px}
-.hdr-der{display:flex;align-items:center;gap:12px}
+.hdr-der{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .tbtn{min-width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:15px;cursor:pointer;box-shadow:var(--sombra);padding:0 10px}
 .tbtn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 a.volver{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:2px}
@@ -46,6 +46,7 @@ section.on{display:block}
 .sec-title{font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:3px;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
 .sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:var(--sombra)}
+.card h3{font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:1px;margin-bottom:8px}
 .drop{border:2px dashed var(--accent);border-radius:12px;background:var(--accent-soft);padding:22px 16px;text-align:center;cursor:pointer;transition:background .15s}
 .drop.sobre{background:var(--azul-bg);border-style:solid}
 .drop .t{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;color:var(--accent)}
@@ -71,23 +72,34 @@ section.on{display:block}
 .bVERDE{border-color:var(--verde);background:var(--verde-bg);color:var(--verde)}
 .bAMAR{border-color:var(--amar);background:var(--amar-bg);color:var(--amar)}
 .bROJO{border-color:var(--rojo);background:var(--rojo-bg);color:var(--rojo)}
-.bAZUL{border-color:var(--accent);background:var(--azul-bg);color:var(--accent)}
-.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:9px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px}
 .kpi{background:var(--dim);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-.kpi .l{font-size:11.5px;line-height:1.35;color:var(--text-suave);min-height:31px}
-.kpi .v{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1.05;color:var(--text)}
-.kpi .f{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.5px}
+.kpi .l{font-size:12px;line-height:1.35;color:var(--text-suave)}
+.kpi .v{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;line-height:1.05;color:var(--text)}
+.kpi .f{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.5px;margin-top:2px}
 .kpi.clave{border-color:var(--accent)}
 .kpi.clave .v{color:var(--accent)}
+.ficha{width:100%;border-collapse:collapse}
+.ficha td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.ficha td.c{width:34px;text-align:center}
+.ficha td.v{text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;width:90px}
+.ficha tr{cursor:pointer}
+.ficha tr.hecho td{background:var(--verde-bg)}
+.ficha tr.hecho td.l{color:var(--muted);text-decoration:line-through}
+.ficha tr.sep td{cursor:default;font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:2px;color:var(--muted);background:var(--dim)}
+.chk{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-radius:5px;line-height:16px;font-size:13px;color:var(--verde);font-weight:900}
+tr.hecho .chk{border-color:var(--verde)}
 .controles{list-style:none;display:grid;gap:4px;margin-top:12px}
 .controles li{font-size:13px;padding-left:22px;position:relative;line-height:1.5}
 .controles li::before{position:absolute;left:0;top:0;font-weight:800}
 .controles li.ok::before{content:'✓';color:var(--verde)}
 .controles li.no{color:var(--rojo)}
 .controles li.no::before{content:'✗';color:var(--rojo)}
-.controles li.causa{padding-left:0}
-.controles li.causa::before{content:none}
-.acciones{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.lista{list-style:none;display:grid;gap:3px;font-size:13px}
+.lista li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--border);padding:3px 0}
+.lista li b{font-family:'Barlow Condensed',sans-serif;font-size:17px}
+.dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:12px}
+.acciones{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px;align-items:center}
 .btn{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,var(--btn1),var(--btn2));border:none;border-radius:9px;color:#fff;padding:11px 20px;cursor:pointer;box-shadow:var(--sombra)}
 .btn.sec{background:var(--panel);border:1px solid var(--accent);color:var(--accent)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
@@ -99,9 +111,10 @@ td.n{text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:16px;f
 .tbl{overflow-x:auto}
 tr.pend td{background:var(--rojo-bg)}
 tr.manual td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
-td select,.card select,.card input[type=text],.card input[type=date]{background:var(--dim);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;padding:6px 7px;max-width:260px}
-.card input[type=text]{max-width:none;width:100%;font-size:14px;padding:8px 10px}
-select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+td select,.card select,.card input[type=text],.card input[type=date],.card input[type=time],.card textarea{background:var(--dim);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;padding:6px 7px;max-width:260px}
+.card input[type=text],.card textarea{max-width:none;width:100%;font-size:14px;padding:8px 10px}
+.card textarea{min-height:120px;font-family:'Share Tech Mono',monospace;font-size:12px}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .est{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:6px;border:1px solid;white-space:nowrap;display:inline-block}
 .eVERDE{color:var(--verde);border-color:var(--verde);background:var(--verde-bg)}
 .eAMAR{color:var(--amar);border-color:var(--amar);background:var(--amar-bg)}
@@ -115,9 +128,11 @@ select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);ou
 .run{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted)}
 .pends{display:grid;gap:8px}
 .pendc{border:1px solid var(--rojo);border-left:5px solid var(--rojo);background:var(--rojo-bg);border-radius:9px;padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-.pendc .q{font-size:13.5px;color:var(--text)}
+.pendc .q{font-size:13.5px;color:var(--text);flex:1 1 380px}
 .pendc .q b{font-weight:800}
 .pendc .ops{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.cand{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.lnk{background:none;border:none;color:var(--accent);font-family:'Barlow',sans-serif;font-size:12px;cursor:pointer;padding:0;text-decoration:underline}
 .hint{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px}
 .hint b{color:var(--text-suave)}
 .vacio{font-size:13px;color:var(--muted);padding:12px 4px}
@@ -128,13 +143,13 @@ select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);ou
 details.ayuda{margin-top:10px;font-size:13px;color:var(--text-suave)}
 details.ayuda summary{cursor:pointer;color:var(--accent);font-weight:600}
 details.ayuda ol{padding-left:20px;margin-top:6px;line-height:1.7}
-.cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .cfg label{display:flex;flex-direction:column;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:1px;color:var(--muted)}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--paper);padding:10px 18px;border-radius:9px;font-size:13.5px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 .toast.on{opacity:1}
 body.ocultar .phi{filter:blur(5px)}
 footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-align:center;padding:26px 10px;line-height:2}
-@media (max-width:640px){.wrap{padding:0 16px 60px}.kpi .v{font-size:27px}}
+@media (max-width:640px){.wrap{padding:0 16px 60px}.kpi .v{font-size:26px}.ficha td.v{font-size:22px;width:60px}}
 </style>
 </head>
 <body>
@@ -154,7 +169,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <button type="button" id="themeBtn" class="tbtn" aria-label="Cambiar tema claro/oscuro">🌙</button>
   </div>
 </header>
-<div class="aviso">LOS ARCHIVOS SE LEEN SOLO EN ESTE COMPUTADOR: NO SE ENVÍAN AL SERVIDOR · EL HISTORIAL GUARDA SOLO NÚMEROS, SIN DATOS DE PACIENTES</div>
+<div class="aviso">LOS ARCHIVOS SE LEEN SOLO EN ESTE COMPUTADOR: NO SE ENVÍAN A NINGÚN SERVIDOR · EL HISTORIAL GUARDA SOLO NÚMEROS, SIN DATOS DE PACIENTES</div>
 
 <nav id="tabs">
   <button type="button" data-s="cierre" class="on">CIERRE DEL DÍA</button>
@@ -175,11 +190,11 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <details class="ayuda">
       <summary>¿Qué exportar desde SITGEQ cada día?</summary>
       <ol>
-        <li><b>Tabla quirúrgica</b> del día (PDF "Tabla Quirúrgica"): es la lista de lo programado. Idealmente la tabla oficial publicada el día anterior.</li>
-        <li><b>Encuentros quirúrgicos</b> del día (export Excel): todo lo que se operó, incluidas urgencias, cirugías menores y procedimientos.</li>
-        <li><b>Informe de suspensiones</b> del día (Excel): pacientes suspendidos con su causal MINSAL.</li>
+        <li><b>Tabla quirúrgica</b> (PDF "Tabla Quirúrgica") <b>publicada el día de la cirugía</b>: es la lista de lo programado.</li>
+        <li><b>Encuentros quirúrgicos</b> del día (export Excel): todo lo operado, incluidas urgencias, cirugías menores y procedimientos.</li>
+        <li><b>Informe de suspensiones</b> del día (Excel): suspendidos con su causal MINSAL.</li>
       </ol>
-      Si un programado no aparece ni operado ni suspendido, la herramienta te lo muestra como pendiente para que decidas.
+      Si cargas dos archivos del mismo tipo para un mismo día, se usa el último que cargaste.
     </details>
   </div>
 
@@ -187,27 +202,21 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <div class="sec-title">2 · DÍA A CERRAR</div>
     <div class="fechas" id="fechas"></div>
 
-    <div class="sec-title" id="tituloRes">3 · RESULTADO PARA UGCQ</div>
-    <div class="card" id="resultado"></div>
-
     <div id="zonaPend">
-      <div class="sec-title">4 · PENDIENTES POR RESOLVER</div>
+      <div class="sec-title">PENDIENTES POR RESOLVER</div>
       <div class="pends" id="pendientes"></div>
     </div>
 
-    <div class="sec-title">5 · COTEJO PACIENTE A PACIENTE</div>
-    <div class="card">
-      <h3 class="reglas" style="margin:0 0 6px"><b>Programados en tabla</b></h3>
-      <div class="tbl" id="tProgramados"></div>
-    </div>
-    <div class="card">
-      <h3 class="reglas" style="margin:0 0 6px"><b>Registro de pabellón en SITGEQ (lo realizado)</b></h3>
-      <div class="tbl" id="tEncuentros"></div>
-    </div>
-    <div class="card">
-      <h3 class="reglas" style="margin:0 0 6px"><b>Suspensiones registradas en SITGEQ</b></h3>
-      <div class="tbl" id="tSuspensiones"></div>
-    </div>
+    <div class="sec-title" id="tituloRes">FICHA PARA DIGITAR EN UGCQ</div>
+    <div class="card" id="resultado"></div>
+
+    <div class="sec-title">GESTIÓN DE PABELLÓN (NO VA A UGCQ)</div>
+    <div class="card" id="gestion"></div>
+
+    <div class="sec-title">COTEJO PACIENTE A PACIENTE</div>
+    <div class="card"><h3>Programados en tabla</h3><div class="tbl" id="tProgramados"></div></div>
+    <div class="card"><h3>Registro de pabellón en SITGEQ (lo realizado)</h3><div class="tbl" id="tEncuentros"></div></div>
+    <div class="card"><h3>Suspensiones registradas en SITGEQ</h3><div class="tbl" id="tSuspensiones"></div></div>
   </div>
 </section>
 
@@ -215,14 +224,14 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <section id="s-historial">
   <div class="sec-title">DÍAS CERRADOS (SOLO NÚMEROS)</div>
   <div class="card">
-    <div class="acciones" style="margin-top:0;align-items:center">
+    <div class="acciones" style="margin-top:0">
       <label class="hint" style="margin:0">Desde <input type="date" id="hDesde"></label>
       <label class="hint" style="margin:0">Hasta <input type="date" id="hHasta"></label>
-      <button type="button" class="btn sec peq" id="hDescargar">Descargar rango (formato UGCQ)</button>
+      <button type="button" class="btn sec peq" id="hDescargar">Descargar rango (UGCQ + gestión)</button>
       <button type="button" class="btn sec peq" id="hBorrar">Borrar historial</button>
     </div>
     <div class="tbl" id="tHistorial" style="margin-top:12px"></div>
-    <div class="hint">Si cargas el reporte UGCQ ya subido ("Cirugía por rangos de fecha"), cada día se compara con lo que quedó en UGCQ.</div>
+    <div class="hint">Si cargas el reporte UGCQ ya subido ("Cirugía por rangos de fecha"), cada día se compara con lo que quedó en UGCQ: sirve para detectar errores de digitación.</div>
   </div>
 </section>
 
@@ -234,38 +243,53 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
     <div class="acciones"><button type="button" class="btn sec peq" id="cfgReset">Restaurar valores</button></div>
     <div class="hint">Se guardan en este navegador. Úsalos al cambiar de establecimiento (p. ej., Hospital Marga Marga).</div>
   </div>
+  <div class="sec-title">HORARIO HÁBIL (PARA SUSPENSIONES UGCQ)</div>
+  <div class="card">
+    <div class="cfg">
+      <label>INICIO (L–V)<input type="time" id="hIni"></label>
+      <label>TÉRMINO LUNES A JUEVES<input type="time" id="hFinLJ"></label>
+      <label>TÉRMINO VIERNES<input type="time" id="hFinV"></label>
+    </div>
+    <label class="cfg" style="margin-top:12px;display:block"><span style="font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:1px;color:var(--muted)">FERIADOS (UNO POR LÍNEA, dd-mm-aaaa)</span>
+      <textarea id="feriados" spellcheck="false"></textarea></label>
+    <div class="acciones"><button type="button" class="btn sec peq" id="horReset">Restaurar horario y feriados</button></div>
+    <div class="hint">Una suspensión cuenta para UGCQ solo si la cirugía estaba programada en día hábil (lunes a viernes, no feriado) y dentro de este horario. Viene con los feriados de Chile 2026–2027: revísalos cada año.</div>
+  </div>
   <div class="sec-title">CÓMO CUENTA LA HERRAMIENTA</div>
   <div class="card reglas">
     <h4>Programados y condicionales</h4>
     <ul>
-      <li><b>Programados</b> = pacientes de la tabla con agendamiento <code>Electivo Normal</code>. <b>Condicionales</b> = <code>Electivo Condicional</code>.</li>
-      <li>Solo cuentan las <b>cirugías mayores</b>: si SITGEQ registra al paciente como cirugía menor o procedimiento, no suma a programados (su registro va a menores o procedimientos).</li>
-      <li>Si el informe de suspensiones trae a un paciente que no está en la tabla cargada, se cuenta como programado y suspendido (se asume que la tabla impresa ya no lo mostraba). Queda marcado para revisar.</li>
+      <li><b>Programados</b> = pacientes de la tabla con agendamiento <code>Electivo Normal</code> (directo). <b>Condicionales</b> = <code>Electivo Condicional</code>. Solo cirugía mayor.</li>
+      <li>Si el informe de suspensiones trae a un paciente que no está en la tabla cargada, se cuenta como programado y suspendido (la tabla impresa ya no lo muestra).</li>
+    </ul>
+    <h4>Suspensión UGCQ / MINSAL</h4>
+    <ul>
+      <li>Cuenta solo la <b>cirugía mayor electiva directa</b> (no condicional) <b>programada en horario hábil</b>.</li>
+      <li>Condicionales, cirugías menores, procedimientos y suspensiones fuera de horario hábil <b>no van a UGCQ</b>: se muestran en <b>Gestión de pabellón</b>.</li>
+      <li>Condicional no operado sin causal: no es suspensión.</li>
     </ul>
     <h4>Cotejo con lo que ocurrió</h4>
     <ul>
-      <li>Cada paciente se busca en SITGEQ por <b>RUN</b>; si no calza, por <b>nombre</b> (queda marcado).</li>
-      <li>Operado ese día (cirugía mayor) → <b>programada realizada</b> o <b>condicional realizada</b>.</li>
-      <li>En el informe de suspensiones → <b>suspendido</b>, con su causal traducida a la columna UGCQ.</li>
-      <li>Programado sin cirugía ni suspensión → <b>pendiente</b>: tú decides (suspendido con causal, realizado sin registro o no contar). No se puede descargar hasta resolverlo.</li>
-      <li>Condicional no operado → no es suspensión (no suma a suspendidos). Si quieres contarlo, cámbialo a "Normal".</li>
+      <li>Cada paciente se busca en SITGEQ por <b>RUN</b>. Por nombre solo si a alguno le falta un RUN válido y el nombre calza completo (queda marcado).</li>
+      <li>Si el RUN difiere entre la tabla y SITGEQ, la herramienta sugiere el registro parecido y lo vinculas con un clic.</li>
+      <li>Programado sin cirugía ni suspensión → <b>pendiente</b>: tú decides. No se puede marcar el día como listo hasta resolverlo.</li>
+      <li>Si el paciente tuvo una cirugía electiva y otra de urgencia, la electiva es la del programado y la otra se cuenta como urgencia. Si lo suspendieron y después lo operaron de urgencia, cuenta como suspendido + urgencia.</li>
     </ul>
-    <h4>Lo realizado fuera de tabla</h4>
+    <h4>Lo realizado</h4>
     <ul>
-      <li>Cirugía mayor electiva de paciente que no está en tabla → <b>agregada</b>.</li>
-      <li>Tipo de cirugía "Urgencia" → <b>urgencia</b>. Tipo "Cirugía Menor" → <b>menor</b>. Tipo "Procedimiento" → <b>procedimiento</b> (sean electivas o de urgencia).</li>
-      <li>Sin tabla cargada para el día, lo programado se reconstruye desde SITGEQ (electivas operadas + suspendidas) y no se pueden distinguir las agregadas.</li>
+      <li>Cirugía mayor electiva de paciente que no está en tabla → <b>agregada</b>. Tipo de cirugía "Urgencia" → <b>urgencia</b>.</li>
+      <li><b>Cirugías menores y procedimientos se cuentan por código</b> (columnas "Cirugía Menor" y "Procedimiento" del export), incluidos los códigos de anestesia (2201001).</li>
+      <li>Si hay electivas en un pabellón que no tiene tabla cargada, se pide confirmar (¿falta la tabla de ese pabellón?).</li>
     </ul>
     <h4>Totales y controles</h4>
     <ul>
-      <li>% suspendidos = suspendidos ÷ programados × 100, redondeado a entero.</li>
+      <li>% suspendidos = suspendidos UGCQ ÷ programados × 100, redondeado.</li>
       <li>Total Cx Mayores Electivas = programadas + condicionales + agregadas realizadas. Total realizado = ese total + urgencias + menores + procedimientos.</li>
-      <li>Se verifica que programados = realizados + suspendidos y que la suma de causales = suspendidos.</li>
       <li>Semana: de sábado a viernes, con el número ISO del sábado que la inicia (calza con el reporte UGCQ de octubre 2026).</li>
     </ul>
     <h4>Decisiones manuales</h4>
     <ul>
-      <li>Toda corrección queda marcada con una línea azul y se exporta en el cotejo detallado. Las decisiones viven solo mientras la página esté abierta: descarga el cotejo detallado si necesitas respaldo.</li>
+      <li>Toda corrección queda marcada con una línea azul y se exporta en el cotejo detallado. Las decisiones viven mientras la página esté abierta: descarga el cotejo detallado si necesitas respaldo.</li>
     </ul>
   </div>
 </section>
@@ -280,32 +304,44 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <script>
 'use strict';
 const U = window.UGCQ;
-const VERSION = '1.0';
+const VERSION = '1.1';
 if (window.UGCQ_PORTABLE) { document.getElementById('lnkTorre').remove(); document.getElementById('lnkPortable').remove(); }
 document.getElementById('verTxt').textContent = 'v' + VERSION + (window.UGCQ_PORTABLE ? ' PORTÁTIL' : '');
 
-// ─── TEMA CLARO / OSCURO (mismo ajuste que el módulo CMA) ───
+// ─── UTILIDADES ───
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function leerLS(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } }
+function guardarLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+function borrarLS(k) { try { localStorage.removeItem(k); } catch (e) {} }
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('on'), 2800);
+}
+
+// ─── TEMA Y PRIVACIDAD EN PANTALLA ───
 function aplicarTema(t) {
   if (t === 'oscuro') document.documentElement.dataset.theme = 'dark';
   else delete document.documentElement.dataset.theme;
-  document.getElementById('themeBtn').textContent = t === 'oscuro' ? '☀️' : '🌙';
+  $('themeBtn').textContent = t === 'oscuro' ? '☀️' : '🌙';
 }
-function leerLS(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } }
-function guardarLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 aplicarTema((() => { try { return localStorage.getItem('cma_tema') || 'claro'; } catch (e) { return 'claro'; } })());
-document.getElementById('themeBtn').addEventListener('click', () => {
+$('themeBtn').addEventListener('click', () => {
   const t = document.documentElement.dataset.theme === 'dark' ? 'claro' : 'oscuro';
   try { localStorage.setItem('cma_tema', t); } catch (e) {}
   aplicarTema(t);
 });
-document.getElementById('phiBtn').addEventListener('click', e => {
+$('phiBtn').addEventListener('click', e => {
   const on = !document.body.classList.contains('ocultar');
   document.body.classList.toggle('ocultar', on);
   e.currentTarget.setAttribute('aria-pressed', String(on));
 });
 
 // ─── NAVEGACIÓN ───
-document.getElementById('tabs').addEventListener('click', e => {
+$('tabs').addEventListener('click', e => {
   const b = e.target.closest('button[data-s]');
   if (!b) return;
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
@@ -313,17 +349,7 @@ document.getElementById('tabs').addEventListener('click', e => {
   if (b.dataset.s === 'historial') pintarHistorial();
 });
 
-// ─── UTILIDADES ───
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const $ = id => document.getElementById(id);
-function toast(msg) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.classList.add('on');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.remove('on'), 2600);
-}
-// Lector de PDF (pdf.js): incrustado en la versión portátil, servido junto a la página o, en último caso, desde internet
+// ─── LECTOR DE PDF (pdf.js): incrustado en la versión portátil, servido junto a la página o desde internet ───
 let _pdfjs = null;
 async function libPDF() {
   if (_pdfjs) return _pdfjs;
@@ -356,8 +382,9 @@ function descargarArchivo(bytes, nombre) {
 const estado = {
   archivos: [],   // {id, nombre, tamano, tipo, filas, fechas, avisos, error}
   fecha: null,
-  ajustes: {},    // por fecha: {pac:{}, enc:{}}
-  ultimo: null,   // último resultado calculado
+  ajustes: {},    // por fecha: {pac, enc, vinc, conf}
+  hechos: {},     // por fecha: campos de la ficha ya digitados (solo visual)
+  ultimo: null,
 };
 let nArch = 0;
 
@@ -377,28 +404,28 @@ async function cargarArchivos(lista) {
     estado.archivos.push(reg);
     pintarArchivos();
     try {
-      if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (/\.pdf$/i.test(file.name) || (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) {
         const pdfjs = await libPDF();
-        const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+        const doc = await pdfjs.getDocument({ data: bytes }).promise;
         const paginas = [];
         for (let i = 1; i <= doc.numPages; i++) {
           const tc = await (await doc.getPage(i)).getTextContent();
           paginas.push({ items: tc.items.filter(it => 'str' in it).map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width })) });
         }
-        const r = U.parsearTablaPDF(paginas, reg.id + ':' + file.name);
-        reg.tipo = 'tabla'; reg.filas = r.filas; reg.avisos = r.avisos;
-        if (!r.filas.length) { reg.tipo = 'error'; reg.error = r.avisos.join(' '); }
+        const r = U.parsearTablaPDF(paginas, file.name);
+        reg.tipo = r.filas.length ? 'tabla' : 'error';
+        reg.filas = r.filas; reg.avisos = r.avisos;
+        if (!r.filas.length) reg.error = r.avisos.join(' ');
       } else {
-        const hojas = await window.UGCQ_XLSX.leerPlanilla(new Uint8Array(await file.arrayBuffer()), file.name);
+        const hojas = await window.UGCQ_XLSX.leerPlanilla(bytes, file.name);
         let hecho = false;
         for (const hoja of hojas) {
-          const aoa = hoja.filas;
-          const tipo = U.detectarTipoPlanilla(aoa);
+          const tipo = U.detectarTipoPlanilla(hoja.filas);
           if (!tipo) continue;
           reg.tipo = tipo;
-          if (tipo === 'encuentros') reg.filas = U.leerEncuentros(aoa, reg.id + ':' + file.name);
-          else if (tipo === 'suspensiones') reg.filas = U.leerSuspensiones(aoa, reg.id + ':' + file.name);
-          else reg.filas = U.leerUGCQ(aoa);
+          reg.filas = tipo === 'encuentros' ? U.leerEncuentros(hoja.filas, file.name)
+            : tipo === 'suspensiones' ? U.leerSuspensiones(hoja.filas, file.name) : U.leerUGCQ(hoja.filas);
           hecho = true;
           break;
         }
@@ -436,23 +463,23 @@ $('archivos').addEventListener('click', e => {
   recalcular();
 });
 
-// Une las fuentes y descarta filas repetidas (el mismo export cargado dos veces o rangos que se traslapan)
+// Fuentes para el cotejo: por cada día, el último archivo cargado de cada tipo (dos exports del mismo día no se suman)
 function fuentes() {
-  const unir = (tipo, firma) => {
-    const vistos = new Set(), filas = [];
-    for (const a of estado.archivos.filter(x => x.tipo === tipo)) {
-      for (const f of a.filas) { const k = firma(f); if (vistos.has(k)) continue; vistos.add(k); filas.push(f); }
-    }
-    return { cargada: estado.archivos.some(x => x.tipo === tipo), cargado: estado.archivos.some(x => x.tipo === tipo), filas };
+  const unir = (tipo) => {
+    const archivos = estado.archivos.filter(x => x.tipo === tipo);
+    const ultimoPorFecha = new Map();
+    for (const a of archivos) for (const f of a.fechas) ultimoPorFecha.set(f, a.id);
+    const filas = [];
+    for (const a of archivos) for (const f of a.filas) if (ultimoPorFecha.get(f.fecha) === a.id) filas.push(f);
+    return { cargada: archivos.length > 0, cargado: archivos.length > 0, filas };
   };
-  return {
-    tabla: unir('tabla', f => [f.fecha, U.normRun(f.run) || U.norm(f.nombre), f.pabellon, f.hora].join('|')),
-    encuentros: unir('encuentros', f => [f.fecha, U.normRun(f.run) || U.norm(f.nombre), f.hora, f.pabellon, f.intervencion].join('|')),
-    suspensiones: unir('suspensiones', f => [f.fecha, U.normRun(f.run) || U.norm(f.nombre), f.categoria, f.descripcion, f.intervencion].join('|')),
-    ugcq: unir('ugcq', f => f.fecha),
-  };
+  return { tabla: unir('tabla'), encuentros: unir('encuentros'), suspensiones: unir('suspensiones'), ugcq: unir('ugcq') };
 }
-
+function archivosDelDia(fecha) {
+  const out = {};
+  for (const t of ['tabla', 'encuentros', 'suspensiones']) out[t] = estado.archivos.filter(a => a.tipo === t && a.fechas.includes(fecha));
+  return out;
+}
 function fechasDisponibles() {
   const f = fuentes();
   const m = new Map();
@@ -467,25 +494,35 @@ function elegirFechaInicial() {
   estado.fecha = conTabla.length ? conTabla[conTabla.length - 1][0] : (fs.length ? fs[fs.length - 1][0] : null);
 }
 
-// ─── CÁLCULO Y PINTADO ───
+// ─── CONFIGURACIÓN ───
+function fijos() { return Object.assign({}, U.FIJOS_DEF, leerLS('ugcq_fijos', {})); }
+function opciones() { return Object.assign({}, U.OPCIONES_DEF, leerLS('ugcq_horario', {})); }
+
+// ─── CÁLCULO ───
 function ajustesDia() {
-  if (!estado.ajustes[estado.fecha]) estado.ajustes[estado.fecha] = { pac: {}, enc: {} };
+  if (!estado.ajustes[estado.fecha]) estado.ajustes[estado.fecha] = { pac: {}, enc: {}, vinc: {}, conf: {} };
   return estado.ajustes[estado.fecha];
 }
 function recalcular() {
   const fs = fechasDisponibles();
   $('zonaDia').hidden = !estado.fecha;
   if (!estado.fecha) { estado.ultimo = null; return; }
+  const dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
   $('fechas').innerHTML = fs.map(([f, o]) => {
+    const dia = dias[new Date(f + 'T12:00:00Z').getUTCDay()];
     const partes = [o.tabla ? o.tabla + ' en tabla' : 'sin tabla', o.encuentros + ' cx', o.suspensiones + ' susp'];
-    return `<button type="button" class="fbtn${f === estado.fecha ? ' on' : ''}" data-fecha="${f}">${U.fmtFecha(f)}<small>${esc(partes.join(' · '))}</small></button>`;
+    const hist = (leerLS('ugcq_historial', {})[f] || {});
+    return `<button type="button" class="fbtn${f === estado.fecha ? ' on' : ''}" data-fecha="${f}">${dia} ${U.fmtFecha(f)}${hist.digitado ? ' ✓' : ''}<small>${esc(partes.join(' · '))}</small></button>`;
   }).join('');
-  const r = U.cotejarDia(estado.fecha, fuentes(), ajustesDia());
-  const nTablas = estado.archivos.filter(a => a.tipo === 'tabla' && a.fechas.includes(estado.fecha)).length;
-  if (nTablas > 1) r.avisos.unshift(`Hay ${nTablas} tablas cargadas para este día y se usan todas juntas. Si una es una versión antigua, quítala.`);
+  const r = U.cotejarDia(estado.fecha, fuentes(), ajustesDia(), opciones());
+  const ad = archivosDelDia(estado.fecha);
+  for (const [t, nombre] of [['tabla', 'tablas'], ['encuentros', 'exports de encuentros'], ['suspensiones', 'informes de suspensiones']]) {
+    if (ad[t].length > 1) r.avisos.unshift(`Hay ${ad[t].length} ${nombre} con este día: se usa el último cargado (${ad[t][ad[t].length - 1].nombre}).`);
+  }
   estado.ultimo = r;
-  pintarResultado(r);
   pintarPendientes(r);
+  pintarResultado(r);
+  pintarGestion(r);
   pintarProgramados(r);
   pintarEncuentros(r);
   pintarSuspensiones(r);
@@ -496,81 +533,42 @@ $('fechas').addEventListener('click', e => {
   estado.fecha = b.dataset.fecha;
   recalcular();
 });
-
-const ETQ_CONTEO = {
-  programados: 'Programados (Electivo Normal) en tabla',
-  condicionales: 'Electivo Condicional en tabla',
-  suspendidos: 'Programados no operados por suspensión',
-  pctSuspendidos: 'Suspendidos ÷ programados × 100',
-  progRealizadas: 'Programados operados',
-  condRealizadas: 'Condicionales operados',
-  agregadas: 'Electivas mayores fuera de tabla',
-  urgencias: 'Cirugías mayores de urgencia',
-  menores: 'Todas las cirugías menores',
-  procedimientos: 'Todos los procedimientos',
-  totalMayoresElectivas: 'Programadas + condicionales + agregadas',
-  totalRealizado: 'Mayores electivas + urgencias + menores + procedimientos',
-};
-function fijos() { return Object.assign({}, U.FIJOS_DEF, leerLS('ugcq_fijos', {})); }
 function filaActual() { const r = estado.ultimo; return r ? U.filaUGCQ(r.fecha, r.conteos, r.causas, fijos()) : null; }
 
-function pintarResultado(r) {
-  $('tituloRes').textContent = '3 · RESULTADO PARA UGCQ — ' + U.fmtFecha(r.fecha);
-  const fila = U.filaUGCQ(r.fecha, r.conteos, r.causas, fijos());
-  const n = r.pendientes.length;
-  const banner = n
-    ? `<div class="banner bROJO"><div class="t">${n} PENDIENTE${n > 1 ? 'S' : ''} ANTES DE SUBIR</div><div class="a">Resuelve los pendientes (sección 4) para habilitar la descarga. Los números de abajo ya incluyen lo que está claro.</div></div>`
-    : r.avisos.length
-      ? `<div class="banner bAMAR"><div class="t">LISTO, CON AVISOS</div><div class="a">${r.avisos.map(esc).join('<br>')}</div></div>`
-      : `<div class="banner bVERDE"><div class="t">LISTO PARA SUBIR A UGCQ</div><div class="a">Todo lo programado quedó cotejado con lo registrado en SITGEQ.</div></div>`;
-  const avisosExtra = n && r.avisos.length ? `<div class="banner bAMAR"><div class="a">${r.avisos.map(esc).join('<br>')}</div></div>` : '';
-  const kpis = U.CONTEOS.map(([k, col]) => {
-    const clave = ['programados', 'suspendidos', 'pctSuspendidos', 'totalRealizado'].includes(k);
-    return `<div class="kpi${clave ? ' clave' : ''}"><div class="l">${esc(U.ENCABEZADOS[col])}</div><div class="v">${fila[col]}${k === 'pctSuspendidos' ? '<small style="font-size:16px">%</small>' : ''}</div><div class="f">${esc(ETQ_CONTEO[k])}</div></div>`;
-  }).join('');
-  const causas = Object.entries(r.causas).filter(([, v]) => v).map(([col, v]) => `<li class="causa">${v} × ${esc(U.ENCABEZADOS[col])}</li>`).join('');
-  $('resultado').innerHTML = banner + avisosExtra + `<div class="kpis">${kpis}</div>
-    <div class="hint" style="margin-top:12px"><b>Causales de suspensión:</b></div>
-    <ul class="controles" style="margin-top:4px">${causas || '<li class="causa" style="color:var(--muted)">Sin suspensiones</li>'}</ul>
-    <div class="hint"><b>Controles:</b></div>
-    <ul class="controles" style="margin-top:4px">${r.controles.map(c => `<li class="${c.ok ? 'ok' : 'no'}">${esc(c.texto)}</li>`).join('')}</ul>
-    <div class="hint">Semana ${fila[4]} · ${esc(fila[8])} · ${r.conTabla ? 'cotejado contra la tabla quirúrgica' : 'sin tabla: reconstruido desde SITGEQ'}</div>
-    <div class="acciones">
-      <button type="button" class="btn" id="bDescargar" ${n ? 'disabled' : ''}>⬇ Descargar planilla UGCQ</button>
-      <button type="button" class="btn sec" id="bCopiar" ${n ? 'disabled' : ''}>Copiar fila</button>
-      <button type="button" class="btn sec" id="bGuardar" ${n ? 'disabled' : ''}>Guardar en historial</button>
-      <button type="button" class="btn sec" id="bCotejo">Descargar cotejo detallado</button>
-    </div>
-    <div class="hint">La planilla UGCQ trae las 119 columnas en el orden del reporte. El cotejo detallado incluye nombres y RUN: guárdalo solo en equipos institucionales.</div>`;
-}
-
+// ─── PINTADO ───
 const ESTADO_UI = {
   REALIZADA: ['Realizada', 'eVERDE'], SUSPENDIDA: ['Suspendida', 'eROJO'], SIN_REGISTRO: ['Sin registro', 'eROJO'],
   NO_REALIZADA: ['Condicional no operado', 'eGRIS'], NO_MAYOR: ['Menor / procedimiento', 'eGRIS'], NO_CONTAR: ['No se cuenta', 'eGRIS'],
 };
 const CLASE_UI = {
   PROG: ['Programada realizada', 'eVERDE'], AGREG: ['Electiva agregada', 'eAZUL'], URG: ['Urgencia', 'eAMAR'],
-  MENOR: ['Cirugía menor', 'eGRIS'], PROC: ['Procedimiento', 'eGRIS'], NO_CONTAR: ['No se cuenta', 'eGRIS'],
+  NO_MAYOR: ['Menor / procedimiento (por código)', 'eGRIS'], NO_CONTAR: ['No se cuenta', 'eGRIS'],
 };
 const est = (par) => `<span class="est ${par[1]}">${esc(par[0])}</span>`;
 const avisos = (lista) => lista && lista.length ? `<ul class="av">${lista.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : '';
 const persona = (nombre, run) => `<div class="phi">${esc(nombre || '—')}</div><div class="run phi">${esc(run || 'sin RUN')}</div>`;
+const etiquetaEstado = (p) => {
+  if (p.estado === 'SUSPENDIDA' && p.motivoNoUGCQ) return ['Suspendida · no va a UGCQ', 'eAMAR'];
+  return ESTADO_UI[p.estado] || ['?', 'eGRIS'];
+};
 
 function opcionesCausal(sel) {
   const grupos = new Map();
   for (const c of U.CAUSAS) { if (!grupos.has(c.categoria)) grupos.set(c.categoria, []); grupos.get(c.categoria).push(c); }
-  let html = `<option value="">— Elegir causal UGCQ —</option>`;
+  let html = '<option value="">— Elegir causal UGCQ —</option>';
   for (const [cat, lista] of grupos) {
     html += `<optgroup label="${esc(cat)}">` + lista.map(c => `<option value="${c.col}"${c.col === sel ? ' selected' : ''}>${esc(c.encabezado.replace(/^\([^)]*\)\s*/, ''))}</option>`).join('') + '</optgroup>';
   }
   return html;
 }
 function selectEstadoPac(p) {
-  const ops = [['', 'Automático'], ['REALIZADA', 'Realizada (falta registro en SITGEQ)'], ['SUSPENDIDA', 'Suspendida'], ['NO_CONTAR', 'No contar (error de tabla / no era Cx mayor)']];
+  const ops = [['', 'Automático'], ['SUSPENDIDA', 'Suspendida'], ['NO_CONTAR', 'No contar (error de tabla / no era Cx mayor)']];
+  // "Realizada sin registro" solo si SITGEQ no tiene ninguna cirugía suya (si la tiene, se vincula)
+  if (!p.encuentros.length) ops.splice(1, 0, ['REALIZADA', 'Realizada (falta registro en SITGEQ)']);
   return `<select data-pac-estado="${esc(p.id)}" aria-label="Decisión">${ops.map(([v, t]) => `<option value="${v}"${p.ajuste === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 }
 function selectAgend(p) {
-  const ops = [['NORMAL', 'Normal'], ['CONDICIONAL', 'Condicional']];
+  const ops = [['NORMAL', 'Normal (directa)'], ['CONDICIONAL', 'Condicional']];
   if (p.agendTabla !== 'NORMAL' && p.agendTabla !== 'CONDICIONAL') ops.unshift([p.agendTabla, 'No electivo']);
   return `<select data-pac-agend="${esc(p.id)}" aria-label="Agendamiento">${ops.map(([v, t]) => `<option value="${v}"${p.agend === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 }
@@ -582,36 +580,114 @@ function selectCausal(p) {
 function pintarPendientes(r) {
   $('zonaPend').hidden = !r.pendientes.length;
   $('pendientes').innerHTML = r.pendientes.map(x => {
+    if (x.tipo === 'fuente' || x.tipo === 'pabellon') {
+      return `<div class="pendc"><div class="q"><b>${esc(x.texto)}</b></div><div class="ops"><button type="button" class="btn sec peq" data-conf="${esc(x.clave)}">${esc(x.accion)}</button></div></div>`;
+    }
     const p = r.pacientes.find(q => q.id === x.pacienteId);
     if (!p) return '';
     const donde = [p.pabellon, p.hora].filter(Boolean).join(' · ');
     const sus = p.suspensiones[0];
     const causalSitgeq = sus ? `<div class="det">SITGEQ: ${esc(sus.categoria)} — ${esc(sus.descripcion)}</div>` : '';
-    const ops = x.tipo === 'estado' ? selectEstadoPac(p) : selectCausal(p);
-    return `<div class="pendc"><div class="q"><b class="phi">${esc(p.nombre)}</b> <span class="run phi">${esc(p.run)}</span>${donde ? ' · ' + esc(donde) : ''}<div>${esc(x.texto)}</div>${causalSitgeq}${avisos(p.avisos)}</div><div class="ops">${ops}</div></div>`;
+    let ops = '';
+    if (x.tipo === 'estado') ops = selectEstadoPac(p);
+    else if (x.tipo === 'causal') ops = selectCausal(p);
+    else if (x.tipo === 'conflicto') ops = `<button type="button" class="btn sec peq" data-confirmar-estado="${esc(p.id)}">Mantener mi decisión</button> <button type="button" class="btn sec peq" data-auto="${esc(p.id)}">Volver a automático</button>`;
+    const cands = x.tipo === 'estado' && p.candidatos.length
+      ? `<div class="cand">¿Es alguno de estos? ${p.candidatos.map(c => `<button type="button" class="btn sec peq phi" data-vinc="${esc(c.id)}" data-pac="${esc(p.id)}">${esc(c.texto)}</button>`).join('')}</div>` : '';
+    return `<div class="pendc"><div class="q"><b class="phi">${esc(p.nombre)}</b> <span class="run phi">${esc(p.run)}</span>${donde ? ' · ' + esc(donde) : ''}<div>${esc(x.texto)}</div>${causalSitgeq}${cands}${avisos(p.avisos)}</div><div class="ops">${ops}</div></div>`;
   }).join('');
 }
 
+const CAMPOS_FICHA = {
+  programados: 'Programados (Electivo Normal) en tabla', condicionales: 'Electivo Condicional en tabla',
+  suspendidos: 'Cx mayor electiva directa, en horario hábil', pctSuspendidos: 'Suspendidos ÷ programados × 100',
+  progRealizadas: 'Programados operados', condRealizadas: 'Condicionales operados', agregadas: 'Electivas mayores fuera de tabla',
+  urgencias: 'Cirugías mayores de urgencia', menores: 'Códigos de cirugía menor', procedimientos: 'Códigos de procedimiento (incluye anestesia)',
+  totalMayoresElectivas: 'Programadas + condicionales + agregadas', totalRealizado: 'Mayores electivas + urgencias + menores + procedimientos',
+};
+function pintarResultado(r) {
+  $('tituloRes').textContent = 'FICHA PARA DIGITAR EN UGCQ — ' + U.fmtFecha(r.fecha);
+  const fila = U.filaUGCQ(r.fecha, r.conteos, r.causas, fijos());
+  const n = r.pendientes.length;
+  const hist = leerLS('ugcq_historial', {})[r.fecha] || {};
+  const hechos = estado.hechos[r.fecha] || (estado.hechos[r.fecha] = {});
+  const banner = n
+    ? `<div class="banner bROJO"><div class="t">${n} PENDIENTE${n > 1 ? 'S' : ''} ANTES DE DIGITAR</div><div class="a">Resuelve los pendientes de arriba. Los números ya incluyen todo lo que está claro.</div></div>`
+    : `<div class="banner ${r.avisos.length ? 'bAMAR' : 'bVERDE'}"><div class="t">${hist.digitado ? 'DIGITADO EN UGCQ ✓' : 'LISTO PARA DIGITAR EN UGCQ'}</div><div class="a">${r.avisos.length ? r.avisos.map(esc).join('<br>') : 'Todo lo programado quedó cotejado con lo registrado en SITGEQ.'}</div></div>`;
+  const avisosExtra = n && r.avisos.length ? `<div class="banner bAMAR"><div class="a">${r.avisos.map(esc).join('<br>')}</div></div>` : '';
+  const filaFicha = (k, etiqueta, valor, ayuda) => `<tr data-hecho="${esc(k)}" class="${hechos[k] ? 'hecho' : ''}"><td class="c"><span class="chk">${hechos[k] ? '✓' : ''}</span></td><td class="l">${esc(etiqueta)}${ayuda ? `<div class="det">${esc(ayuda)}</div>` : ''}</td><td class="v">${esc(valor)}</td></tr>`;
+  const causas = Object.entries(r.causas).filter(([, v]) => v);
+  const ficha = `<table class="ficha">` +
+    U.CONTEOS.map(([k, col]) => filaFicha(k, U.ENCABEZADOS[col], fila[col] + (k === 'pctSuspendidos' ? '%' : ''), CAMPOS_FICHA[k])).join('') +
+    `<tr class="sep"><td colspan="3">CAUSALES DE SUSPENSIÓN ${causas.length ? '' : '· NINGUNA'}</td></tr>` +
+    causas.map(([col, v]) => filaFicha('c' + col, U.ENCABEZADOS[col], v)).join('') + '</table>';
+  $('resultado').innerHTML = banner + avisosExtra + ficha +
+    `<div class="hint">Toca cada fila a medida que la digitas. Semana ${fila[4]} · ${esc(fila[8])} · ${r.diaHabil ? 'día hábil' : 'día no hábil'} · ${r.conTabla ? 'cotejado contra la tabla quirúrgica' : 'sin tabla: reconstruido desde SITGEQ'}</div>
+    <ul class="controles">${r.controles.map(c => `<li class="${c.ok ? 'ok' : 'no'}">${esc(c.texto)}</li>`).join('')}</ul>
+    <div class="acciones">
+      <button type="button" class="btn" id="bDigitado" ${n ? 'disabled' : ''}>${hist.digitado ? 'Actualizar día en el historial' : '✓ Marcar como digitado en UGCQ'}</button>
+      <button type="button" class="btn sec" id="bDescargar" ${n ? 'disabled' : ''}>Planilla UGCQ (Excel)</button>
+      <button type="button" class="btn sec" id="bCopiar" ${n ? 'disabled' : ''}>Copiar fila</button>
+      <button type="button" class="btn sec" id="bCotejo">Cotejo detallado (Excel)</button>
+    </div>
+    <div class="hint">${hist.digitado ? 'Digitado el ' + esc(new Date(hist.digitado).toLocaleString('es-CL')) + '. ' : ''}El cotejo detallado incluye nombres y RUN: guárdalo solo en equipos institucionales.</div>`;
+}
+
+function pintarGestion(r) {
+  const g = r.gestion;
+  const kpi = (v, l, f, clave) => `<div class="kpi${clave ? ' clave' : ''}"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div>${f ? `<div class="f">${esc(f)}</div>` : ''}</div>`;
+  const li = (t, v) => `<li><span>${esc(t)}</span><b>${esc(v)}</b></li>`;
+  $('gestion').innerHTML = `<div class="kpis">
+      ${kpi(g.programados, 'Pacientes programados', g.normales + ' normales · ' + g.condicionales + ' condicionales')}
+      ${kpi(g.operados, 'Operados de la tabla')}
+      ${kpi(g.suspendidos, 'Suspendidos (todos)', 'de ellos ' + g.suspUGCQ + ' van a UGCQ', true)}
+      ${kpi(g.pctSuspension + '%', 'Suspensión de gestión', 'suspendidos ÷ programados', true)}
+      ${kpi(g.condNoOperados, 'Condicionales no operados', 'sin causal: no es suspensión')}
+      ${kpi(g.cirugiasRegistradas, 'Registros de pabellón en SITGEQ')}
+    </div>
+    <div class="dos">
+      <div><div class="hint" style="margin-top:0"><b>Suspensiones por tipo</b></div><ul class="lista">
+        ${li('Van a UGCQ (mayor electiva directa, horario hábil)', g.suspUGCQ)}
+        ${li('Condicionales', g.suspCondicionales)}
+        ${li('Cirugía menor o procedimiento', g.suspNoMayor)}
+        ${li('Fuera de horario hábil', g.suspFueraHorario)}
+        ${li('Agendamiento no electivo', g.suspOtroAgend)}
+        ${li('Programados sin registro (pendientes)', g.sinRegistro)}
+      </ul></div>
+      <div><div class="hint" style="margin-top:0"><b>Causales (todas las suspensiones)</b></div><ul class="lista">
+        ${g.causales.length ? g.causales.map(c => li(c.causal, c.n)).join('') : '<li><span>Sin suspensiones</span><b>0</b></li>'}
+      </ul></div>
+      <div><div class="hint" style="margin-top:0"><b>Actividad del día</b></div><ul class="lista">
+        ${li('Electivas agregadas', g.agregadas)}
+        ${li('Cirugías mayores de urgencia', g.urgencias)}
+        ${li('Códigos de cirugía menor', g.codigosMenores)}
+        ${li('Códigos de procedimiento', g.codigosProcedimientos)}
+        ${li('… de ellos, de anestesia (grupo 22)', g.anestesias)}
+        ${li('Programados registrados como menor/procedimiento', g.menorOProcedimiento)}
+      </ul></div>
+    </div>`;
+}
+
 function pintarProgramados(r) {
-  const filas = r.pacientes;
-  if (!filas.length) { $('tProgramados').innerHTML = `<div class="vacio">${r.conTabla ? 'Sin pacientes en la tabla.' : 'No hay tabla quirúrgica para este día.'}</div>`; return; }
+  if (!r.pacientes.length) { $('tProgramados').innerHTML = `<div class="vacio">${r.conTabla ? 'Sin pacientes en la tabla.' : 'No hay tabla quirúrgica para este día.'}</div>`; return; }
   const origenTxt = { tabla: '', suspension: 'Desde informe de suspensiones', manual: 'Agregado a mano', sitgeq: 'Desde SITGEQ (sin tabla)' };
   $('tProgramados').innerHTML = `<table><thead><tr><th>PABELLÓN / HORA</th><th>PACIENTE</th><th>INTERVENCIÓN PROGRAMADA</th><th>AGENDAMIENTO</th><th>RESULTADO</th><th>DECISIÓN</th><th>CAUSAL UGCQ</th></tr></thead><tbody>` +
-    filas.map(p => {
-      const enc = p.encuentros.filter(e => e.claseFinal === 'PROG')[0] || p.encuentros[0];
+    r.pacientes.map(p => {
+      const enc = p.encuentros.find(e => e.claseFinal === 'PROG') || p.encuentros[0];
       const sus = p.suspensiones[0];
       let detalle = '';
-      if (enc) detalle += `<div class="det">SITGEQ: ${esc(enc.pabellon)} ${esc(enc.hora)} · ${esc(enc.tipoCirugiaTxt)}${enc.tipoTxt ? ' · ' + esc(enc.tipoTxt) : ''}</div>`;
+      if (enc) detalle += `<div class="det">SITGEQ: ${esc(enc.pabellon)} ${esc(enc.horaN === '99:99' ? '' : enc.horaN)} · ${esc(enc.tipoCirugiaTxt)}${enc.tipoTxt ? ' · ' + esc(enc.tipoTxt) : ''}</div>`;
       if (sus) detalle += `<div class="det">Suspensión: ${esc(sus.categoria)} — ${esc(sus.descripcion)}</div>`;
+      if (p.habil === false && p.estado === 'SUSPENDIDA') detalle += '<div class="det">Fuera de horario hábil</div>';
       const pend = r.pendientes.some(x => x.pacienteId === p.id);
-      const cuentaTxt = p.cuenta ? '' : `<div class="det">No suma a UGCQ</div>`;
-      const causal = p.estado === 'SUSPENDIDA' && p.cuenta && p.agend === 'NORMAL' ? selectCausal(p) : '<span class="det">—</span>';
+      const cuentaTxt = p.cuenta ? '' : '<div class="det">No suma a UGCQ</div>';
+      const causal = p.suspUGCQ ? selectCausal(p) : p.estado === 'SUSPENDIDA' && p.causalCol != null ? `<span class="det">${esc(U.ENCABEZADOS[p.causalCol])}</span>` : '<span class="det">—</span>';
       return `<tr class="${pend ? 'pend' : ''}${p.ajuste || p.encuentros.some(e => e.ajuste) ? ' manual' : ''}">
         <td>${esc(p.pabellon || '—')}<div class="det">${esc(p.hora || '')}</div>${origenTxt[p.origen] ? `<div class="det">${esc(origenTxt[p.origen])}</div>` : ''}</td>
         <td>${persona(p.nombre, p.run)}</td>
         <td>${esc(p.intervencion || '—')}${p.obs ? `<div class="det" title="${esc(p.obs)}">Obs: ${esc(p.obs.length > 90 ? p.obs.slice(0, 90) + '…' : p.obs)}</div>` : ''}</td>
         <td>${selectAgend(p)}</td>
-        <td>${est(ESTADO_UI[p.estado] || ['?', 'eGRIS'])}${detalle}${cuentaTxt}${avisos(p.avisos)}</td>
+        <td>${est(etiquetaEstado(p))}${detalle}${cuentaTxt}${avisos(p.avisos)}</td>
         <td>${selectEstadoPac(p)}</td>
         <td>${causal}</td></tr>`;
     }).join('') + '</tbody></table>';
@@ -619,37 +695,46 @@ function pintarProgramados(r) {
 
 function pintarEncuentros(r) {
   if (!r.encuentros.length) { $('tEncuentros').innerHTML = '<div class="vacio">No hay cirugías registradas en SITGEQ para este día.</div>'; return; }
-  $('tEncuentros').innerHTML = `<table><thead><tr><th>HORA</th><th>PABELLÓN</th><th>PACIENTE</th><th>INTERVENCIÓN REALIZADA</th><th>SITGEQ</th><th>EN TABLA</th><th>CUENTA COMO</th></tr></thead><tbody>` +
+  const mayor = (e) => e.interv === 'MAYOR' || e.interv === '?';
+  $('tEncuentros').innerHTML = `<table><thead><tr><th>HORA</th><th>PABELLÓN</th><th>PACIENTE</th><th>INTERVENCIÓN REALIZADA</th><th>SITGEQ</th><th>PROGRAMADO</th><th>CUENTA COMO</th></tr></thead><tbody>` +
     r.encuentros.map(e => {
-      const enTabla = !e.paciente ? 'No'
-        : e.paciente.origen === 'suspension' ? 'No (suspendido en SITGEQ ese día)'
-        : e.paciente.origen === 'sitgeq' ? 'Sin tabla'
-        : `Sí${e.paciente.pabellon ? ' · ' + esc(e.paciente.pabellon) : ''}${e.paciente.hora ? ' ' + esc(e.paciente.hora) : ''}`;
-      const clase = e.claseFinal === 'PROG' && e.paciente && e.paciente.agend === 'CONDICIONAL' ? ['Condicional realizada', 'eVERDE'] : (CLASE_UI[e.claseFinal] || ['?', 'eGRIS']);
+      const p = e.paciente;
+      const enTabla = !p ? 'No'
+        : p.origen === 'suspension' ? 'No (suspendido en SITGEQ ese día)'
+        : p.origen === 'sitgeq' ? 'Sin tabla'
+        : `Sí${p.pabellon ? ' · ' + esc(p.pabellon) : ''}${p.hora ? ' ' + esc(p.hora) : ''}`;
+      const enlace = !p ? '' : e.enlace === 'nombre' ? ` <button type="button" class="lnk" data-desvinc="${esc(e.id)}">no es este paciente</button>`
+        : e.enlace === 'manual' && !e.fijoProg ? ` <button type="button" class="lnk" data-revinc="${esc(e.id)}">deshacer vínculo</button>` : '';
+      const clase = e.claseFinal === 'PROG' && p && p.agend === 'CONDICIONAL' ? ['Condicional realizada', 'eVERDE'] : (CLASE_UI[e.claseFinal] || ['?', 'eGRIS']);
       const ops = [['', 'Automático: ' + (CLASE_UI[e.claseAuto] || ['?'])[0]]];
-      if (e.paciente) ops.push(['PROG', 'Cirugía del programado']);
-      if (!e.paciente || e.ajuste === 'NUEVO_NORMAL' || e.ajuste === 'NUEVO_COND') ops.push(['NUEVO_NORMAL', 'Programado (faltaba en la tabla)'], ['NUEVO_COND', 'Condicional (faltaba en la tabla)']);
-      ops.push(['AGREG', 'Electiva agregada'], ['URG', 'Urgencia'], ['MENOR', 'Cirugía menor'], ['PROC', 'Procedimiento'], ['NO_CONTAR', 'No contar (duplicado / error)']);
+      if (mayor(e)) {
+        if (p) ops.push(['PROG', 'Cirugía del programado']);
+        if (!p || e.ajuste === 'NUEVO_NORMAL' || e.ajuste === 'NUEVO_COND') ops.push(['NUEVO_NORMAL', 'Programado (faltaba en la tabla)'], ['NUEVO_COND', 'Condicional (faltaba en la tabla)']);
+        ops.push(['AGREG', 'Electiva agregada'], ['URG', 'Urgencia']);
+      }
+      ops.push(['NO_CONTAR', 'No contar (duplicado / error)']);
       const sel = `<select data-enc="${esc(e.id)}" aria-label="Cuenta como">${ops.map(([v, t]) => `<option value="${v}"${e.ajuste === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
-      return `<tr class="${e.ajuste ? 'manual' : ''}"><td>${esc(e.hora || '—')}</td><td>${esc(e.pabellon || '—')}</td>
+      const codigos = `Códigos: ${e.nMayor || 0} mayor · ${e.cMenor} menor · ${e.cProc} proced.${e.anestesias ? ' (' + e.anestesias + ' anest.)' : ''}`;
+      return `<tr class="${e.ajuste ? 'manual' : ''}"><td>${esc(e.horaN === '99:99' ? '—' : e.horaN)}</td><td>${esc(e.pabellon || '—')}</td>
         <td>${persona(e.nombre, e.ident.run)}</td>
-        <td>${esc(e.intervencion || '—')}<div class="det">${esc([e.servicio, e.especialidad].filter(Boolean).join(' · '))}</div></td>
+        <td>${esc(e.intervencion || '—')}<div class="det">${esc([e.servicio, e.especialidad].filter(Boolean).join(' · '))}</div><div class="det">${esc(codigos)}</div></td>
         <td>${esc(e.tipoCirugiaTxt || '—')}<div class="det">${esc(e.tipoTxt || '')}</div></td>
-        <td>${enTabla}</td>
+        <td>${enTabla}${enlace}</td>
         <td>${est(clase)}<div style="margin-top:5px">${sel}</div>${avisos(e.avisos)}</td></tr>`;
     }).join('') + '</tbody></table>';
 }
 
 function pintarSuspensiones(r) {
   if (!r.suspensiones.length) { $('tSuspensiones').innerHTML = '<div class="vacio">No hay suspensiones registradas para este día.</div>'; return; }
-  $('tSuspensiones').innerHTML = `<table><thead><tr><th>PACIENTE</th><th>CAUSAL SITGEQ</th><th>COLUMNA UGCQ</th><th>INTERVENCIÓN</th><th>AGENDAMIENTO</th><th>¿CUENTA?</th></tr></thead><tbody>` +
+  $('tSuspensiones').innerHTML = `<table><thead><tr><th>PACIENTE</th><th>CAUSAL SITGEQ</th><th>COLUMNA UGCQ</th><th>INTERVENCIÓN</th><th>AGENDAMIENTO</th><th>¿VA A UGCQ?</th></tr></thead><tbody>` +
     r.suspensiones.map(s => {
       const p = s.paciente;
       const col = p && p.causalCol != null ? p.causalCol : (s.causal ? s.causal.col : null);
-      const cuenta = p && p.cuenta && p.agend === 'NORMAL' && p.estado === 'SUSPENDIDA'
-        ? est(['Suma a suspendidos', 'eROJO'])
-        : est([p && p.estado === 'REALIZADA' ? 'Se operó igual' : p && p.agend === 'CONDICIONAL' ? 'Condicional: no suma' : 'No suma', 'eGRIS']);
-      return `<tr><td>${persona(s.nombre, s.ident.run)}</td>
+      const cuenta = p && p.suspUGCQ && p.suspensiones[0] === s ? est(['Sí: suma a suspendidos', 'eROJO'])
+        : est([p && p.estado === 'REALIZADA' ? 'No: se operó igual' : p && p.motivoNoUGCQ ? 'No: ' + p.motivoNoUGCQ : 'No', 'eGRIS']);
+      const enlace = p && s.enlace === 'nombre' ? ` <button type="button" class="lnk" data-desvinc="${esc(s.id)}">no es este paciente</button>`
+        : p && s.enlace === 'manual' ? ` <button type="button" class="lnk" data-revinc="${esc(s.id)}">deshacer vínculo</button>` : '';
+      return `<tr><td>${persona(s.nombre, s.ident.run)}${enlace}</td>
         <td>${esc(s.categoria)}<div class="det">${esc(s.descripcion)}</div></td>
         <td>${col != null ? esc(U.ENCABEZADOS[col]) : '<span class="est eROJO">Sin equivalente</span>'}${s.causal ? `<div class="det">Coincidencia ${esc(s.causal.confianza)}</div>` : ''}</td>
         <td>${esc(s.intervencion || '—')}<div class="det">${esc(s.intervTxt || '')}</div></td>
@@ -663,123 +748,139 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (!t.matches('select')) return;
   const aj = ajustesDia();
-  if (t.dataset.pacEstado !== undefined) {
-    const id = t.dataset.pacEstado;
-    aj.pac[id] = Object.assign({}, aj.pac[id], { estado: t.value });
-  } else if (t.dataset.pacAgend !== undefined) {
-    const id = t.dataset.pacAgend;
-    aj.pac[id] = Object.assign({}, aj.pac[id], { agend: t.value });
-  } else if (t.dataset.pacCausal !== undefined) {
-    const id = t.dataset.pacCausal;
-    aj.pac[id] = Object.assign({}, aj.pac[id], { causalCol: t.value === '' ? null : Number(t.value) });
-  } else if (t.dataset.enc !== undefined) {
-    aj.enc[t.dataset.enc] = { clase: t.value };
-  } else return;
+  if (t.dataset.pacEstado !== undefined) aj.pac[t.dataset.pacEstado] = Object.assign({}, aj.pac[t.dataset.pacEstado], { estado: t.value, confirmado: false });
+  else if (t.dataset.pacAgend !== undefined) aj.pac[t.dataset.pacAgend] = Object.assign({}, aj.pac[t.dataset.pacAgend], { agend: t.value });
+  else if (t.dataset.pacCausal !== undefined) aj.pac[t.dataset.pacCausal] = Object.assign({}, aj.pac[t.dataset.pacCausal], { causalCol: t.value === '' ? null : Number(t.value) });
+  else if (t.dataset.enc !== undefined) aj.enc[t.dataset.enc] = { clase: t.value };
+  else return;
   recalcular();
 });
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-confirmar]');
-  if (!b) return;
+  const b = e.target.closest('button,[data-hecho]');
+  if (!b || !estado.fecha) return;
   const aj = ajustesDia();
-  const id = b.dataset.confirmar;
-  aj.pac[id] = Object.assign({}, aj.pac[id], { causalCol: Number(b.dataset.col) });
+  const d = b.dataset;
+  if (d.confirmar) aj.pac[d.confirmar] = Object.assign({}, aj.pac[d.confirmar], { causalCol: Number(d.col) });
+  else if (d.conf) aj.conf[d.conf] = true;
+  else if (d.confirmarEstado) aj.pac[d.confirmarEstado] = Object.assign({}, aj.pac[d.confirmarEstado], { confirmado: true });
+  else if (d.auto) aj.pac[d.auto] = Object.assign({}, aj.pac[d.auto], { estado: '', confirmado: false });
+  else if (d.vinc) aj.vinc[d.vinc] = d.pac;
+  else if (d.desvinc) aj.vinc[d.desvinc] = '_ninguno';
+  else if (d.revinc) delete aj.vinc[d.revinc];
+  else if (d.hecho) {
+    const h = estado.hechos[estado.fecha] || (estado.hechos[estado.fecha] = {});
+    h[d.hecho] = !h[d.hecho];
+    pintarResultado(estado.ultimo);
+    return;
+  } else return;
   recalcular();
 });
 
-// ─── DESCARGAS ───
+// ─── DESCARGAS E HISTORIAL ───
 function slug(s) { return U.clave(s).replace(/ /g, '_') || 'hospital'; }
-function descargarUGCQ(filas, nombre) {
-  descargarArchivo(window.UGCQ_XLSX.escribirXlsx([{ nombre: 'hoja1', filas: [U.ENCABEZADOS].concat(filas) }]), nombre);
+function descargarUGCQ(filas, nombre, gestion) {
+  const hojas = [{ nombre: 'hoja1', filas: [U.ENCABEZADOS].concat(filas) }];
+  if (gestion) hojas.push({ nombre: 'Gestión', filas: gestion });
+  descargarArchivo(window.UGCQ_XLSX.escribirXlsx(hojas), nombre);
 }
+const CAMPOS_GESTION = [['programados', 'Pacientes programados'], ['operados', 'Operados de la tabla'], ['suspendidos', 'Suspendidos (todos)'],
+  ['suspUGCQ', 'Suspendidos UGCQ'], ['suspCondicionales', 'Susp. condicionales'], ['suspNoMayor', 'Susp. menor/procedimiento'],
+  ['suspFueraHorario', 'Susp. fuera de horario hábil'], ['suspOtroAgend', 'Susp. no electivas'], ['condNoOperados', 'Condicionales no operados'],
+  ['pctSuspension', '% suspensión gestión'], ['agregadas', 'Agregadas'], ['urgencias', 'Urgencias'], ['codigosMenores', 'Códigos menores'],
+  ['codigosProcedimientos', 'Códigos procedimiento'], ['anestesias', 'Códigos anestesia']];
+function gestionNumerica(g) { const o = {}; for (const [k] of CAMPOS_GESTION) o[k] = g[k]; o.causales = g.causales; return o; }
+
 $('resultado').addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b || b.disabled) return;
   const r = estado.ultimo;
   if (!r) return;
-  try {
-    if (b.id === 'bDescargar') {
-      descargarUGCQ([filaActual()], `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(r.fecha)}.xlsx`);
-      guardarHistorial(r, true);
-    } else if (b.id === 'bCopiar') {
-      const tsv = filaActual().map(v => v == null ? '' : String(v)).join('\t');
-      try { await navigator.clipboard.writeText(tsv); }
-      catch (err) {
-        const ta = document.createElement('textarea'); ta.value = tsv; document.body.appendChild(ta); ta.select();
-        document.execCommand('copy'); ta.remove();
-      }
-      toast('Fila copiada: pégala en Excel en la fila del día');
-    } else if (b.id === 'bGuardar') {
-      guardarHistorial(r, false);
-    } else if (b.id === 'bCotejo') {
-      descargarCotejo(r);
+  if (b.id === 'bDigitado') {
+    guardarHistorial(r, true);
+    recalcular();
+  } else if (b.id === 'bDescargar') {
+    descargarUGCQ([filaActual()], `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(r.fecha)}.xlsx`);
+    guardarHistorial(r, false);
+  } else if (b.id === 'bCopiar') {
+    const tsv = filaActual().map(v => v == null ? '' : String(v)).join('\t');
+    try { await navigator.clipboard.writeText(tsv); }
+    catch (err) {
+      const ta = document.createElement('textarea'); ta.value = tsv; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
     }
-  } catch (err) { toast('⚠ ' + (err.message || err)); }
+    toast('Fila copiada: pégala en Excel en la fila del día');
+  } else if (b.id === 'bCotejo') {
+    descargarCotejo(r);
+  }
 });
 
-function guardarHistorial(r, silencioso) {
+function guardarHistorial(r, digitado) {
   const h = leerLS('ugcq_historial', {});
-  const ya = h[r.fecha];
-  const fila = filaActual();
-  h[r.fecha] = { fila, guardado: new Date().toISOString() };
+  const previo = h[r.fecha] || {};
+  h[r.fecha] = { fila: filaActual(), gestion: gestionNumerica(r.gestion), guardado: new Date().toISOString(),
+    digitado: digitado ? new Date().toISOString() : (previo.digitado || null) };
   if (!guardarLS('ugcq_historial', h)) { toast('⚠ Este navegador no permite guardar el historial'); return; }
-  if (!silencioso || !ya) toast(ya ? `Día ${U.fmtFecha(r.fecha)} actualizado en el historial` : `Día ${U.fmtFecha(r.fecha)} guardado en el historial`);
+  toast(digitado ? `Día ${U.fmtFecha(r.fecha)} marcado como digitado en UGCQ` : `Día ${U.fmtFecha(r.fecha)} guardado en el historial`);
 }
 
 function descargarCotejo(r) {
   const fila = filaActual();
+  const g = r.gestion;
   const resumen = [['Cierre diario UGCQ', U.fmtFecha(r.fecha)], ['Establecimiento', fila[8]], ['Generado', new Date().toLocaleString('es-CL')], [],
     ['Campo UGCQ', 'Valor']].concat(U.CONTEOS.map(([, col]) => [U.ENCABEZADOS[col], fila[col]]))
-    .concat([[], ['Causales de suspensión', 'Cantidad']]).concat(Object.entries(r.causas).map(([col, n]) => [U.ENCABEZADOS[col], n]))
+    .concat([[], ['Causales de suspensión UGCQ', 'Cantidad']]).concat(Object.entries(r.causas).map(([col, n]) => [U.ENCABEZADOS[col], n]))
     .concat([[], ['Controles', '']]).concat(r.controles.map(c => [c.texto, c.ok ? 'OK' : 'NO CUADRA']))
     .concat([[], ['Pendientes', '']]).concat(r.pendientes.map(x => { const p = r.pacientes.find(q => q.id === x.pacienteId); return [(p ? p.nombre + ': ' : '') + x.texto, '']; }))
     .concat([[], ['Avisos', '']]).concat(r.avisos.map(a => [a, '']));
-  const prog = [['Pabellón', 'Hora', 'Paciente', 'RUN', 'Intervención programada', 'Agendamiento tabla', 'Agendamiento usado', 'Resultado', 'Decisión', 'Suma a UGCQ', 'Causal UGCQ', 'Origen', 'Avisos', 'Obs tabla']]
-    .concat(r.pacientes.map(p => [p.pabellon, p.hora, p.nombre, p.run, p.intervencion, p.agendamientoTxt, p.agend, (ESTADO_UI[p.estado] || [p.estado])[0],
-      p.estadoOrigen === 'manual' ? 'Manual' : 'Automática', p.cuenta ? 'Sí' : 'No', p.causalCol != null ? U.ENCABEZADOS[p.causalCol] : '', p.origen, p.avisos.join(' | '), p.obs]));
-  const encs = [['Hora', 'Pabellón', 'Paciente', 'RUN', 'Intervención realizada', 'Servicio', 'Tipo de cirugía SITGEQ', 'Tipo SITGEQ', 'Cuenta como', 'Ajuste manual', 'Paciente de tabla', 'Avisos']]
-    .concat(r.encuentros.map(e => [e.hora, e.pabellon, e.nombre, e.ident.run, e.intervencion, e.servicio, e.tipoCirugiaTxt, e.tipoTxt, (CLASE_UI[e.claseFinal] || [e.claseFinal])[0],
-      e.ajuste || '', e.paciente ? 'Sí' : 'No', e.avisos.join(' | ')]));
-  const sus = [['Paciente', 'RUN', 'Causal MINSAL', 'Descripción causal', 'Columna UGCQ', 'Intervención', 'Tipo intervención', 'Agendamiento', 'Avisos']]
+  const gestion = [['Gestión de pabellón (no va a UGCQ)', U.fmtFecha(r.fecha)], []].concat(CAMPOS_GESTION.map(([k, t]) => [t, g[k]]))
+    .concat([[], ['Causales (todas las suspensiones)', 'Cantidad']]).concat(g.causales.map(c => [c.causal, c.n]));
+  const prog = [['Pabellón', 'Hora', 'Paciente', 'RUN', 'Intervención programada', 'Agendamiento tabla', 'Agendamiento usado', 'Resultado', 'Va a UGCQ', 'Motivo si no va', 'Horario hábil', 'Decisión', 'Causal UGCQ', 'Origen', 'Avisos', 'Obs tabla']]
+    .concat(r.pacientes.map(p => [p.pabellon, p.hora, p.nombre, p.run, p.intervencion, p.agendamientoTxt, p.agend, etiquetaEstado(p)[0],
+      p.cuenta ? 'Sí' : 'No', p.motivoNoUGCQ || '', p.habil === false ? 'No' : p.habil === null ? 'Sin hora' : 'Sí',
+      p.estadoOrigen === 'manual' ? 'Manual' : 'Automática', p.causalCol != null ? U.ENCABEZADOS[p.causalCol] : '', p.origen, p.avisos.join(' | '), p.obs]));
+  const encs = [['Hora', 'Pabellón', 'Paciente', 'RUN', 'Intervención realizada', 'Servicio', 'Tipo de cirugía SITGEQ', 'Tipo SITGEQ', 'Cuenta como', 'Códigos menor', 'Códigos procedimiento', 'Códigos anestesia', 'Ajuste manual', 'Paciente programado', 'Avisos']]
+    .concat(r.encuentros.map(e => [e.horaN === '99:99' ? '' : e.horaN, e.pabellon, e.nombre, e.ident.run, e.intervencion, e.servicio, e.tipoCirugiaTxt, e.tipoTxt,
+      (CLASE_UI[e.claseFinal] || [e.claseFinal])[0], e.cMenor, e.cProc, e.anestesias, e.ajuste || '', e.paciente ? e.paciente.nombre : '', e.avisos.join(' | ')]));
+  const sus = [['Paciente', 'RUN', 'Causal MINSAL', 'Descripción causal', 'Columna UGCQ', 'Intervención', 'Tipo intervención', 'Agendamiento', 'Va a UGCQ', 'Avisos']]
     .concat(r.suspensiones.map(s => [s.nombre, s.ident.run, s.categoria, s.descripcion, s.paciente && s.paciente.causalCol != null ? U.ENCABEZADOS[s.paciente.causalCol] : (s.causal ? U.ENCABEZADOS[s.causal.col] : ''),
-      s.intervencion, s.intervTxt, s.agendamientoTxt, s.avisos.join(' | ')]));
+      s.intervencion, s.intervTxt, s.agendamientoTxt, s.paciente && s.paciente.suspUGCQ ? 'Sí' : 'No', s.avisos.join(' | ')]));
   descargarArchivo(window.UGCQ_XLSX.escribirXlsx([
-    { nombre: 'Resumen', filas: resumen }, { nombre: 'Programados', filas: prog }, { nombre: 'Registro SITGEQ', filas: encs },
-    { nombre: 'Suspensiones', filas: sus }, { nombre: 'Fila UGCQ', filas: [U.ENCABEZADOS, fila] },
+    { nombre: 'Resumen', filas: resumen }, { nombre: 'Gestión', filas: gestion }, { nombre: 'Programados', filas: prog },
+    { nombre: 'Registro SITGEQ', filas: encs }, { nombre: 'Suspensiones', filas: sus }, { nombre: 'Fila UGCQ', filas: [U.ENCABEZADOS, fila] },
   ]), `Cotejo_UGCQ_${U.fmtFecha(r.fecha)}.xlsx`);
 }
 
-// ─── HISTORIAL ───
 function pintarHistorial() {
   const h = leerLS('ugcq_historial', {});
   const fechas = Object.keys(h).sort();
   const reporte = new Map(fuentes().ugcq.filas.map(x => [x.fecha, x.fila]));
-  if (!fechas.length) { $('tHistorial').innerHTML = '<div class="vacio">Aún no hay días guardados. Usa "Guardar en historial" o "Descargar planilla UGCQ" al cerrar cada día.</div>'; return; }
+  if (!fechas.length) { $('tHistorial').innerHTML = '<div class="vacio">Aún no hay días guardados. Usa "Marcar como digitado en UGCQ" al cerrar cada día.</div>'; return; }
   const cols = U.CONTEOS.map(([, c]) => c);
-  $('tHistorial').innerHTML = `<table><thead><tr><th>FECHA</th>${['PROG', 'COND', 'SUSP', '%', 'PROG R', 'COND R', 'AGREG', 'URG', 'MEN', 'PROC', 'MAY EL', 'TOTAL'].map(t => `<th>${t}</th>`).join('')}<th>CAUSALES</th><th>VS UGCQ</th></tr></thead><tbody>` +
+  $('tHistorial').innerHTML = `<table><thead><tr><th>FECHA</th><th>DIGITADO</th>${['PROG', 'COND', 'SUSP', '%', 'PROG R', 'COND R', 'AGREG', 'URG', 'MEN', 'PROC', 'MAY EL', 'TOTAL'].map(t => `<th>${t}</th>`).join('')}<th>SUSP TODAS</th><th>% GESTIÓN</th><th>VS UGCQ</th></tr></thead><tbody>` +
     fechas.slice().reverse().map(f => {
-      const fila = h[f].fila;
-      const nCaus = fila.slice(U.PRIMERA_CAUSA).reduce((a, v) => a + Number(v || 0), 0);
+      const d = h[f], fila = d.fila, g = d.gestion || {};
       let vs = '<span class="det">—</span>';
       if (reporte.has(f)) {
         const dif = U.compararFilas(fila, reporte.get(f));
-        vs = dif.length ? `<span class="est eROJO" title="${esc(dif.map(d => `${d.encabezado}: calculado ${d.calculado} / UGCQ ${d.ugcq}`).join('\n'))}">${dif.length} diferencia${dif.length > 1 ? 's' : ''}</span><div class="det">${esc(dif.slice(0, 3).map(d => `${d.encabezado.slice(0, 32)}: ${d.calculado} vs ${d.ugcq}`).join(' · '))}</div>` : '<span class="est eVERDE">Igual</span>';
+        vs = dif.length ? `<span class="est eROJO" title="${esc(dif.map(x => `${x.encabezado}: calculado ${x.calculado} / UGCQ ${x.ugcq}`).join('\n'))}">${dif.length} diferencia${dif.length > 1 ? 's' : ''}</span><div class="det">${esc(dif.slice(0, 3).map(x => `${x.encabezado.slice(0, 32)}: ${x.calculado} vs ${x.ugcq}`).join(' · '))}</div>` : '<span class="est eVERDE">Igual</span>';
       }
-      return `<tr><td>${U.fmtFecha(f)}</td>${cols.map(c => `<td class="n">${fila[c] == null ? '' : esc(fila[c])}</td>`).join('')}<td class="n">${nCaus}</td><td>${vs}</td></tr>`;
+      return `<tr><td>${U.fmtFecha(f)}</td><td>${d.digitado ? '✓ ' + esc(new Date(d.digitado).toLocaleDateString('es-CL')) : '<span class="det">no</span>'}</td>${cols.map(c => `<td class="n">${fila[c] == null ? '' : esc(fila[c])}</td>`).join('')}<td class="n">${g.suspendidos == null ? '' : esc(g.suspendidos)}</td><td class="n">${g.pctSuspension == null ? '' : esc(g.pctSuspension) + '%'}</td><td>${vs}</td></tr>`;
     }).join('') + '</tbody></table>';
   if (!$('hDesde').value) $('hDesde').value = fechas[0];
   if (!$('hHasta').value) $('hHasta').value = fechas[fechas.length - 1];
 }
-$('hDescargar').addEventListener('click', async () => {
+$('hDescargar').addEventListener('click', () => {
   const h = leerLS('ugcq_historial', {});
   const d = $('hDesde').value || '0000-00-00', a = $('hHasta').value || '9999-99-99';
   const fechas = Object.keys(h).sort().filter(f => f >= d && f <= a);
   if (!fechas.length) { toast('No hay días guardados en ese rango'); return; }
-  try { descargarUGCQ(fechas.map(f => h[f].fila), `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(fechas[0])}_al_${U.fmtFecha(fechas[fechas.length - 1])}.xlsx`); }
-  catch (err) { toast('⚠ ' + (err.message || err)); }
+  const gestion = [['Fecha', 'Digitado en UGCQ'].concat(CAMPOS_GESTION.map(([, t]) => t))]
+    .concat(fechas.map(f => [U.fmtFecha(f), h[f].digitado ? new Date(h[f].digitado).toLocaleString('es-CL') : ''].concat(CAMPOS_GESTION.map(([k]) => (h[f].gestion || {})[k]))));
+  descargarUGCQ(fechas.map(f => h[f].fila), `UGCQ_${slug(fijos().hospital)}_${U.fmtFecha(fechas[0])}_al_${U.fmtFecha(fechas[fechas.length - 1])}.xlsx`, gestion);
 });
 $('hBorrar').addEventListener('click', () => {
   if (!confirm('¿Borrar todos los días guardados en este navegador? Esta acción no se puede deshacer.')) return;
-  try { localStorage.removeItem('ugcq_historial'); } catch (e) {}
+  borrarLS('ugcq_historial');
   pintarHistorial();
 });
 
@@ -788,6 +889,9 @@ const CAMPOS_FIJOS = [['macroregion', 'MACROREGIÓN'], ['region', 'REGIÓN (tal 
 function pintarConfig() {
   const fx = fijos();
   $('cfg').innerHTML = CAMPOS_FIJOS.map(([k, t]) => `<label>${t}<input type="text" data-fijo="${k}" value="${esc(fx[k])}"></label>`).join('');
+  const op = opciones();
+  $('hIni').value = op.horaInicio; $('hFinLJ').value = op.finLunJue; $('hFinV').value = op.finVie;
+  $('feriados').value = (op.feriados || []).map(U.fmtFecha).join('\n');
 }
 $('cfg').addEventListener('input', e => {
   const k = e.target.dataset.fijo;
@@ -797,15 +901,19 @@ $('cfg').addEventListener('input', e => {
   guardarLS('ugcq_fijos', fx);
   if (estado.ultimo) pintarResultado(estado.ultimo);
 });
-$('cfgReset').addEventListener('click', () => {
-  try { localStorage.removeItem('ugcq_fijos'); } catch (e) {}
-  pintarConfig();
-  if (estado.ultimo) pintarResultado(estado.ultimo);
-});
+$('cfgReset').addEventListener('click', () => { borrarLS('ugcq_fijos'); pintarConfig(); if (estado.ultimo) recalcular(); });
+function guardarHorario() {
+  const feriados = $('feriados').value.split(/[\s,;]+/).map(U.parseFecha).filter(Boolean);
+  guardarLS('ugcq_horario', { horaInicio: $('hIni').value || '08:00', finLunJue: $('hFinLJ').value || '17:00', finVie: $('hFinV').value || '16:00', feriados });
+  if (estado.fecha) recalcular();
+}
+['hIni', 'hFinLJ', 'hFinV'].forEach(id => $(id).addEventListener('change', guardarHorario));
+$('feriados').addEventListener('change', guardarHorario);
+$('horReset').addEventListener('click', () => { borrarLS('ugcq_horario'); pintarConfig(); if (estado.fecha) recalcular(); });
 pintarConfig();
 
 window.addEventListener('beforeunload', e => {
-  const hay = Object.values(estado.ajustes).some(a => Object.keys(a.pac).length || Object.keys(a.enc).length);
+  const hay = Object.values(estado.ajustes).some(a => Object.keys(a.pac).length || Object.keys(a.enc).length || Object.keys(a.vinc).length);
   if (hay) { e.preventDefault(); e.returnValue = ''; }
 });
 </script>
