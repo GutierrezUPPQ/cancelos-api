@@ -29,17 +29,20 @@ Dos formas de usarla, sin depender de Claude:
 
 ## Reglas de conteo
 
+Definición del Servicio de Salud Viña del Mar–Quillota (SSVQ): las columnas **"Pacientes…" cuentan pacientes** y las
+columnas **"Cx…" cuentan los códigos de cada acto quirúrgico**. Un acto con 2 códigos de cirugía mayor suma 2.
+
 | Columna UGCQ | Cómo se calcula |
 |---|---|
 | Pacientes Programados Cx Mayor Electiva | Pacientes de la tabla *Electivo Normal* (directa), cirugía mayor |
 | Pacientes Condicionales Cx Mayor Electiva | Pacientes de la tabla *Electivo Condicional* |
 | Pacientes Suspendidos | **Cirugía mayor electiva directa programada en horario hábil** que se suspendió |
 | Porcentaje de Pacientes Suspendidos | suspendidos ÷ **programados en horario hábil** × 100, redondeado (los de fin de semana, feriado o fuera de horario se cuentan como programados, pero no entran al %) |
-| Programadas / Condicionales realizadas | Programados / condicionales con cirugía mayor registrada ese día |
-| Agregadas realizadas | Cirugías mayores electivas de pacientes que no están en la tabla |
-| Urgencia realizadas | Cirugías mayores con tipo de cirugía *Urgencia* |
+| Programadas / Condicionales realizadas | **Códigos** de cirugía mayor del acto de cada programado / condicional operado ese día (1 si se marcó "Realizada" sin registro en SITGEQ) |
+| Agregadas realizadas | **Códigos** de cirugía mayor de las cirugías electivas de pacientes que no están en la tabla |
+| Urgencia realizadas | **Códigos** de cirugía mayor de las cirugías con tipo *Urgencia* |
 | Cx Menores / Procedimientos | **Por código**: suma de las columnas *Cirugía Menor* / *Procedimiento* del export (incluye anestesia 2201001) |
-| Total Cx Mayores Electivas | programadas + condicionales + agregadas realizadas |
+| Total Cx Mayores Electivas | programadas + condicionales + agregadas realizadas (códigos) |
 | Total Realizado | mayores electivas + urgencias + menores + procedimientos |
 | Causales | Causal MINSAL de SITGEQ traducida a su columna UGCQ (los encabezados UGCQ vienen truncados a 63 bytes) |
 
@@ -63,7 +66,7 @@ Detalles del cotejo:
 - Falta un archivo del día → pendiente, que se puede confirmar ("no hubo suspensiones", "continuar sin tabla").
 - **Semana**: de sábado a viernes, con el número ISO del sábado que la inicia (deducido del reporte UGCQ de octubre 2026).
 
-Controles diarios: programados = realizados + suspendidos UGCQ + suspendidos fuera de horario + sin registro;
+Controles diarios (en pacientes): programados = operados + suspendidos UGCQ + suspendidos fuera de horario + sin registro;
 suma de causales = suspendidos; suspensiones por tipo = total de suspensiones; condicionales realizadas ≤ condicionales; totales.
 
 ## Archivos

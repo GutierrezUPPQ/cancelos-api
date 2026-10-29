@@ -538,3 +538,49 @@ test('Controles: el desglose de suspensiones por tipo suma el total; aviso si el
   const sinTabla = U.cotejarDia(MAR, fuentes({ enc: [LUIS] }), { conf });
   assert.ok(sinTabla.avisos.some(a => /1 programado sin hora programada conocida/.test(a)), JSON.stringify(sinTabla.avisos));
 });
+
+// ═══════════════ Definición del SSVQ: columnas "Pacientes…" cuentan pacientes; columnas "Cx…", códigos de cada acto ═══════════════
+test('Columnas "Cx": cada acto suma sus códigos de cirugía mayor; las columnas "Pacientes" cuentan personas', () => {
+  const f = fuentes({
+    tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:00' }),
+      filaTabla({ fecha: MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:00', agend: 'CONDICIONAL' })],
+    enc: [
+      { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:10', mayor: 2 },                                            // programada: 2 códigos
+      { fecha: D_MAR, pab: 'Pabellón 2', tipoCx: 'Electivo Condicional', nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '11:00', mayor: 3 },  // condicional: 3
+      { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'EVA MORA LARA', run: run(7654321), hora: '13:00', mayor: 2 },                                    // agregada: 2
+      { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'PEDRO TAPIA LARA', run: run(12345678), hora: '22:00', mayor: 2 },            // urgencia: 2
+    ] });
+  const r = U.cotejarDia(MAR, f, { conf });
+  const c = r.conteos;
+  assert.deepEqual([c.programados, c.condicionales, c.progRealizadasPac, c.condRealizadasPac], [1, 1, 1, 1], 'pacientes');
+  assert.deepEqual([c.progRealizadas, c.condRealizadas, c.agregadas, c.urgencias], [2, 3, 2, 2], 'códigos de Cx mayor');
+  assert.equal(c.totalMayoresElectivas, 7);
+  assert.equal(c.procedimientos, 4, 'el código de anestesia de cada acto');
+  assert.equal(c.totalRealizado, 7 + 2 + 0 + 4);
+  assert.equal(r.gestion.codigosMayores, 9);
+  assert.equal(r.gestion.operados, 2);
+  assert.ok(r.controles.every(x => x.ok), JSON.stringify(r.controles.filter(x => !x.ok)));
+  assert.ok(r.avisos.some(a => /9 códigos de cirugía mayor en 4 actos/.test(a)), JSON.stringify(r.avisos));
+  assert.ok(enc(r, 'ANA SOTO PEREZ')[0].avisos.some(a => /suma 2 en la columna UGCQ/.test(a)));
+  // Con un código por acto no hay aviso del día
+  const uno = U.cotejarDia(MAR, fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:00' })],
+    enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:10' }] }), { conf });
+  assert.equal(uno.conteos.progRealizadas, 1);
+  assert.ok(!uno.avisos.some(a => /códigos de cirugía mayor en/.test(a)));
+});
+
+test('Columnas "Cx" sin códigos conocidos: "Realizada" a mano o export sin columnas de códigos cuentan 1 por acto', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:00' })], enc: [] });
+  const ana = U.cotejarDia(MAR, f, { conf }).pacientes[0];
+  const r = U.cotejarDia(MAR, f, { conf, pac: { [ana.id]: { estado: 'REALIZADA' } } });
+  assert.deepEqual([r.conteos.progRealizadas, r.conteos.progRealizadasPac], [1, 1]);
+  assert.ok(r.controles.every(x => x.ok), JSON.stringify(r.controles.filter(x => !x.ok)));
+  // Export sin las columnas "Cirugía Mayor", "Cirugía Menor" y "Procedimiento"
+  const quitar = (fila) => fila.filter((_, j) => ![15, 16, 17].includes(j));
+  const regs = U.leerEncuentros([quitar(ENC_HDR), quitar(filaEnc({ fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'PEDRO TAPIA LARA', run: run(12345678), mayor: 2 }))], 'enc.xlsx');
+  const r2 = U.cotejarDia(MAR, { tabla: { cargada: false, filas: [] }, encuentros: { cargado: true, filas: regs }, suspensiones: { cargado: true, filas: [] } }, { conf });
+  assert.equal(r2.conteos.urgencias, 1);
+  // Registrado como procedimiento pero con código de cirugía mayor: se avisa para revisar
+  const r3 = U.cotejarDia(MAR, fuentes({ enc: [{ fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'B DOS', run: run(11000002), tipo: 'Procedimiento', mayor: 1, proc: 1 }] }), { conf });
+  assert.ok(r3.encuentros[0].avisos.some(a => /trae 1 código de cirugía mayor: revisar/.test(a)), JSON.stringify(r3.encuentros[0].avisos));
+});

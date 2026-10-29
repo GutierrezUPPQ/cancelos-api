@@ -156,6 +156,7 @@ test('Cotejo automático: conteos UGCQ del día', () => {
     menores: 1, procedimientos: 8,   // por código: la cirugía menor y un código de procedimiento por cirugía
     totalMayoresElectivas: 5, totalRealizado: 15,
     programadosHabiles: 7,   // denominador del %: todos en horario hábil (martes, horas de 08:00 a 15:45)
+    progRealizadasPac: 3, condRealizadasPac: 1,   // pacientes operados (las columnas "Cx" cuentan códigos: aquí, 1 por acto)
   });
   assert.deepEqual(r.causas, { [col('(Paciente) No se presenta / No se ubica')]: 1, [col('(Unidades de apoyo logístico) Instrumental incompleto o no dis')]: 1 });
   // Pendientes: Vera (sin registro), la causal desconocida y el Pabellón 3, que no tiene tabla

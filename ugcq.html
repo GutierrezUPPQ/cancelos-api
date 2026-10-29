@@ -309,7 +309,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <script>
 'use strict';
 const U = window.UGCQ;
-const VERSION = '1.3';
+const VERSION = '1.4';
 if (window.UGCQ_PORTABLE) { document.getElementById('lnkTorre').remove(); document.getElementById('lnkPortable').remove(); }
 document.getElementById('verTxt').textContent = 'v' + VERSION + (window.UGCQ_PORTABLE ? ' PORTÁTIL' : '');
 
@@ -638,12 +638,14 @@ function pintarPendientes(r) {
   }).join('');
 }
 
+// Definición del SSVQ: las columnas "Pacientes…" cuentan pacientes; las columnas "Cx…", los códigos de cada acto quirúrgico
 const CAMPOS_FICHA = {
-  programados: 'Programados (Electivo Normal) en tabla', condicionales: 'Electivo Condicional en tabla',
-  suspendidos: 'Cx mayor electiva directa, en horario hábil', pctSuspendidos: 'Suspendidos ÷ programados en horario hábil × 100',
-  progRealizadas: 'Programados operados', condRealizadas: 'Condicionales operados', agregadas: 'Electivas mayores fuera de tabla',
-  urgencias: 'Cirugías mayores de urgencia', menores: 'Códigos de cirugía menor', procedimientos: 'Códigos de procedimiento (incluye anestesia)',
-  totalMayoresElectivas: 'Programadas + condicionales + agregadas', totalRealizado: 'Mayores electivas + urgencias + menores + procedimientos',
+  programados: 'Pacientes programados (Electivo Normal) en tabla', condicionales: 'Pacientes Electivo Condicional en tabla',
+  suspendidos: 'Pacientes: Cx mayor electiva directa, en horario hábil', pctSuspendidos: 'Suspendidos ÷ programados en horario hábil × 100',
+  progRealizadas: 'Códigos de Cx mayor de los programados operados', condRealizadas: 'Códigos de Cx mayor de los condicionales operados',
+  agregadas: 'Códigos de Cx mayor de las electivas fuera de tabla', urgencias: 'Códigos de Cx mayor de urgencia',
+  menores: 'Códigos de cirugía menor', procedimientos: 'Códigos de procedimiento (incluye anestesia)',
+  totalMayoresElectivas: 'Programadas + condicionales + agregadas (códigos)', totalRealizado: 'Mayores electivas + urgencias + menores + procedimientos (códigos)',
 };
 function pintarResultado(r) {
   $('tituloRes').textContent = 'FICHA PARA DIGITAR EN UGCQ — ' + U.fmtFecha(r.fecha);
@@ -709,8 +711,9 @@ function pintarGestion(r) {
         ${g.causales.length ? g.causales.map(c => li(c.causal, c.n)).join('') : '<li><span>Sin suspensiones</span><b>0</b></li>'}
       </ul></div>
       <div><div class="hint" style="margin-top:0"><b>Actividad del día</b></div><ul class="lista">
-        ${li('Electivas agregadas', g.agregadas)}
-        ${li('Cirugías mayores de urgencia', g.urgencias)}
+        ${li('Códigos de cirugía mayor (todos)', g.codigosMayores)}
+        ${li('… de electivas agregadas', g.agregadas)}
+        ${li('… de urgencia', g.urgencias)}
         ${li('Códigos de cirugía menor', g.codigosMenores)}
         ${li('Códigos de procedimiento', g.codigosProcedimientos)}
         ${li('… de ellos, de anestesia (grupo 22)', g.anestesias)}
@@ -860,7 +863,8 @@ function descargarUGCQ(filas, nombre, gestion) {
 const CAMPOS_GESTION = [['programados', 'Pacientes programados'], ['operados', 'Operados de la tabla'], ['suspendidos', 'Suspendidos (todos)'],
   ['suspUGCQ', 'Suspendidos UGCQ'], ['suspCondicionales', 'Susp. condicionales'], ['suspNoMayor', 'Susp. menor/procedimiento'],
   ['suspFueraHorario', 'Susp. fuera de horario hábil'], ['suspOtroAgend', 'Susp. no electivas'], ['condNoOperados', 'Condicionales no operados'],
-  ['pctSuspension', '% suspensión gestión'], ['agregadas', 'Agregadas'], ['urgencias', 'Urgencias'], ['codigosMenores', 'Códigos menores'],
+  ['pctSuspension', '% suspensión gestión'], ['codigosMayores', 'Códigos Cx mayor'], ['agregadas', 'Códigos Cx mayor agregadas'],
+  ['urgencias', 'Códigos Cx mayor urgencia'], ['codigosMenores', 'Códigos menores'],
   ['codigosProcedimientos', 'Códigos procedimiento'], ['anestesias', 'Códigos anestesia']];
 // En el historial solo números: las causales se guardan por columna UGCQ, nunca con el texto de SITGEQ
 function gestionNumerica(g) { const o = {}; for (const [k] of CAMPOS_GESTION) o[k] = g[k]; o.causalesCol = g.causalesCol; return o; }
@@ -917,9 +921,10 @@ function descargarCotejo(r) {
     .concat(r.pacientes.map(p => [p.pabellon, p.hora, p.nombre, p.run, p.intervencion, p.agendamientoTxt, p.agend, etiquetaEstado(p)[0],
       p.cuenta ? 'Sí' : 'No', p.estado === 'SUSPENDIDA' ? (p.suspUGCQ ? 'Sí' : 'No') : '', p.motivoNoUGCQ || '', p.habil === false ? 'No' : p.habil === null ? 'Sin hora' : 'Sí',
       p.estadoOrigen === 'manual' ? 'Manual' : 'Automática', p.causalCol != null ? U.ENCABEZADOS[p.causalCol] : '', p.origen, p.avisos.join(' | '), p.obs]));
-  const encs = [['Hora', 'Pabellón', 'Paciente', 'RUN', 'Intervención realizada', 'Servicio', 'Tipo de cirugía SITGEQ', 'Tipo SITGEQ', 'Cuenta como', 'Códigos menor', 'Códigos procedimiento', 'Códigos anestesia', 'Ajuste manual', 'Paciente programado', 'Avisos']]
+  const sumaMayor = (e) => ['PROG', 'AGREG', 'URG'].includes(e.claseFinal) ? e.cMayor : 0;
+  const encs = [['Hora', 'Pabellón', 'Paciente', 'RUN', 'Intervención realizada', 'Servicio', 'Tipo de cirugía SITGEQ', 'Tipo SITGEQ', 'Cuenta como', 'Códigos mayor (suman a UGCQ)', 'Códigos menor', 'Códigos procedimiento', 'Códigos anestesia', 'Ajuste manual', 'Paciente programado', 'Avisos']]
     .concat(r.encuentros.map(e => [e.horaN === '99:99' ? '' : e.horaN, e.pabellon, e.nombre, e.ident.run, e.intervencion, e.servicio, e.tipoCirugiaTxt, e.tipoTxt,
-      (CLASE_UI[e.claseFinal] || [e.claseFinal])[0], e.cMenor, e.cProc, e.anestesias, e.ajuste || '', e.paciente ? e.paciente.nombre : '', e.avisos.join(' | ')]));
+      (CLASE_UI[e.claseFinal] || [e.claseFinal])[0], sumaMayor(e), e.cMenor, e.cProc, e.anestesias, e.ajuste || '', e.paciente ? e.paciente.nombre : '', e.avisos.join(' | ')]));
   const sus = [['Paciente', 'RUN', 'Causal MINSAL', 'Descripción causal', 'Columna UGCQ', 'Intervención', 'Tipo intervención', 'Agendamiento', 'Va a UGCQ', 'Avisos']]
     .concat(r.suspensiones.map(s => [s.nombre, s.ident.run, s.categoria, s.descripcion, s.paciente && s.paciente.causalCol != null ? U.ENCABEZADOS[s.paciente.causalCol] : (s.causal ? U.ENCABEZADOS[s.causal.col] : ''),
       s.intervencion, s.intervTxt, s.agendamientoTxt, s.paciente && s.paciente.suspUGCQ && s.paciente.suspensiones[0] === s ? 'Sí' : 'No', s.avisos.join(' | ')]));
