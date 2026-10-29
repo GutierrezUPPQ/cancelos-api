@@ -2,7 +2,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { U, run, filaTabla, fuentes, col } = require('./helpers/sitgeq_sintetico.js');
+const { U, run, filaTabla, filaEnc, fuentes, col, ENC_HDR } = require('./helpers/sitgeq_sintetico.js');
 
 const MAR = '2026-03-17', D_MAR = '17-03-2026';   // martes
 const VIE = '2026-03-20', D_VIE = '20-03-2026';   // viernes
@@ -439,4 +439,102 @@ test('Causal: categoría en plural se reconoce; descripción ambigua sin categor
   assert.equal(U.mapearCausal('Pacientes', 'No se presenta').col, col('(Paciente) No se presenta'));
   assert.equal(U.mapearCausal('Equipo quirúrgico', 'Reemplazo por urgencia').col, col('(Equipo quirúrgico) Reemplazo por urgencia'));
   assert.equal(U.mapearCausal('Categoría rara', 'No se presenta'), null);
+});
+
+// ═══════════════ Tercera revisión: decisiones por persona de SITGEQ, ids estables, filas repetidas y controles ═══════════════
+const RT = run(15234567), RS = run(15234576);   // RUN de la tabla y el mismo con dígitos traspuestos en SITGEQ (ambos válidos)
+const LUIS = { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:10' };
+const tablaAnaLuis = () => [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:00' }), filaTabla({ fecha: MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:00' })];
+const resumen = (r) => { const c = r.conteos; return { prog: c.programados, susp: c.suspendidos, pct: c.pctSuspendidos, progR: c.progRealizadas, agreg: c.agregadas, urg: c.urgencias }; };
+
+test('Vincular un candidato arrastra todos los registros de esa persona de SITGEQ, en cualquier orden de clic', () => {
+  const casos = [
+    ['suspendida y operada de urgencia', {
+      enc: [LUIS, { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'ANA SOTO PEREZ', run: RS, hora: '20:00' }],
+      sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: RS, desc: 'Patología aguda' }] }, { prog: 2, susp: 1, pct: 50, progR: 1, agreg: 0, urg: 1 }],
+    ['suspendida en la mañana y operada electiva en la tarde', {
+      enc: [LUIS, { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'ANA SOTO PEREZ', run: RS, hora: '15:00' }],
+      sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: RS, desc: 'Falta de ayuno' }] }, { prog: 2, susp: 0, pct: 0, progR: 2, agreg: 0, urg: 0 }],
+    ['electiva y urgencia el mismo día, sin suspensión', {
+      enc: [LUIS, { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'ANA SOTO PEREZ', run: RS, hora: '09:10' },
+        { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'ANA SOTO PEREZ', run: RS, hora: '21:00' }] }, { prog: 2, susp: 0, pct: 0, progR: 2, agreg: 0, urg: 1 }],
+  ];
+  for (const [nombre, datos, esperado] of casos) {
+    const f = fuentes(Object.assign({ tabla: tablaAnaLuis() }, datos));
+    const ana = U.cotejarDia(MAR, f, {}).pacientes.find(p => p.origen === 'tabla' && p.nombre === 'ANA SOTO PEREZ');
+    assert.ok(ana.candidatos.length >= 2, nombre);
+    for (const c of ana.candidatos) {
+      const r = U.cotejarDia(MAR, f, { vinc: { [c.id]: ana.id } });
+      assert.deepEqual(resumen(r), esperado, nombre + ' · clic en ' + c.texto);
+      assert.equal(r.pacientes.length, 2, nombre);
+      assert.equal(r.pendientes.filter(p => p.tipo === 'estado').length, 0, nombre);
+    }
+  }
+});
+
+test('"No es este paciente" vale para todos los registros de esa persona de SITGEQ', () => {
+  // ANA en la tabla sin RUN; en SITGEQ, dos suspensiones de ANA con RUN, enlazadas por nombre
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: 'S/I', hora: '09:00' })], enc: [],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: RT, desc: 'Rechaza operación' }, { fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: RT, desc: 'Falta de ayuno' }] });
+  const r0 = U.cotejarDia(MAR, f, {});
+  assert.deepEqual(r0.suspensiones.map(s => s.enlace), ['nombre', 'nombre']);
+  assert.deepEqual(resumen(r0), { prog: 1, susp: 1, pct: 100, progR: 0, agreg: 0, urg: 0 });
+  for (const s of r0.suspensiones) {
+    const r = U.cotejarDia(MAR, f, { vinc: { [s.id]: '_ninguno' } });
+    assert.deepEqual(r.suspensiones.map(x => x.desvinculado), [true, true]);
+    assert.equal(new Set(r.suspensiones.map(x => x.paciente.id)).size, 1, 'las dos suspensiones quedan en el mismo paciente');
+    assert.deepEqual(resumen(r), { prog: 2, susp: 1, pct: 50, progR: 0, agreg: 0, urg: 0 });
+    assert.equal(pac(r, 'ANA SOTO PEREZ').estado, 'SIN_REGISTRO');
+    assert.equal(pac(r, 'ANA SOTO PEREZ').candidatos.length, 0, 'no vuelve a ofrecer lo que se marcó "no es este paciente"');
+    assert.equal(r.pendientes.filter(p => p.tipo === 'estado').length, 1);
+  }
+});
+
+test('Dos cirugías del mismo paciente, pabellón y tipo: cada decisión sigue a su cirugía aunque el re-export cambie el orden', () => {
+  const aseo = { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'PEDRO TAPIA LARA', run: run(12345678), hora: '10:00', propuesta: 'ASEO QUIRURGICO', interv: 'ASEO QUIRURGICO' };
+  const lapa = Object.assign({}, aseo, { hora: '', propuesta: 'LAPAROTOMIA', interv: '' });
+  const ids = (lista) => Object.fromEntries(U.leerEncuentros([ENC_HDR, ...lista.map(filaEnc)], 'enc.xlsx').map(e => [e.propuesta, e.id]));
+  const antes = ids([aseo, lapa]);
+  const despues = ids([Object.assign({}, lapa, { hora: '18:00', interv: 'LAPAROTOMIA EXPLORADORA' }), aseo]);
+  assert.ok(antes['ASEO QUIRURGICO'] && antes.LAPAROTOMIA && antes['ASEO QUIRURGICO'] !== antes.LAPAROTOMIA);
+  assert.deepEqual(despues, antes);
+});
+
+test('Fila repetida de cirugía menor: no se suma, pero se puede volver a contar a mano', () => {
+  const menor = { fecha: D_MAR, pab: 'Pabellón 1', nombre: 'C TRES', run: run(11000003), tipo: 'Cirugía Menor', mayor: 0, menor: 1, proc: 1, hora: '10:00' };
+  const f = fuentes({ enc: [menor, menor] });
+  const r = U.cotejarDia(MAR, f, { conf });
+  assert.equal(r.conteos.menores, 1);
+  const rep = r.encuentros.find(e => e.repetida);
+  assert.equal(rep.claseFinal, 'NO_CONTAR');
+  const r2 = U.cotejarDia(MAR, f, { conf, enc: { [rep.id]: { clase: 'NO_MAYOR' } } });
+  assert.equal(r2.conteos.menores, 2);
+  assert.equal(r2.conteos.procedimientos, 2);
+});
+
+test('Con varios días cargados, el día sin informe de suspensiones lo sigue pidiendo', () => {
+  const LUN = '2026-03-16', D_LUN = '16-03-2026';
+  const f = fuentes({
+    tabla: [filaTabla({ fecha: LUN, nombre: 'LUIS ROJAS DIAZ', run: run(9876543) }), filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:00' })],
+    enc: [{ fecha: D_LUN, pab: 'Pabellón 2', nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:10' }, { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'ANA SOTO PEREZ', run: RT, hora: '09:05' }],
+    sus: [{ fecha: D_LUN, nombre: 'EVA MORA LARA', run: run(7654321), desc: 'Rechaza operación' }] });
+  const pend = U.cotejarDia(MAR, f, {}).pendientes.filter(p => p.clave === 'sinSuspensiones');
+  assert.equal(pend.length, 1);
+  assert.match(pend[0].texto, /no traen este día/);
+  assert.equal(U.cotejarDia(LUN, f, {}).pendientes.filter(p => p.clave === 'sinSuspensiones').length, 0);
+});
+
+test('Controles: el desglose de suspensiones por tipo suma el total; aviso si el % usa programados sin hora conocida', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: RT, hora: '11:00' }), filaTabla({ fecha: MAR, nombre: 'EVA MORA LARA', run: run(7654321), hora: '17:30' }),
+      filaTabla({ fecha: MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:00', agend: 'CONDICIONAL' })],
+    enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'OTRO PACIENTE', run: run(11000009), hora: '10:00' }],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: RT }, { fecha: D_MAR, nombre: 'EVA MORA LARA', run: run(7654321) },
+      { fecha: D_MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), agend: 'CONDICIONAL', clase: 'Procedimiento' }] });
+  const r = U.cotejarDia(MAR, f, {});
+  const ctl = r.controles.find(c => /Suspensiones por tipo/.test(c.texto));
+  assert.ok(ctl && ctl.ok, JSON.stringify(ctl));
+  assert.match(ctl.texto, /1 UGCQ \+ 1 condicionales \+ 1 fuera de horario\) = suspendidos \(3\)/);
+  assert.ok(!r.avisos.some(a => /sin hora programada conocida/.test(a)));
+  const sinTabla = U.cotejarDia(MAR, fuentes({ enc: [LUIS] }), { conf });
+  assert.ok(sinTabla.avisos.some(a => /1 programado sin hora programada conocida/.test(a)), JSON.stringify(sinTabla.avisos));
 });

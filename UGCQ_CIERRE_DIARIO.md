@@ -21,7 +21,8 @@ Dos formas de usarla, sin depender de Claude:
    - **Encuentros quirúrgicos** (Excel): todo lo operado, incluidas urgencias, cirugías menores y procedimientos.
    - **Informe de suspensiones** (Excel): suspendidos con causal MINSAL.
 2. Arrastrarlos a la página (se reconoce cada archivo solo; se pueden cargar varios días a la vez).
-   Si hay dos archivos del mismo tipo para un día, se usa el último cargado.
+   Si hay dos archivos del mismo tipo para un día, se usa el último cargado. Si un Excel trae varias hojas,
+   se usan todas las visibles (las ocultas solo si no hay otras). También lee CSV y los ".xls" que en realidad son HTML.
 3. Resolver los **pendientes** (en rojo).
 4. **Digitar en UGCQ** con la ficha (tocar cada fila al digitarla) y **marcar el día como digitado**.
 5. Opcional: **cotejo detallado** en Excel (paciente a paciente, decisiones y avisos) como respaldo.
@@ -53,6 +54,8 @@ Detalles del cotejo:
 - El paciente se busca en SITGEQ por **RUN**. Por **nombre** solo si a alguno le falta un RUN válido y el nombre calza completo.
   Si el RUN difiere (error de digitación), la herramienta sugiere el registro parecido y se vincula con un clic.
 - Programado sin cirugía ni suspensión → **pendiente**: se resuelve como suspendido (con causal), realizado sin registro o no contar.
+- Las decisiones sobre un registro ("¿Es alguno de estos?", "no es este paciente") valen para **todos los registros de esa
+  persona en SITGEQ**, y "deshacer" las revierte todas.
 - Suspendido en SITGEQ que no aparece en la tabla cargada → programado y suspendido (marcado para revisar).
 - Paciente con una electiva y una urgencia el mismo día → la electiva es la del programado; la otra cuenta como urgencia.
   Suspendido y luego operado de urgencia → suspensión + urgencia.
@@ -61,7 +64,7 @@ Detalles del cotejo:
 - **Semana**: de sábado a viernes, con el número ISO del sábado que la inicia (deducido del reporte UGCQ de octubre 2026).
 
 Controles diarios: programados = realizados + suspendidos UGCQ + suspendidos fuera de horario + sin registro;
-suma de causales = suspendidos; condicionales realizadas ≤ condicionales; totales.
+suma de causales = suspendidos; suspensiones por tipo = total de suspensiones; condicionales realizadas ≤ condicionales; totales.
 
 ## Archivos
 

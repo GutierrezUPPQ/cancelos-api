@@ -681,6 +681,30 @@ window.UGCQ_PDFJS = (function () {
     return null;
   }
 
+  // Varias hojas del mismo tipo (exports paginados) en una sola tabla: las filas de cada hoja se alinean por
+  // encabezado con las columnas de la primera. Así los ids estables se calculan sobre todos los registros juntos.
+  function unirHojas(aoas, tipo) {
+    if (aoas.length < 2) return aoas[0] || [];
+    const requisitos = tipo === 'encuentros' ? [['fecha intervencion', 'tipo de cirugia']]
+      : tipo === 'suspensiones' ? [['causal minsal'], ['descripcion causal']] : [['fecha monitoreo']];
+    const encabezado = (aoa) => { for (const r of requisitos) { const h = filaEncabezado(aoa, r); if (h >= 0) return h; } return -1; };
+    const base = aoas[0], hb = encabezado(base);
+    if (hb < 0) return base;
+    const columnas = (base[hb] || []).map(norm);
+    const out = base.slice();
+    for (const aoa of aoas.slice(1)) {
+      const h = encabezado(aoa);
+      if (h < 0) continue;
+      const destino = (aoa[h] || []).map(v => { const k = norm(v); return k ? columnas.indexOf(k) : -1; });
+      for (let i = h + 1; i < aoa.length; i++) {
+        const fila = new Array(columnas.length).fill(null);
+        (aoa[i] || []).forEach((v, j) => { if (destino[j] >= 0) fila[destino[j]] = v; });
+        out.push(fila);
+      }
+    }
+    return out;
+  }
+
   function claseIntervencion(txt, mayor, menor, proc) {
     const t = norm(txt);
     if (t.includes('mayor')) return 'MAYOR';
@@ -708,13 +732,20 @@ window.UGCQ_PDFJS = (function () {
     for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
     return h.toString(36);
   }
-  function idsEstables(regs, prefijo, firma) {
-    const vistos = new Map();
+  // Los registros con la misma firma se numeran (-2, -3…) según `desempate` y luego por orden de aparición:
+  // si un re-export trae las filas en otro orden, cada decisión sigue apuntando al mismo registro
+  function idsEstables(regs, prefijo, firma, desempate) {
+    const grupos = new Map();
     for (const r of regs) {
       const base = prefijo + hashTexto(firma(r));
-      const n = (vistos.get(base) || 0) + 1;
-      vistos.set(base, n);
-      r.id = n > 1 ? base + '-' + n : base;
+      if (!grupos.has(base)) grupos.set(base, []);
+      grupos.get(base).push(r);
+    }
+    for (const [base, lista] of grupos) {
+      const orden = desempate && lista.length > 1
+        ? lista.map((r, i) => [desempate(r), i, r]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1])).map(x => x[2])
+        : lista;
+      orden.forEach((r, k) => { r.id = k ? base + '-' + (k + 1) : base; });
     }
     return regs;
   }
@@ -753,14 +784,16 @@ window.UGCQ_PDFJS = (function () {
         conCodigos, nMayor: num(g(f, 'mayor')), nMenor: num(g(f, 'menor')), nProc: num(g(f, 'proc')),
         codigos: celdaTexto(g(f, 'codigos')).split(/[\s,;]+/).filter(c => /^\d{5,8}$/.test(c)),
         intervencion: (realizada || celdaTexto(g(f, 'propuesta'))).split('\n')[0].replace(/^\+\s*/, ''),
+        propuesta: celdaTexto(g(f, 'propuesta')),
         nombre: celdaTexto(g(f, 'nombre')), run: celdaTexto(g(f, 'run')),
         hora: horaTexto(g(f, 'horaQx')) || horaTexto(g(f, 'horaIQ')),
         cma: celdaTexto(g(f, 'cma')),
       });
     }
-    // El id no usa la hora ni la intervención: SITGEQ las completa durante el día y las decisiones deben sobrevivir al re-export
+    // El id no usa la hora ni la intervención realizada: SITGEQ las completa durante el día y las decisiones deben
+    // sobrevivir al re-export. Dos cirugías del mismo paciente, pabellón y tipo se distinguen por la intervención propuesta
     for (const r of out) r.firma = [r.fecha, normRun(r.run) || norm(r.nombre), horaDe(r.hora), clave(r.pabellon), clave(r.intervencion), r.nMayor, r.nMenor, r.nProc].join('|');
-    return idsEstables(out, 'e', r => [r.fecha, normRun(r.run) || norm(r.nombre), clave(r.pabellon), r.tipoCirugia].join('|'));
+    return idsEstables(out, 'e', r => [r.fecha, normRun(r.run) || norm(r.nombre), clave(r.pabellon), r.tipoCirugia].join('|'), r => clave(r.propuesta));
   }
 
   function leerSuspensiones(aoa, archivo) {
@@ -1164,11 +1197,13 @@ window.UGCQ_PDFJS = (function () {
       if (ident.key === 'N:') ident.key = 'X:' + r.id;
       return ident;
     };
-    // Paciente de un registro: vínculo manual, mismo RUN o, si a alguno le falta RUN válido, mismo nombre
+    // Paciente de un registro: vínculo manual, mismo RUN o, si a alguno le falta RUN válido, mismo nombre.
+    // Las decisiones manuales valen para toda la persona de SITGEQ (todos sus registros con la misma clave)
     const vincClave = new Map(); // clave SITGEQ -> paciente elegido a mano
+    const desvincClave = new Set(); // claves SITGEQ marcadas "no es este paciente"
     const enlazar = (reg) => {
       const v = vinc[reg.id];
-      if (v === '_ninguno') { reg.desvinculado = true; return { p: null }; }
+      if (v === '_ninguno' || (!v && !vincClave.has(reg.ident.key) && desvincClave.has(reg.ident.key))) { reg.desvinculado = true; return { p: null }; }
       const destino = v || vincClave.get(reg.ident.key);
       if (destino && porId.has(destino)) return { p: porId.get(destino), manual: true };
       const p = porClave.get(reg.ident.key);
@@ -1227,7 +1262,9 @@ window.UGCQ_PDFJS = (function () {
       .map(s => Object.assign({}, s, { ident: identReg(s), avisos: [], causal: mapearCausal(s.categoria, s.descripcion) }));
     for (const r of encuentros.concat(suspensiones)) {
       const v = vinc[r.id];
-      if (v && v !== '_ninguno' && !/^X:/.test(r.ident.key)) vincClave.set(r.ident.key, v);
+      if (!v || /^X:/.test(r.ident.key)) continue;
+      if (v === '_ninguno') desvincClave.add(r.ident.key);
+      else vincClave.set(r.ident.key, v);
     }
     for (const e of encuentros) {
       const aj = (ajE[e.id] || {}).clase;
@@ -1249,7 +1286,7 @@ window.UGCQ_PDFJS = (function () {
     if (!conTabla) {
       // Sin tabla: lo programado se reconstruye con las electivas mayores registradas en SITGEQ
       for (const e of encuentros) {
-        if (e.paciente || !esMayor(e) || e.tipoCirugia === 'URG' || e.tipoCirugia === 'AGREG' || vinc[e.id] === '_ninguno') continue;
+        if (e.paciente || !esMayor(e) || e.tipoCirugia === 'URG' || e.tipoCirugia === 'AGREG' || e.desvinculado) continue;
         const p = porClave.get(e.ident.key) || nuevoPaciente({
           id: 'E:' + e.ident.key, origen: 'sitgeq', ident: e.ident, nombre: e.nombre, run: e.ident.run,
           pabellon: e.pabellon, hora: e.hora, intervencion: e.intervencion,
@@ -1273,7 +1310,8 @@ window.UGCQ_PDFJS = (function () {
         });
         if (conTabla) p.avisos.push('Suspendido en SITGEQ, pero no aparece en la tabla cargada: se cuenta como programado (revisar)');
         for (const e of encuentros) {
-          if (e.paciente || vinc[e.id] === '_ninguno') continue;
+          // Un registro marcado "no es este paciente" solo se junta con los de su misma persona de SITGEQ (misma clave)
+          if (e.paciente || (e.desvinculado && e.ident.key !== s.ident.key)) continue;
           const m = mismaPersona(e.ident, s.ident);
           if (m.si) vincular(e, p, m);
         }
@@ -1524,13 +1562,14 @@ window.UGCQ_PDFJS = (function () {
       if (otrosE.length) p.avisos.push('Tiene cirugía registrada otro día: ' + otrosE.map(e => fmtFecha(e.fecha)).join(', '));
       if (otrosS.length) p.avisos.push('Tiene suspensión registrada otro día: ' + otrosS.map(s => fmtFecha(s.fecha)).join(', '));
       const parecido = (ident) => similitudNombre(ident.tokens, p.ident.tokens) >= 0.5 || distanciaRun(ident.run, p.run) <= 2;
+      // No se ofrece de nuevo un registro marcado "no es este paciente" (se puede deshacer en su fila)
       for (const e of encuentros) {
-        if (esMayor(e) && (!e.paciente || e.paciente.origen === 'suspension') && parecido(e.ident)) {
+        if (esMayor(e) && !e.desvinculado && (!e.paciente || e.paciente.origen === 'suspension') && parecido(e.ident)) {
           p.candidatos.push({ tipo: 'enc', id: e.id, texto: `Cirugía ${e.horaN === '99:99' ? '' : e.horaN + ' '}${e.pabellon}: ${e.nombre} (${e.ident.run || 'sin RUN'})` });
         }
       }
       for (const s of suspensiones) {
-        if (s.paciente && s.paciente.origen === 'suspension' && parecido(s.ident)) {
+        if (s.paciente && !s.desvinculado && s.paciente.origen === 'suspension' && parecido(s.ident)) {
           p.candidatos.push({ tipo: 'sus', id: s.id, texto: `Suspensión: ${s.nombre} (${s.ident.run || 'sin RUN'}) — ${s.descripcion}` });
         }
       }
@@ -1543,6 +1582,8 @@ window.UGCQ_PDFJS = (function () {
     if (conTabla && c.agregadas > Math.max(3, c.programados)) {
       avisos.push(`Hay ${c.agregadas} electivas fuera de tabla (más que las programadas): ¿falta la tabla de algún pabellón?`);
     }
+    const sinHora = pacientes.filter(p => p.cuenta && p.agend === 'NORMAL' && p.habil === null).length;
+    if (sinHora) avisos.push(`${sinHora} programado${sinHora > 1 ? 's' : ''} sin hora programada conocida (sin tabla, agregado a mano o sin hora en la tabla): para el % de suspensión se asume${sinHora > 1 ? 'n' : ''} en horario hábil.`);
 
     // 10) Gestión de pabellón: todo lo que pasó, vaya o no a UGCQ
     const vivos = pacientes.filter(p => p.estado !== 'NO_CONTAR');
@@ -1585,12 +1626,20 @@ window.UGCQ_PDFJS = (function () {
     const sinReg = normales.filter(p => p.estado === 'SIN_REGISTRO').length;
     const suspFuera = normales.filter(p => p.estado === 'SUSPENDIDA' && !p.suspUGCQ).length;
     const sumaCausas = Object.values(causas).reduce((a, b) => a + b, 0);
+    // Cada suspensión cae en una sola categoría: UGCQ o un motivo de gestión
+    const susp = pacientes.filter(p => p.estado === 'SUSPENDIDA');
+    const nMotivo = (m) => susp.filter(p => !p.suspUGCQ && p.motivoCod === m).length;
+    const porTipo = [['UGCQ', susp.filter(p => p.suspUGCQ).length], ['condicionales', nMotivo('CONDICIONAL')], ['menor/proced.', nMotivo('NO_MAYOR')],
+      ['fuera de horario', nMotivo('FUERA_HORARIO')], ['no electivas', nMotivo('NO_ELECTIVO')]];
+    const sumaTipos = porTipo.reduce((a, [, n]) => a + n, 0);
     return [
       { ok: c.progRealizadas + c.suspendidos + suspFuera + sinReg === c.programados,
         texto: `Programados (${c.programados}) = realizados (${c.progRealizadas}) + suspendidos UGCQ (${c.suspendidos})` +
           (suspFuera ? ` + suspendidos fuera de horario hábil (${suspFuera})` : '') + (sinReg ? ` + sin registro (${sinReg})` : '') },
       { ok: sinReg === 0, texto: sinReg ? `${sinReg} programado(s) sin cirugía ni suspensión en SITGEQ` : 'Todos los programados tienen cirugía o suspensión registrada' },
       { ok: sumaCausas === c.suspendidos, texto: `Causales asignadas (${sumaCausas}) = suspendidos UGCQ (${c.suspendidos})` },
+      { ok: sumaTipos === susp.length && porTipo[0][1] === c.suspendidos,
+        texto: `Suspensiones por tipo (${porTipo.filter(([, n]) => n).map(([t, n]) => n + ' ' + t).join(' + ') || '0'}) = suspendidos (${susp.length})` },
       { ok: c.pctSuspendidos === (c.programadosHabiles ? Math.round(c.suspendidos * 100 / c.programadosHabiles) : 0),
         texto: `% suspensión = ${c.suspendidos} ÷ ${c.programadosHabiles} programados en horario hábil = ${c.pctSuspendidos}%` +
           (c.programados > c.programadosHabiles ? ` (${c.programados - c.programadosHabiles} programado(s) fuera de horario hábil no entran al %)` : '') },
@@ -1632,7 +1681,7 @@ window.UGCQ_PDFJS = (function () {
     ENCABEZADOS, PRIMERA_CAUSA, CONTEOS, FIJOS_DEF, CAUSAS,
     norm, clave, normRun, runValido, fmtRun, identidad, similitudNombre,
     parseFecha, fmtFecha, semanaUGCQ, mapearCausal,
-    detectarTipoPlanilla, leerEncuentros, leerSuspensiones, leerUGCQ, parsearTablaPDF,
+    detectarTipoPlanilla, unirHojas, leerEncuentros, leerSuspensiones, leerUGCQ, parsearTablaPDF,
     horaTexto, horaDe, mismaPersona, nombresEquivalentes, distanciaRun, cotejarDia, filaUGCQ, compararFilas,
     FERIADOS_CL, OPCIONES_DEF, diaHabil, enHorarioHabil,
   };
@@ -1736,15 +1785,26 @@ window.UGCQ_PDFJS = (function () {
   // XML
   // ═══════════════════════════════════════════════
   const ENTIDADES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
+  // Entidades con nombre de los "Excel" que en realidad son HTML (p. ej. htmlentities de PHP); distinguen mayúsculas
+  const ENTIDADES_HTML = {
+    aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú', Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú',
+    agrave: 'à', egrave: 'è', igrave: 'ì', ograve: 'ò', ugrave: 'ù', Agrave: 'À', Egrave: 'È', Igrave: 'Ì', Ograve: 'Ò', Ugrave: 'Ù',
+    ntilde: 'ñ', Ntilde: 'Ñ', uuml: 'ü', Uuml: 'Ü', ccedil: 'ç', Ccedil: 'Ç', ordm: 'º', ordf: 'ª', deg: '°', iquest: '¿', iexcl: '¡',
+    middot: '·', laquo: '«', raquo: '»', ndash: '–', mdash: '—', hellip: '…', euro: '€', copy: '©', reg: '®', shy: '',
+  };
+  const tiene = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   function desXml(s) {
-    return String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+    return String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, (m, e) => {
       if (e[0] === '#') {
         const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
         return cp > 0 && cp <= 0x10FFFF ? String.fromCodePoint(cp) : '';
       }
-      return Object.prototype.hasOwnProperty.call(ENTIDADES, e.toLowerCase()) ? ENTIDADES[e.toLowerCase()] : m;
+      if (tiene(ENTIDADES_HTML, e)) return ENTIDADES_HTML[e];
+      return tiene(ENTIDADES, e.toLowerCase()) ? ENTIDADES[e.toLowerCase()] : m;
     });
   }
+  // Excel guarda los caracteres de control como _xHHHH_ (_x000D_ = retorno de carro); _x005F_ es un "_" literal
+  const desEscapeOoxml = (s) => s.replace(/_x([0-9A-Fa-f]{4})_/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
   // Algunos generadores usan prefijos de espacio de nombres (<x:row>); se quitan de las etiquetas
   const sinPrefijos = (xml) => xml.replace(/<(\/?)[A-Za-z_][\w.-]*:(?=[A-Za-z_])/g, '<$1');
   function atributo(etiqueta, nombre) {
@@ -1757,7 +1817,7 @@ window.UGCQ_PDFJS = (function () {
     const re = /<t(?:\s[^>]*)?(?:\/>|>([\s\S]*?)<\/t>)/g;
     const limpio = xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, '');
     let m;
-    while ((m = re.exec(limpio))) if (m[1]) out += desXml(m[1]);
+    while ((m = re.exec(limpio))) if (m[1]) out += desEscapeOoxml(desXml(m[1]));
     return out;
   }
   function numeroColumna(ref) {
@@ -1789,7 +1849,8 @@ window.UGCQ_PDFJS = (function () {
         let val = null;
         if (t === 's') val = v != null ? (compartidas[Number(v)] != null ? compartidas[Number(v)] : '') : null;
         else if (t === 'inlineStr') { const is = cuerpo.match(/<is(?:\s[^>]*)?>([\s\S]*?)<\/is>/); val = is ? textoRico(is[1]) : null; }
-        else if (t === 'str' || t === 'e' || t === 'd') val = v != null ? desXml(v) : null;
+        else if (t === 'str') val = v != null ? desEscapeOoxml(desXml(v)) : null;
+        else if (t === 'e' || t === 'd') val = v != null ? desXml(v) : null;
         else if (t === 'b') val = v != null ? v.trim() === '1' : null;
         else if (v != null && v.trim() !== '') { const x = Number(v); val = isFinite(x) ? x : desXml(v); }
         if (val != null && j >= 0) fila[j] = val;
@@ -1827,7 +1888,8 @@ window.UGCQ_PDFJS = (function () {
       const id = atributo(m[0], 'r:id') || atributo(m[0], 'id');
       const xml = await texto(ruta(destino[id]));
       if (xml == null) continue;
-      hojas.push({ nombre: atributo(m[0], 'name') || 'Hoja', filas: hojaComoFilas(xml, compartidas) });
+      hojas.push({ nombre: atributo(m[0], 'name') || 'Hoja', oculta: /hidden/i.test(atributo(m[0], 'state') || ''),
+        filas: hojaComoFilas(xml, compartidas) });
     }
     return hojas;
   }
@@ -1838,10 +1900,30 @@ window.UGCQ_PDFJS = (function () {
     if (/^-?\d+(?:\.\d+)?$/.test(t) && !/^-?0\d/.test(t)) return Number(t);
     return v;
   }
+  // Texto de un CSV o HTML: UTF-8 si es válido. Si no, cada secuencia UTF-8 válida se lee como UTF-8 y cada byte
+  // suelto como windows-1252: un apellido mal codificado no arruina el resto del archivo, y un archivo
+  // windows-1252 completo se lee bien. Respeta el BOM de UTF-16 y la codificación que declare el HTML.
+  const CP1252 = '\u20ac\u0081\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030\u0160\u2039\u0152\u008d\u017d\u008f' +
+    '\u0090\u2018\u2019\u201c\u201d\u2022\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u009d\u017e\u0178';
+  const UTF8_O_BYTE = /([\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}|\xED[\x80-\x9F][\x80-\xBF]|\xF0[\x90-\xBF][\x80-\xBF]{2}|[\xF1-\xF3][\x80-\xBF]{3}|\xF4[\x80-\x8F][\x80-\xBF]{2})|[\x80-\xFF]/g;
+  function decodificarTexto(b, preferida) {
+    if (b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(b);
+    if (b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(b);
+    if (preferida === 'windows-1252') return new TextDecoder('windows-1252').decode(b);
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (_) { /* hay bytes que no son UTF-8 */ }
+    let bin = '';
+    for (let i = 0; i < b.length; i += 8192) bin += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
+    return bin.replace(UTF8_O_BYTE, (m, utf8) => {
+      if (!utf8) { const c = m.charCodeAt(0); return c < 0xA0 ? CP1252[c - 0x80] : m; }
+      const c = [...utf8].map(ch => ch.charCodeAt(0));
+      return String.fromCodePoint(c.length === 2 ? ((c[0] & 0x1F) << 6) | (c[1] & 0x3F)
+        : c.length === 3 ? ((c[0] & 0x0F) << 12) | ((c[1] & 0x3F) << 6) | (c[2] & 0x3F)
+        : ((c[0] & 0x07) << 18) | ((c[1] & 0x3F) << 12) | ((c[2] & 0x3F) << 6) | (c[3] & 0x3F));
+    }).replace(/^\uFEFF/, '');
+  }
+
   function leerCsv(bytes) {
-    let txt = new TextDecoder('utf-8').decode(bytes);
-    if (txt.includes('\uFFFD')) txt = new TextDecoder('windows-1252').decode(bytes);
-    txt = txt.replace(/^\uFEFF/, '');
+    const txt = decodificarTexto(bytes).replace(/^\uFEFF/, '');
     const primera = txt.split(/\r?\n/, 1)[0] || '';
     const sep = [';', ',', '\t'].map(s => [s, primera.split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
     const filas = [];
@@ -1851,41 +1933,84 @@ window.UGCQ_PDFJS = (function () {
       if (comillas) {
         if (ch === '"') { if (txt[i + 1] === '"') { campo += '"'; i++; } else comillas = false; }
         else campo += ch;
-      } else if (ch === '"') comillas = true;
+      } else if (ch === '"' && campo === '') comillas = true; // una comilla a mitad de campo (3" DEDO) es texto
       else if (ch === sep) { fila.push(campo); campo = ''; }
       else if (ch === '\n' || ch === '\r') {
         if (ch === '\r' && txt[i + 1] === '\n') i++;
         fila.push(campo); filas.push(fila); fila = []; campo = '';
       } else campo += ch;
     }
+    if (comillas) throw new Error('El CSV tiene comillas sin cerrar: ábrelo en Excel y guárdalo como "Libro de Excel (.xlsx)".');
     if (campo !== '' || fila.length) { fila.push(campo); filas.push(fila); }
     return [{ nombre: 'CSV', filas: filas.map(f => f.map(convertirCelda)) }];
   }
-  // Exportaciones "Excel" que en realidad son una tabla HTML
+
+  // Exportaciones "Excel" que en realidad son una tabla HTML. Acepta etiquetas sin cierre (válido en HTML)
+  // y ubica cada celda por posición: colspan deja vacías las columnas que cubre y rowspan repite el valor hacia abajo.
   function leerHtml(bytes) {
-    let txt = new TextDecoder('utf-8').decode(bytes);
-    if (txt.includes('\uFFFD')) txt = new TextDecoder('windows-1252').decode(bytes);
+    const cabecera = new TextDecoder('windows-1252').decode(bytes.subarray(0, 4096));
+    const cs = (cabecera.match(/<meta\b[^>]*charset\s*=\s*["']?\s*([\w-]+)/i) || [])[1] || '';
+    const latin = /^(windows-1252|cp1252|iso-8859-1|iso-8859-15|latin-?1)$/i.test(cs);
+    const txt = decodificarTexto(bytes, latin ? 'windows-1252' : null)
+      .replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, '');
+    const valor = (html) => convertirCelda(desXml(html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')).replace(/[ \t]+/g, ' '));
+    const span = (attrs, nombre) => {
+      const m = attrs.match(new RegExp('\\b' + nombre + '\\s*=\\s*["\']?\\s*(\\d+)', 'i'));
+      const n = m ? Number(m[1]) : 1;
+      return n >= 1 && n <= 1000 ? n : 1;
+    };
     const filas = [];
-    for (const tr of txt.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
-      const fila = [];
-      for (const td of tr[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)) {
-        fila.push(convertirCelda(desXml(td[1].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')).replace(/[ \t]+/g, ' ')));
+    const bajan = [];   // bajan[i] = Map(columna -> valor) de las celdas con rowspan que llegan a la fila i
+    let fila = null, celda = null;
+    const colocar = (celdas) => {
+      const i = filas.length, ocupadas = bajan[i] || new Map(), out = [];
+      let j = 0;
+      for (const c of celdas) {
+        while (ocupadas.has(j)) j++;
+        const v = valor(c.html);
+        out[j] = v;
+        for (let k = 1; k < c.colspan; k++) out[j + k] = null;
+        for (let r = 1; r < c.rowspan; r++) {
+          const m = bajan[i + r] || (bajan[i + r] = new Map());
+          for (let k = 0; k < c.colspan; k++) if (!m.has(j + k)) m.set(j + k, k === 0 ? v : null);
+        }
+        j += c.colspan;
       }
-      filas.push(fila);
+      for (const [k, v] of ocupadas) if (out[k] === undefined) out[k] = v;
+      for (let k = 0; k < out.length; k++) if (out[k] === undefined) out[k] = null;
+      filas.push(out);
+    };
+    const cerrarCelda = () => { if (celda) { (fila || (fila = [])).push(celda); celda = null; } };
+    const cerrarFila = () => { cerrarCelda(); if (fila) colocar(fila); fila = null; };
+    const re = /<(\/?)(tr|td|th|table|thead|tbody|tfoot)\b([^>]*)>/gi;
+    let m, desde = 0;
+    while ((m = re.exec(txt))) {
+      if (celda) celda.html += txt.slice(desde, m.index);
+      desde = re.lastIndex;
+      const cierre = m[1] === '/', tag = m[2].toLowerCase();
+      if (tag === 'td' || tag === 'th') {
+        cerrarCelda();
+        if (!cierre) { fila = fila || []; celda = { html: '', colspan: span(m[3], 'colspan'), rowspan: span(m[3], 'rowspan') }; }
+      } else if (tag === 'tr') {
+        cerrarFila();
+        if (!cierre) fila = [];
+      } else cerrarFila();
     }
+    if (celda) celda.html += txt.slice(desde);
+    cerrarFila();
     return [{ nombre: 'HTML', filas }];
   }
 
-  // Devuelve [{nombre, filas}] (filas = arreglo de arreglos, null en celdas vacías)
+  // Devuelve [{nombre, oculta, filas}] (filas = arreglo de arreglos, null en celdas vacías)
   async function leerPlanilla(datos, nombreArchivo) {
     const b = datos instanceof Uint8Array ? datos : new Uint8Array(datos);
     if (b[0] === 0x50 && b[1] === 0x4B) return leerXlsx(b);
     if (b[0] === 0xD0 && b[1] === 0xCF && b[2] === 0x11 && b[3] === 0xE0) {
       throw new Error('Es un Excel antiguo (.xls). Ábrelo en Excel y guárdalo como "Libro de Excel (.xlsx)".');
     }
-    const inicio = new TextDecoder('utf-8').decode(b.subarray(0, 2048)).toLowerCase();
+    const inicio = decodificarTexto(b.subarray(0, 4096)).toLowerCase();
     if (/<table|<html/.test(inicio)) return leerHtml(b);
-    if (/\.(csv|txt)$/i.test(nombreArchivo || '') || !/[\u0000-\u0008]/.test(inicio)) return leerCsv(b);
+    if (/\.(csv|txt|tsv)$/i.test(nombreArchivo || '') || !/[\u0000-\u0008]/.test(inicio)) return leerCsv(b);
     throw new Error('No reconozco el formato del archivo.');
   }
 
@@ -1909,7 +2034,8 @@ window.UGCQ_PDFJS = (function () {
         const ref = letraColumna(j) + (i + 1);
         if (typeof v === 'number' && isFinite(v)) celdas += `<c r="${ref}"><v>${v}</v></c>`;
         else if (typeof v === 'boolean') celdas += `<c r="${ref}" t="b"><v>${v ? 1 : 0}</v></c>`;
-        else celdas += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escXml(v)}</t></is></c>`;
+        // Un texto que ya trae la forma _xHHHH_ se protege con _x005F_ para que Excel no lo lea como escape
+        else celdas += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escXml(v).replace(/_(x[0-9A-Fa-f]{4}_)/g, '_x005F_$1')}</t></is></c>`;
       });
       cuerpo += `<row r="${i + 1}">${celdas}</row>`;
     });
@@ -1963,7 +2089,7 @@ window.UGCQ_PDFJS = (function () {
 <script>
 'use strict';
 const U = window.UGCQ;
-const VERSION = '1.2';
+const VERSION = '1.3';
 if (window.UGCQ_PORTABLE) { document.getElementById('lnkTorre').remove(); document.getElementById('lnkPortable').remove(); }
 document.getElementById('verTxt').textContent = 'v' + VERSION + (window.UGCQ_PORTABLE ? ' PORTÁTIL' : '');
 
@@ -2062,6 +2188,7 @@ async function cargarArchivos(lista) {
   for (const file of Array.from(lista || [])) {
     if (estado.archivos.some(a => a.nombre === file.name && a.tamano === file.size)) { toast(`"${file.name}" ya estaba cargado`); continue; }
     const reg = { id: ++nArch, nombre: file.name, tamano: file.size, tipo: 'cargando', filas: [], fechas: [], avisos: [] };
+    const regs = [reg];
     estado.archivos.push(reg);
     pintarArchivos();
     try {
@@ -2080,23 +2207,35 @@ async function cargarArchivos(lista) {
         if (!r.filas.length) reg.error = r.avisos.join(' ');
       } else {
         const hojas = await window.UGCQ_XLSX.leerPlanilla(bytes, file.name);
-        let hecho = false;
-        for (const hoja of hojas) {
-          const tipo = U.detectarTipoPlanilla(hoja.filas);
-          if (!tipo) continue;
-          reg.tipo = tipo;
-          reg.filas = tipo === 'encuentros' ? U.leerEncuentros(hoja.filas, file.name)
-            : tipo === 'suspensiones' ? U.leerSuspensiones(hoja.filas, file.name) : U.leerUGCQ(hoja.filas);
-          hecho = true;
-          break;
-        }
-        if (!hecho) { reg.tipo = 'error'; reg.error = 'No reconozco este Excel: no es export de encuentros, informe de suspensiones ni reporte UGCQ.'; }
+        const reconocidas = hojas.map(h => Object.assign({}, h, { tipo: U.detectarTipoPlanilla(h.filas) })).filter(h => h.tipo);
+        // Se usan todas las hojas reconocidas; las ocultas, solo si ninguna visible lo es
+        const usar = reconocidas.some(h => !h.oculta) ? reconocidas.filter(h => !h.oculta) : reconocidas;
+        if (!usar.length) { reg.tipo = 'error'; reg.error = 'No reconozco este Excel: no es export de encuentros, informe de suspensiones ni reporte UGCQ.'; }
+        [...new Set(usar.map(h => h.tipo))].forEach((tipo, k) => {
+          // Un libro con hojas de distinto tipo (p. ej., encuentros y suspensiones) queda como un archivo por tipo
+          const destino = k === 0 ? reg : { id: ++nArch, nombre: file.name, tamano: file.size, tipo, filas: [], fechas: [], avisos: [] };
+          if (k > 0) { regs.push(destino); estado.archivos.push(destino); }
+          const deTipo = usar.filter(h => h.tipo === tipo);
+          try {
+            const aoa = U.unirHojas(deTipo.map(h => h.filas), tipo);
+            destino.tipo = tipo;
+            destino.filas = tipo === 'encuentros' ? U.leerEncuentros(aoa, file.name)
+              : tipo === 'suspensiones' ? U.leerSuspensiones(aoa, file.name) : U.leerUGCQ(aoa);
+            if (hojas.length > 1) destino.avisos.push((deTipo.length > 1 ? 'Se unieron las hojas ' : 'Hoja ') + deTipo.map(h => `"${h.nombre}"`).join(', '));
+          } catch (err) {
+            destino.tipo = 'error';
+            destino.filas = [];
+            destino.error = err && err.message ? err.message : String(err);
+          }
+        });
+        const ocultas = reconocidas.length - usar.length;
+        if (ocultas) reg.avisos.push(`${ocultas} hoja${ocultas > 1 ? 's ocultas' : ' oculta'} sin usar`);
       }
     } catch (err) {
       reg.tipo = 'error';
       reg.error = err && err.message ? err.message : String(err);
     }
-    reg.fechas = [...new Set(reg.filas.map(f => f.fecha).filter(Boolean))].sort();
+    for (const r of regs) r.fechas = [...new Set(r.filas.map(f => f.fecha).filter(Boolean))].sort();
     pintarArchivos();
   }
   elegirFechaInicial();
@@ -2118,7 +2257,9 @@ function pintarArchivos() {
 $('archivos').addEventListener('click', e => {
   const b = e.target.closest('[data-quitar]');
   if (!b) return;
-  estado.archivos = estado.archivos.filter(a => a.id !== Number(b.dataset.quitar));
+  // Un libro con hojas de distinto tipo quedó como varias entradas: se quitan todas las del mismo archivo
+  const x = estado.archivos.find(a => a.id === Number(b.dataset.quitar));
+  estado.archivos = estado.archivos.filter(a => x ? !(a.nombre === x.nombre && a.tamano === x.tamano) : a.id !== Number(b.dataset.quitar));
   pintarArchivos();
   elegirFechaInicial();
   recalcular();
@@ -2402,7 +2543,7 @@ function pintarEncuentros(r) {
         if (p) ops.push(['PROG', 'Cirugía del programado']);
         if (!p || e.ajuste === 'NUEVO_NORMAL' || e.ajuste === 'NUEVO_COND') ops.push(['NUEVO_NORMAL', 'Programado (faltaba en la tabla)'], ['NUEVO_COND', 'Condicional (faltaba en la tabla)']);
         ops.push(['AGREG', 'Electiva agregada'], ['URG', 'Urgencia']);
-      }
+      } else if (e.repetida) ops.push(['NO_MAYOR', 'Contar (no es repetida)']);
       ops.push(['NO_CONTAR', 'No contar (duplicado / error)']);
       const sel = `<select data-enc="${esc(e.id)}" aria-label="Cuenta como">${ops.map(([v, t]) => `<option value="${v}"${e.ajuste === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
       const codigos = `Códigos: ${e.nMayor || 0} mayor · ${e.cMenor} menor · ${e.cProc} proced.${e.anestesias ? ' (' + e.anestesias + ' anest.)' : ''}`;
@@ -2422,7 +2563,8 @@ function pintarSuspensiones(r) {
       const p = s.paciente;
       const col = p && p.causalCol != null ? p.causalCol : (s.causal ? s.causal.col : null);
       const cuenta = p && p.suspUGCQ && p.suspensiones[0] === s ? est(['Sí: suma a suspendidos', 'eROJO'])
-        : est([p && p.estado === 'REALIZADA' ? 'No: se operó igual' : p && p.motivoNoUGCQ ? 'No: ' + p.motivoNoUGCQ : 'No', 'eGRIS']);
+        : est([p && p.estado === 'REALIZADA' ? (p.estadoOrigen === 'manual' ? 'No: marcada Realizada a mano' : 'No: se operó igual')
+          : p && p.motivoNoUGCQ ? 'No: ' + p.motivoNoUGCQ : 'No', 'eGRIS']);
       const enlace = s.desvinculado ? ` <button type="button" class="lnk" data-revinc="${esc(s.id)}">deshacer "no es este paciente"</button>`
         : p && s.enlace === 'nombre' ? ` <button type="button" class="lnk" data-desvinc="${esc(s.id)}">no es este paciente</button>`
         : p && s.enlace === 'manual' ? ` <button type="button" class="lnk" data-revinc="${esc(s.id)}">deshacer vínculo</button>` : '';
@@ -2464,7 +2606,15 @@ document.addEventListener('click', e => {
   else if (d.auto) aj.pac[d.auto] = Object.assign({}, aj.pac[d.auto], { estado: '', confirmado: false });
   else if (d.vinc) { aj.vinc[d.vinc] = d.pac; aj.desc[d.vinc] = b.textContent.trim().slice(0, 80); }
   else if (d.desvinc) { aj.vinc[d.desvinc] = '_ninguno'; aj.desc[d.desvinc] = descRegistro(d.desvinc); }
-  else if (d.revinc) delete aj.vinc[d.revinc];
+  else if (d.revinc) {
+    // Vínculos y "no es este paciente" valen para toda la persona de SITGEQ: se deshacen en todos sus registros
+    const r = estado.ultimo;
+    const regs = r ? r.encuentros.concat(r.suspensiones) : [];
+    const reg = regs.find(x => x.id === d.revinc);
+    const clave = reg && !/^X:/.test(reg.ident.key) ? reg.ident.key : null;
+    delete aj.vinc[d.revinc];
+    for (const x of regs) if (clave && x.ident.key === clave) delete aj.vinc[x.id];
+  }
   else if (d.huerfana) {
     const [tipo, ...resto] = d.huerfana.split(':');
     const id = resto.join(':');

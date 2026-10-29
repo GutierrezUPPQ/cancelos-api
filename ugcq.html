@@ -309,7 +309,7 @@ footer{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);
 <script>
 'use strict';
 const U = window.UGCQ;
-const VERSION = '1.2';
+const VERSION = '1.3';
 if (window.UGCQ_PORTABLE) { document.getElementById('lnkTorre').remove(); document.getElementById('lnkPortable').remove(); }
 document.getElementById('verTxt').textContent = 'v' + VERSION + (window.UGCQ_PORTABLE ? ' PORTÁTIL' : '');
 
@@ -408,6 +408,7 @@ async function cargarArchivos(lista) {
   for (const file of Array.from(lista || [])) {
     if (estado.archivos.some(a => a.nombre === file.name && a.tamano === file.size)) { toast(`"${file.name}" ya estaba cargado`); continue; }
     const reg = { id: ++nArch, nombre: file.name, tamano: file.size, tipo: 'cargando', filas: [], fechas: [], avisos: [] };
+    const regs = [reg];
     estado.archivos.push(reg);
     pintarArchivos();
     try {
@@ -426,23 +427,35 @@ async function cargarArchivos(lista) {
         if (!r.filas.length) reg.error = r.avisos.join(' ');
       } else {
         const hojas = await window.UGCQ_XLSX.leerPlanilla(bytes, file.name);
-        let hecho = false;
-        for (const hoja of hojas) {
-          const tipo = U.detectarTipoPlanilla(hoja.filas);
-          if (!tipo) continue;
-          reg.tipo = tipo;
-          reg.filas = tipo === 'encuentros' ? U.leerEncuentros(hoja.filas, file.name)
-            : tipo === 'suspensiones' ? U.leerSuspensiones(hoja.filas, file.name) : U.leerUGCQ(hoja.filas);
-          hecho = true;
-          break;
-        }
-        if (!hecho) { reg.tipo = 'error'; reg.error = 'No reconozco este Excel: no es export de encuentros, informe de suspensiones ni reporte UGCQ.'; }
+        const reconocidas = hojas.map(h => Object.assign({}, h, { tipo: U.detectarTipoPlanilla(h.filas) })).filter(h => h.tipo);
+        // Se usan todas las hojas reconocidas; las ocultas, solo si ninguna visible lo es
+        const usar = reconocidas.some(h => !h.oculta) ? reconocidas.filter(h => !h.oculta) : reconocidas;
+        if (!usar.length) { reg.tipo = 'error'; reg.error = 'No reconozco este Excel: no es export de encuentros, informe de suspensiones ni reporte UGCQ.'; }
+        [...new Set(usar.map(h => h.tipo))].forEach((tipo, k) => {
+          // Un libro con hojas de distinto tipo (p. ej., encuentros y suspensiones) queda como un archivo por tipo
+          const destino = k === 0 ? reg : { id: ++nArch, nombre: file.name, tamano: file.size, tipo, filas: [], fechas: [], avisos: [] };
+          if (k > 0) { regs.push(destino); estado.archivos.push(destino); }
+          const deTipo = usar.filter(h => h.tipo === tipo);
+          try {
+            const aoa = U.unirHojas(deTipo.map(h => h.filas), tipo);
+            destino.tipo = tipo;
+            destino.filas = tipo === 'encuentros' ? U.leerEncuentros(aoa, file.name)
+              : tipo === 'suspensiones' ? U.leerSuspensiones(aoa, file.name) : U.leerUGCQ(aoa);
+            if (hojas.length > 1) destino.avisos.push((deTipo.length > 1 ? 'Se unieron las hojas ' : 'Hoja ') + deTipo.map(h => `"${h.nombre}"`).join(', '));
+          } catch (err) {
+            destino.tipo = 'error';
+            destino.filas = [];
+            destino.error = err && err.message ? err.message : String(err);
+          }
+        });
+        const ocultas = reconocidas.length - usar.length;
+        if (ocultas) reg.avisos.push(`${ocultas} hoja${ocultas > 1 ? 's ocultas' : ' oculta'} sin usar`);
       }
     } catch (err) {
       reg.tipo = 'error';
       reg.error = err && err.message ? err.message : String(err);
     }
-    reg.fechas = [...new Set(reg.filas.map(f => f.fecha).filter(Boolean))].sort();
+    for (const r of regs) r.fechas = [...new Set(r.filas.map(f => f.fecha).filter(Boolean))].sort();
     pintarArchivos();
   }
   elegirFechaInicial();
@@ -464,7 +477,9 @@ function pintarArchivos() {
 $('archivos').addEventListener('click', e => {
   const b = e.target.closest('[data-quitar]');
   if (!b) return;
-  estado.archivos = estado.archivos.filter(a => a.id !== Number(b.dataset.quitar));
+  // Un libro con hojas de distinto tipo quedó como varias entradas: se quitan todas las del mismo archivo
+  const x = estado.archivos.find(a => a.id === Number(b.dataset.quitar));
+  estado.archivos = estado.archivos.filter(a => x ? !(a.nombre === x.nombre && a.tamano === x.tamano) : a.id !== Number(b.dataset.quitar));
   pintarArchivos();
   elegirFechaInicial();
   recalcular();
@@ -748,7 +763,7 @@ function pintarEncuentros(r) {
         if (p) ops.push(['PROG', 'Cirugía del programado']);
         if (!p || e.ajuste === 'NUEVO_NORMAL' || e.ajuste === 'NUEVO_COND') ops.push(['NUEVO_NORMAL', 'Programado (faltaba en la tabla)'], ['NUEVO_COND', 'Condicional (faltaba en la tabla)']);
         ops.push(['AGREG', 'Electiva agregada'], ['URG', 'Urgencia']);
-      }
+      } else if (e.repetida) ops.push(['NO_MAYOR', 'Contar (no es repetida)']);
       ops.push(['NO_CONTAR', 'No contar (duplicado / error)']);
       const sel = `<select data-enc="${esc(e.id)}" aria-label="Cuenta como">${ops.map(([v, t]) => `<option value="${v}"${e.ajuste === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
       const codigos = `Códigos: ${e.nMayor || 0} mayor · ${e.cMenor} menor · ${e.cProc} proced.${e.anestesias ? ' (' + e.anestesias + ' anest.)' : ''}`;
@@ -768,7 +783,8 @@ function pintarSuspensiones(r) {
       const p = s.paciente;
       const col = p && p.causalCol != null ? p.causalCol : (s.causal ? s.causal.col : null);
       const cuenta = p && p.suspUGCQ && p.suspensiones[0] === s ? est(['Sí: suma a suspendidos', 'eROJO'])
-        : est([p && p.estado === 'REALIZADA' ? 'No: se operó igual' : p && p.motivoNoUGCQ ? 'No: ' + p.motivoNoUGCQ : 'No', 'eGRIS']);
+        : est([p && p.estado === 'REALIZADA' ? (p.estadoOrigen === 'manual' ? 'No: marcada Realizada a mano' : 'No: se operó igual')
+          : p && p.motivoNoUGCQ ? 'No: ' + p.motivoNoUGCQ : 'No', 'eGRIS']);
       const enlace = s.desvinculado ? ` <button type="button" class="lnk" data-revinc="${esc(s.id)}">deshacer "no es este paciente"</button>`
         : p && s.enlace === 'nombre' ? ` <button type="button" class="lnk" data-desvinc="${esc(s.id)}">no es este paciente</button>`
         : p && s.enlace === 'manual' ? ` <button type="button" class="lnk" data-revinc="${esc(s.id)}">deshacer vínculo</button>` : '';
@@ -810,7 +826,15 @@ document.addEventListener('click', e => {
   else if (d.auto) aj.pac[d.auto] = Object.assign({}, aj.pac[d.auto], { estado: '', confirmado: false });
   else if (d.vinc) { aj.vinc[d.vinc] = d.pac; aj.desc[d.vinc] = b.textContent.trim().slice(0, 80); }
   else if (d.desvinc) { aj.vinc[d.desvinc] = '_ninguno'; aj.desc[d.desvinc] = descRegistro(d.desvinc); }
-  else if (d.revinc) delete aj.vinc[d.revinc];
+  else if (d.revinc) {
+    // Vínculos y "no es este paciente" valen para toda la persona de SITGEQ: se deshacen en todos sus registros
+    const r = estado.ultimo;
+    const regs = r ? r.encuentros.concat(r.suspensiones) : [];
+    const reg = regs.find(x => x.id === d.revinc);
+    const clave = reg && !/^X:/.test(reg.ident.key) ? reg.ident.key : null;
+    delete aj.vinc[d.revinc];
+    for (const x of regs) if (clave && x.ident.key === clave) delete aj.vinc[x.id];
+  }
   else if (d.huerfana) {
     const [tipo, ...resto] = d.huerfana.split(':');
     const id = resto.join(':');

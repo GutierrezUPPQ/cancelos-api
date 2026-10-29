@@ -14,12 +14,12 @@ const run = (cuerpo) => cuerpo + '-' + dv(cuerpo);
 // Mismas columnas que el export real de encuentros quirúrgicos
 const ENC_HDR = ['Fecha intervención', 'Servicio clínico', 'Especialidad', 'Pabellón', 'Tipo de cirugía', 'Intervención propuesta', 'Intervención realizada', 'Códigos intervención', 'Tipo de Anestesia', 'Diagnóstico(s)', 'Cód Diagnóstico(s)', 'Previsión', 'Nombre paciente', 'RUN / Identificación', 'Tipo', 'Cirugía Mayor', 'Cirugía Menor', 'Procedimiento', 'CMA', 'Reintervención', 'Edad', 'Sexo', 'Protocolo', 'Medico Cirujano', 'Primer Ayudante', 'Segundo Ayudante', 'Anestesiólogo', 'Auxiliar Anestesiólogo', 'Arsenalero', 'Pabellonero', 'Hora Ingreso Serv. Pabellón', 'Hora Ingreso Quirófano'];
 // Por defecto cada cirugía trae su código de anestesia (2201001), que UGCQ cuenta como procedimiento
-function filaEnc({ fecha, pab = 'Pabellón 1', tipoCx = 'Electivo Normal', nombre, run: r, tipo = 'Cirugía Mayor', hora = '', interv = 'Cirugía X', mayor, menor, proc, codigos }) {
+function filaEnc({ fecha, pab = 'Pabellón 1', tipoCx = 'Electivo Normal', nombre, run: r, tipo = 'Cirugía Mayor', hora = '', interv = 'Cirugía X', propuesta = null, mayor, menor, proc, codigos }) {
   const f = new Array(ENC_HDR.length).fill(null);
   const nMayor = mayor != null ? mayor : tipo === 'Cirugía Mayor' ? 1 : 0;
   const nMenor = menor != null ? menor : tipo === 'Cirugía Menor' ? 1 : 0;
   const nProc = proc != null ? proc : (tipo === 'Procedimiento' ? 1 : 0) + 1;
-  Object.assign(f, { 0: fecha, 1: 'SERVICIO X', 3: pab, 4: tipoCx, 6: interv, 7: codigos || '0000000\n2201001', 12: nombre, 13: r, 14: tipo,
+  Object.assign(f, { 0: fecha, 1: 'SERVICIO X', 3: pab, 4: tipoCx, 5: propuesta, 6: interv, 7: codigos || '0000000\n2201001', 12: nombre, 13: r, 14: tipo,
     15: nMayor, 16: nMenor, 17: nProc, 31: hora });
   return f;
 }

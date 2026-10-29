@@ -93,15 +93,26 @@
   // XML
   // ═══════════════════════════════════════════════
   const ENTIDADES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
+  // Entidades con nombre de los "Excel" que en realidad son HTML (p. ej. htmlentities de PHP); distinguen mayúsculas
+  const ENTIDADES_HTML = {
+    aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú', Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú',
+    agrave: 'à', egrave: 'è', igrave: 'ì', ograve: 'ò', ugrave: 'ù', Agrave: 'À', Egrave: 'È', Igrave: 'Ì', Ograve: 'Ò', Ugrave: 'Ù',
+    ntilde: 'ñ', Ntilde: 'Ñ', uuml: 'ü', Uuml: 'Ü', ccedil: 'ç', Ccedil: 'Ç', ordm: 'º', ordf: 'ª', deg: '°', iquest: '¿', iexcl: '¡',
+    middot: '·', laquo: '«', raquo: '»', ndash: '–', mdash: '—', hellip: '…', euro: '€', copy: '©', reg: '®', shy: '',
+  };
+  const tiene = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   function desXml(s) {
-    return String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+    return String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, (m, e) => {
       if (e[0] === '#') {
         const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
         return cp > 0 && cp <= 0x10FFFF ? String.fromCodePoint(cp) : '';
       }
-      return Object.prototype.hasOwnProperty.call(ENTIDADES, e.toLowerCase()) ? ENTIDADES[e.toLowerCase()] : m;
+      if (tiene(ENTIDADES_HTML, e)) return ENTIDADES_HTML[e];
+      return tiene(ENTIDADES, e.toLowerCase()) ? ENTIDADES[e.toLowerCase()] : m;
     });
   }
+  // Excel guarda los caracteres de control como _xHHHH_ (_x000D_ = retorno de carro); _x005F_ es un "_" literal
+  const desEscapeOoxml = (s) => s.replace(/_x([0-9A-Fa-f]{4})_/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
   // Algunos generadores usan prefijos de espacio de nombres (<x:row>); se quitan de las etiquetas
   const sinPrefijos = (xml) => xml.replace(/<(\/?)[A-Za-z_][\w.-]*:(?=[A-Za-z_])/g, '<$1');
   function atributo(etiqueta, nombre) {
@@ -114,7 +125,7 @@
     const re = /<t(?:\s[^>]*)?(?:\/>|>([\s\S]*?)<\/t>)/g;
     const limpio = xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, '');
     let m;
-    while ((m = re.exec(limpio))) if (m[1]) out += desXml(m[1]);
+    while ((m = re.exec(limpio))) if (m[1]) out += desEscapeOoxml(desXml(m[1]));
     return out;
   }
   function numeroColumna(ref) {
@@ -146,7 +157,8 @@
         let val = null;
         if (t === 's') val = v != null ? (compartidas[Number(v)] != null ? compartidas[Number(v)] : '') : null;
         else if (t === 'inlineStr') { const is = cuerpo.match(/<is(?:\s[^>]*)?>([\s\S]*?)<\/is>/); val = is ? textoRico(is[1]) : null; }
-        else if (t === 'str' || t === 'e' || t === 'd') val = v != null ? desXml(v) : null;
+        else if (t === 'str') val = v != null ? desEscapeOoxml(desXml(v)) : null;
+        else if (t === 'e' || t === 'd') val = v != null ? desXml(v) : null;
         else if (t === 'b') val = v != null ? v.trim() === '1' : null;
         else if (v != null && v.trim() !== '') { const x = Number(v); val = isFinite(x) ? x : desXml(v); }
         if (val != null && j >= 0) fila[j] = val;
@@ -184,7 +196,8 @@
       const id = atributo(m[0], 'r:id') || atributo(m[0], 'id');
       const xml = await texto(ruta(destino[id]));
       if (xml == null) continue;
-      hojas.push({ nombre: atributo(m[0], 'name') || 'Hoja', filas: hojaComoFilas(xml, compartidas) });
+      hojas.push({ nombre: atributo(m[0], 'name') || 'Hoja', oculta: /hidden/i.test(atributo(m[0], 'state') || ''),
+        filas: hojaComoFilas(xml, compartidas) });
     }
     return hojas;
   }
@@ -195,10 +208,30 @@
     if (/^-?\d+(?:\.\d+)?$/.test(t) && !/^-?0\d/.test(t)) return Number(t);
     return v;
   }
+  // Texto de un CSV o HTML: UTF-8 si es válido. Si no, cada secuencia UTF-8 válida se lee como UTF-8 y cada byte
+  // suelto como windows-1252: un apellido mal codificado no arruina el resto del archivo, y un archivo
+  // windows-1252 completo se lee bien. Respeta el BOM de UTF-16 y la codificación que declare el HTML.
+  const CP1252 = '\u20ac\u0081\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030\u0160\u2039\u0152\u008d\u017d\u008f' +
+    '\u0090\u2018\u2019\u201c\u201d\u2022\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u009d\u017e\u0178';
+  const UTF8_O_BYTE = /([\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}|\xED[\x80-\x9F][\x80-\xBF]|\xF0[\x90-\xBF][\x80-\xBF]{2}|[\xF1-\xF3][\x80-\xBF]{3}|\xF4[\x80-\x8F][\x80-\xBF]{2})|[\x80-\xFF]/g;
+  function decodificarTexto(b, preferida) {
+    if (b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(b);
+    if (b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(b);
+    if (preferida === 'windows-1252') return new TextDecoder('windows-1252').decode(b);
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (_) { /* hay bytes que no son UTF-8 */ }
+    let bin = '';
+    for (let i = 0; i < b.length; i += 8192) bin += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
+    return bin.replace(UTF8_O_BYTE, (m, utf8) => {
+      if (!utf8) { const c = m.charCodeAt(0); return c < 0xA0 ? CP1252[c - 0x80] : m; }
+      const c = [...utf8].map(ch => ch.charCodeAt(0));
+      return String.fromCodePoint(c.length === 2 ? ((c[0] & 0x1F) << 6) | (c[1] & 0x3F)
+        : c.length === 3 ? ((c[0] & 0x0F) << 12) | ((c[1] & 0x3F) << 6) | (c[2] & 0x3F)
+        : ((c[0] & 0x07) << 18) | ((c[1] & 0x3F) << 12) | ((c[2] & 0x3F) << 6) | (c[3] & 0x3F));
+    }).replace(/^\uFEFF/, '');
+  }
+
   function leerCsv(bytes) {
-    let txt = new TextDecoder('utf-8').decode(bytes);
-    if (txt.includes('\uFFFD')) txt = new TextDecoder('windows-1252').decode(bytes);
-    txt = txt.replace(/^\uFEFF/, '');
+    const txt = decodificarTexto(bytes).replace(/^\uFEFF/, '');
     const primera = txt.split(/\r?\n/, 1)[0] || '';
     const sep = [';', ',', '\t'].map(s => [s, primera.split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
     const filas = [];
@@ -208,41 +241,84 @@
       if (comillas) {
         if (ch === '"') { if (txt[i + 1] === '"') { campo += '"'; i++; } else comillas = false; }
         else campo += ch;
-      } else if (ch === '"') comillas = true;
+      } else if (ch === '"' && campo === '') comillas = true; // una comilla a mitad de campo (3" DEDO) es texto
       else if (ch === sep) { fila.push(campo); campo = ''; }
       else if (ch === '\n' || ch === '\r') {
         if (ch === '\r' && txt[i + 1] === '\n') i++;
         fila.push(campo); filas.push(fila); fila = []; campo = '';
       } else campo += ch;
     }
+    if (comillas) throw new Error('El CSV tiene comillas sin cerrar: ábrelo en Excel y guárdalo como "Libro de Excel (.xlsx)".');
     if (campo !== '' || fila.length) { fila.push(campo); filas.push(fila); }
     return [{ nombre: 'CSV', filas: filas.map(f => f.map(convertirCelda)) }];
   }
-  // Exportaciones "Excel" que en realidad son una tabla HTML
+
+  // Exportaciones "Excel" que en realidad son una tabla HTML. Acepta etiquetas sin cierre (válido en HTML)
+  // y ubica cada celda por posición: colspan deja vacías las columnas que cubre y rowspan repite el valor hacia abajo.
   function leerHtml(bytes) {
-    let txt = new TextDecoder('utf-8').decode(bytes);
-    if (txt.includes('\uFFFD')) txt = new TextDecoder('windows-1252').decode(bytes);
+    const cabecera = new TextDecoder('windows-1252').decode(bytes.subarray(0, 4096));
+    const cs = (cabecera.match(/<meta\b[^>]*charset\s*=\s*["']?\s*([\w-]+)/i) || [])[1] || '';
+    const latin = /^(windows-1252|cp1252|iso-8859-1|iso-8859-15|latin-?1)$/i.test(cs);
+    const txt = decodificarTexto(bytes, latin ? 'windows-1252' : null)
+      .replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, '');
+    const valor = (html) => convertirCelda(desXml(html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')).replace(/[ \t]+/g, ' '));
+    const span = (attrs, nombre) => {
+      const m = attrs.match(new RegExp('\\b' + nombre + '\\s*=\\s*["\']?\\s*(\\d+)', 'i'));
+      const n = m ? Number(m[1]) : 1;
+      return n >= 1 && n <= 1000 ? n : 1;
+    };
     const filas = [];
-    for (const tr of txt.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
-      const fila = [];
-      for (const td of tr[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)) {
-        fila.push(convertirCelda(desXml(td[1].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')).replace(/[ \t]+/g, ' ')));
+    const bajan = [];   // bajan[i] = Map(columna -> valor) de las celdas con rowspan que llegan a la fila i
+    let fila = null, celda = null;
+    const colocar = (celdas) => {
+      const i = filas.length, ocupadas = bajan[i] || new Map(), out = [];
+      let j = 0;
+      for (const c of celdas) {
+        while (ocupadas.has(j)) j++;
+        const v = valor(c.html);
+        out[j] = v;
+        for (let k = 1; k < c.colspan; k++) out[j + k] = null;
+        for (let r = 1; r < c.rowspan; r++) {
+          const m = bajan[i + r] || (bajan[i + r] = new Map());
+          for (let k = 0; k < c.colspan; k++) if (!m.has(j + k)) m.set(j + k, k === 0 ? v : null);
+        }
+        j += c.colspan;
       }
-      filas.push(fila);
+      for (const [k, v] of ocupadas) if (out[k] === undefined) out[k] = v;
+      for (let k = 0; k < out.length; k++) if (out[k] === undefined) out[k] = null;
+      filas.push(out);
+    };
+    const cerrarCelda = () => { if (celda) { (fila || (fila = [])).push(celda); celda = null; } };
+    const cerrarFila = () => { cerrarCelda(); if (fila) colocar(fila); fila = null; };
+    const re = /<(\/?)(tr|td|th|table|thead|tbody|tfoot)\b([^>]*)>/gi;
+    let m, desde = 0;
+    while ((m = re.exec(txt))) {
+      if (celda) celda.html += txt.slice(desde, m.index);
+      desde = re.lastIndex;
+      const cierre = m[1] === '/', tag = m[2].toLowerCase();
+      if (tag === 'td' || tag === 'th') {
+        cerrarCelda();
+        if (!cierre) { fila = fila || []; celda = { html: '', colspan: span(m[3], 'colspan'), rowspan: span(m[3], 'rowspan') }; }
+      } else if (tag === 'tr') {
+        cerrarFila();
+        if (!cierre) fila = [];
+      } else cerrarFila();
     }
+    if (celda) celda.html += txt.slice(desde);
+    cerrarFila();
     return [{ nombre: 'HTML', filas }];
   }
 
-  // Devuelve [{nombre, filas}] (filas = arreglo de arreglos, null en celdas vacías)
+  // Devuelve [{nombre, oculta, filas}] (filas = arreglo de arreglos, null en celdas vacías)
   async function leerPlanilla(datos, nombreArchivo) {
     const b = datos instanceof Uint8Array ? datos : new Uint8Array(datos);
     if (b[0] === 0x50 && b[1] === 0x4B) return leerXlsx(b);
     if (b[0] === 0xD0 && b[1] === 0xCF && b[2] === 0x11 && b[3] === 0xE0) {
       throw new Error('Es un Excel antiguo (.xls). Ábrelo en Excel y guárdalo como "Libro de Excel (.xlsx)".');
     }
-    const inicio = new TextDecoder('utf-8').decode(b.subarray(0, 2048)).toLowerCase();
+    const inicio = decodificarTexto(b.subarray(0, 4096)).toLowerCase();
     if (/<table|<html/.test(inicio)) return leerHtml(b);
-    if (/\.(csv|txt)$/i.test(nombreArchivo || '') || !/[\u0000-\u0008]/.test(inicio)) return leerCsv(b);
+    if (/\.(csv|txt|tsv)$/i.test(nombreArchivo || '') || !/[\u0000-\u0008]/.test(inicio)) return leerCsv(b);
     throw new Error('No reconozco el formato del archivo.');
   }
 
@@ -266,7 +342,8 @@
         const ref = letraColumna(j) + (i + 1);
         if (typeof v === 'number' && isFinite(v)) celdas += `<c r="${ref}"><v>${v}</v></c>`;
         else if (typeof v === 'boolean') celdas += `<c r="${ref}" t="b"><v>${v ? 1 : 0}</v></c>`;
-        else celdas += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escXml(v)}</t></is></c>`;
+        // Un texto que ya trae la forma _xHHHH_ se protege con _x005F_ para que Excel no lo lea como escape
+        else celdas += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escXml(v).replace(/_(x[0-9A-Fa-f]{4}_)/g, '_x005F_$1')}</t></is></c>`;
       });
       cuerpo += `<row r="${i + 1}">${celdas}</row>`;
     });
