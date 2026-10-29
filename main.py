@@ -1,9 +1,9 @@
 """
 CancelOS IA v4 - API Python + Torre de Control
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from datetime import date, datetime, timedelta
 import os, json, threading, urllib.request
@@ -39,6 +39,36 @@ def encuesta():
 @app.get("/alta", response_class=HTMLResponse)
 def hoja_alta():
     return _html("alta.html", "<h1>Hoja de alta - archivo alta.html no encontrado</h1>")
+
+@app.get("/ugcq", response_class=HTMLResponse)
+def cierre_ugcq():
+    return _html("ugcq.html", "<h1>Cierre UGCQ - archivo ugcq.html no encontrado</h1>")
+
+def _js(nombre, cache="no-store"):
+    with open(os.path.join(os.path.dirname(__file__), *nombre.split("/")), "rb") as f:
+        return Response(f.read(), media_type="text/javascript", headers={"Cache-Control": cache})
+
+# Motor de cotejo y lector de Excel: corren en el navegador, los archivos de pacientes nunca llegan al servidor
+@app.get("/ugcq_core.js")
+def ugcq_core():
+    return _js("ugcq_core.js")
+
+@app.get("/ugcq_xlsx.js")
+def ugcq_xlsx():
+    return _js("ugcq_xlsx.js")
+
+@app.get("/vendor/pdfjs/{archivo}")
+def pdfjs(archivo: str):
+    if archivo not in ("pdf.min.mjs", "pdf.worker.min.mjs"):
+        raise HTTPException(404, "No encontrado")
+    return _js("vendor/pdfjs/" + archivo, "public, max-age=604800")
+
+@app.get("/ugcq/portable")
+def ugcq_portable_descarga():
+    # Un solo archivo HTML para usar con doble clic, sin internet ni servidor
+    from ugcq_portable import armar
+    return Response(armar(), media_type="text/html",
+                    headers={"Cache-Control": "no-store", "Content-Disposition": 'attachment; filename="Cierre_UGCQ.html"'})
 
 # ═══════════════════════════════════════════════
 # MOTOR DE CALCULO
@@ -690,7 +720,7 @@ def indicadores_cma(eventos, total_override=0):
 # ═══════════════════════════════════════════════
 @app.get("/")
 def root():
-    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/cma/registro","/cma/episodio","/cma/pasada","/cma/exportar.csv","/encuesta"]}
+    return {"sistema":"CancelOS IA v4 API","hospital":"Hospital de Quilpue","version":"4.6.0","status":"operativo","torre":"/torre","cma_app":"/cma-app","hoja_alta":"/alta","cierre_ugcq":"/ugcq","docs":"/docs","protocolo_cma":"serie PSQ-CMA 00-04 v2.0","endpoints":["/caso/score","/prediccion","/anticoag","/pbm","/caso/completo","/cma/elegibilidad","/cma/caso-listo","/cma/gate0","/cma/aldrete","/cma/padss","/cma/apfel","/cma/qor15","/cma/evento","/cma/indicadores","/cma/mejora","/cma/encuesta","/cma/encuestas","/cma/registro","/cma/episodio","/cma/pasada","/cma/exportar.csv","/encuesta"]}
 
 @app.post("/caso/score")
 def endpoint_score(body: dict):

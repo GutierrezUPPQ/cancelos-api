@@ -1,0 +1,5 @@
+# Sitio independiente del Cierre UGCQ (https://cierre-ugcq.netlify.app): solo publica dist/,
+# que trae la versión portátil ya armada (python3 ugcq_portable.py dist/Cierre_UGCQ.html). Sin compilación.
+[build]
+  publish = "dist"
+  command = "echo 'Sitio estático: dist/ ya viene armado'"

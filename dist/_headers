@@ -1,0 +1,8 @@
+# Cierre UGCQ como sitio estático independiente (Netlify u otro hosting).
+# El navegador no puede enviar datos a ningún servidor (connect-src y form-action bloqueados):
+# motor, lector de Excel y pdf.js van dentro del HTML.
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline' blob:; worker-src blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
