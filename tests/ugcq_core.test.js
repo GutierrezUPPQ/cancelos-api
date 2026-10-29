@@ -50,8 +50,8 @@ const pac = (r, run) => r.pacientes.find(p => p.run === run);
 test('RUN: normaliza y valida dígito verificador', () => {
   assert.equal(U.runValido('15.234.567-4'), true);
   assert.equal(U.runValido('15234567-5'), false);
-  assert.equal(U.runValido('17567375-K'), true);
-  assert.equal(U.runValido('17567375-k'), true);
+  assert.equal(U.runValido('13579242-K'), true);
+  assert.equal(U.runValido('13579242-k'), true);
   assert.equal(U.fmtRun('015.234.567-4'), '15234567-4');
   assert.equal(U.identidad('15.234.567-4', 'X').key, U.identidad('15234567-4', 'Y').key);
   assert.equal(U.identidad('P123456', 'Juan Pérez').key, 'I:P123456');

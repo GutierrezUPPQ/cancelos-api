@@ -66,7 +66,7 @@ variante('tres secciones en una página', [[T0, E, S(1), fila({ pab: ['Pabellón
 variante('encabezado repetido', [[T0, E, E, S(2), fila({}), E, nora()]]);
 variante('página sin encabezado', [[T0, E, S(2), fila({}), nora()], [vera(), fila({ hora: '15:30', run: '7654321-6', nombre: ['MORA', 'PINTO'] })]]);
 variante('RUN con K, con puntos y pasaporte', [[T0, E, S(2),
-  fila({ run: '15234567-4' }), fila({ hora: '09:00', run: ['17567375-', 'K'], nombre: ['KARLA', 'KAST'] }),
+  fila({ run: '15234567-4' }), fila({ hora: '09:00', run: ['13579242-', 'K'], nombre: ['KARLA', 'KAST'] }),
   fila({ hora: '10:00', run: ['15.234.567-', '4'], nombre: ['PEDRO', 'PUNTO'] }), fila({ hora: '11:00', run: ['PASAPORTE', 'AB123456'], nombre: ['JEAN', 'PIERRE'] })]]);
 variante('hora vacía, con y sin observaciones', [[T0, E, S(2), fila({}), nora({ hora: '' }), vera(), fila({ obs: null, hora: '15:00', run: '7654321-6', nombre: ['MORA'] }),
   fila({ obs: null, hora: '', run: '6543210-2', nombre: ['TORO'] }), fila({ obs: null, hora: '16:00', run: '16777888-7', nombre: ['URIBE'] })]]);
