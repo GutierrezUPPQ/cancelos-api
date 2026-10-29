@@ -140,7 +140,7 @@ test('Marcar "Suspendida" a un operado exige confirmar; confirmada, su cirugía 
   const id = U.cotejarDia(MAR, f, {}).pacientes[0].id;
   const r = U.cotejarDia(MAR, f, { pac: { [id]: { estado: 'SUSPENDIDA', causalCol: col('(Paciente) Rechaza operación') } } });
   assert.equal(pendientesDe(r, 'conflicto').length, 1);
-  const r2 = U.cotejarDia(MAR, f, { pac: { [id]: { estado: 'SUSPENDIDA', causalCol: col('(Paciente) Rechaza operación'), confirmado: true } } });
+  const r2 = U.cotejarDia(MAR, f, { pac: { [id]: { estado: 'SUSPENDIDA', causalCol: col('(Paciente) Rechaza operación'), confirmado: true } }, conf: { sinSuspensiones: true } });
   assert.equal(r2.pendientes.length, 0);
   assert.equal(r2.conteos.suspendidos, 1);
   assert.equal(r2.conteos.agregadas, 1);
@@ -189,7 +189,7 @@ test('Mismo paciente con RUN distinto en tabla y SITGEQ: se vincula a mano y no 
   assert.equal(p.estado, 'SIN_REGISTRO');
   assert.equal(r.conteos.agregadas, 1);
   assert.equal(p.candidatos.length, 1);
-  const r2 = U.cotejarDia(MAR, f, { vinc: { [p.candidatos[0].id]: p.id } });
+  const r2 = U.cotejarDia(MAR, f, { vinc: { [p.candidatos[0].id]: p.id }, conf: { sinSuspensiones: true } });
   assert.equal(pac(r2, 'ANA SOTO PEREZ').estado, 'REALIZADA');
   assert.equal(r2.conteos.progRealizadas, 1);
   assert.equal(r2.conteos.agregadas, 0);
@@ -240,7 +240,7 @@ test('Electivas en un pabellón sin tabla: pendiente hasta confirmar que son agr
   assert.equal(p.length, 1);
   assert.equal(p[0].clave, 'pab:4');
   assert.match(p[0].texto, /2 cirugías electivas en Pabellón 4/);
-  assert.equal(U.cotejarDia(MAR, f, { conf: { 'pab:4': true } }).pendientes.length, 0);
+  assert.equal(U.cotejarDia(MAR, f, { conf: { 'pab:4': true, sinSuspensiones: true } }).pendientes.length, 0);
 });
 
 test('Paciente repetido en la tabla como Normal y Condicional: se usa Normal con aviso', () => {
@@ -325,4 +325,118 @@ test('% de suspensión solo sobre programados en horario hábil', () => {
   assert.equal(r2.conteos.suspendidos, 0);
   assert.equal(r2.conteos.pctSuspendidos, 0);
   assert.equal(r2.gestion.suspFueraHorario, 1);
+});
+
+// ═══════════════ Regresiones de la revisión de la v1.1 ═══════════════
+test('Vincular un candidato arrastra todos los registros de esa persona en SITGEQ', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:00' }), filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), hora: '09:00' })],
+    enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:10' },
+      { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'ANA SOTO PEREZ', run: run(15234576), hora: '20:00' }],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234576), desc: 'Patología aguda' }] });
+  const r = U.cotejarDia(MAR, f, {});
+  const ana = r.pacientes.find(p => p.origen === 'tabla' && p.nombre === 'ANA SOTO PEREZ');
+  const cand = ana.candidatos.find(c => c.tipo === 'sus');
+  const r2 = U.cotejarDia(MAR, f, { vinc: { [cand.id]: ana.id } });
+  assert.equal(r2.pacientes.length, 2);
+  assert.equal(r2.conteos.programados, 2);
+  assert.equal(r2.conteos.suspendidos, 1);
+  assert.equal(r2.conteos.urgencias, 1);
+  assert.equal(r2.conteos.progRealizadas, 1);
+  assert.equal(r2.pendientes.length, 0);
+});
+
+test('Con varios días cargados, un día sin filas de suspensiones pide confirmación', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567) })], enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'ANA SOTO PEREZ', run: run(15234567) }],
+    sus: [{ fecha: '16-03-2026', nombre: 'EVA MORA LARA', run: run(7654321) }] });
+  const r = U.cotejarDia(MAR, f, {});
+  assert.equal(pendientesDe(r, 'fuente').map(p => p.texto).join(), 'Los informes de suspensiones cargados no traen este día');
+});
+
+test('"Suspendida" a mano no convierte en suspensión UGCQ la de un procedimiento', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), hora: '11:20' })], enc: [],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), clase: 'Procedimiento', desc: 'Rechaza operación' }] });
+  const id = U.cotejarDia(MAR, f, {}).pacientes[0].id;
+  const r = U.cotejarDia(MAR, f, { pac: { [id]: { estado: 'SUSPENDIDA' } }, conf });
+  assert.equal(r.conteos.suspendidos, 0);
+  assert.equal(r.gestion.suspNoMayor, 1);
+});
+
+test('"Realizada" a mano y luego llega la suspensión: conflicto que hay que confirmar', () => {
+  const tabla = [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), hora: '10:00' })];
+  const id = U.cotejarDia(MAR, fuentes({ tabla, enc: [] }), {}).pacientes[0].id;
+  const f = fuentes({ tabla, enc: [], sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), desc: 'Rechaza operación' }] });
+  const r = U.cotejarDia(MAR, f, { pac: { [id]: { estado: 'REALIZADA' } }, conf });
+  assert.equal(pendientesDe(r, 'conflicto').length, 1);
+  assert.match(pendientesDe(r, 'conflicto')[0].texto, /su suspensión/);
+});
+
+test('Las decisiones sobre cirugías sobreviven a un re-export con hora e intervención completadas', () => {
+  const base = { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'PEDRO TAPIA LARA', run: run(12345678) };
+  const f1 = fuentes({ enc: [Object.assign({}, base, { hora: '', interv: 'APENDICECTOMIA' })], sus: [] });
+  const f2 = fuentes({ enc: [Object.assign({}, base, { hora: '10:35', interv: '[1802081] Apendicectomía' })], sus: [] });
+  const id = U.cotejarDia(MAR, f1, { conf }).encuentros[0].id;
+  assert.equal(U.cotejarDia(MAR, f2, { conf }).encuentros[0].id, id);
+  assert.equal(U.cotejarDia(MAR, f2, { conf, enc: { [id]: { clase: 'URG' } } }).conteos.urgencias, 1);
+});
+
+test('Una decisión que ya no calza con ningún registro queda como pendiente', () => {
+  const f = fuentes({ enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'PEDRO TAPIA LARA', run: run(12345678) }], sus: [] });
+  const r = U.cotejarDia(MAR, f, { conf, enc: { 'e-no-existe': { clase: 'URG' } }, desc: { 'e-no-existe': 'cirugía de prueba' } });
+  assert.equal(pendientesDe(r, 'huerfana').length, 1);
+  assert.match(pendientesDe(r, 'huerfana')[0].texto, /cirugía de prueba/);
+});
+
+test('Filas idénticas repetidas (urgencia, menor o procedimiento) se cuentan una vez', () => {
+  const urg = { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'PEDRO TAPIA LARA', run: run(12345678), hora: '22:00' };
+  const proc = { fecha: D_MAR, pab: 'Pabellón 1', tipoCx: 'Urgencia', nombre: 'EVA MORA', run: run(7654321), tipo: 'Procedimiento', mayor: 0, proc: 2, hora: '23:00' };
+  const r = U.cotejarDia(MAR, fuentes({ enc: [urg, urg, proc, proc], sus: [] }), { conf });
+  assert.equal(r.conteos.urgencias, 1);
+  assert.equal(r.conteos.procedimientos, 1 + 2);
+  assert.ok(r.encuentros.some(e => e.avisos.some(a => a.includes('Fila repetida'))));
+});
+
+test('"No es este paciente" en dos suspensiones de la misma persona: un solo programado aparte', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: 'S/I', hora: '09:00' })], enc: [],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), desc: 'Rechaza operación' }, { fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), desc: 'Falta de ayuno' }] });
+  const r = U.cotejarDia(MAR, f, {});
+  const ids = r.suspensiones.map(s => s.id);
+  const r2 = U.cotejarDia(MAR, f, { vinc: { [ids[0]]: '_ninguno', [ids[1]]: '_ninguno' } });
+  const ids2 = r2.pacientes.map(p => p.id);
+  assert.equal(new Set(ids2).size, ids2.length);
+  assert.equal(r2.pacientes.filter(p => p.origen === 'suspension').length, 1);
+  assert.ok(r2.suspensiones.every(s => s.desvinculado));
+});
+
+test('Gestión: el desglose de suspensiones es excluyente y suma el total', () => {
+  const f = fuentes({ tabla: [filaTabla({ fecha: MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), hora: '10:00', agend: 'CONDICIONAL' }), filaTabla({ fecha: MAR, nombre: 'LUIS ROJAS DIAZ', run: run(9876543), hora: '08:00' })],
+    enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'LUIS ROJAS DIAZ', run: run(9876543) }],
+    sus: [{ fecha: D_MAR, nombre: 'ANA SOTO PEREZ', run: run(15234567), agend: 'CONDICIONAL', clase: 'Procedimiento', desc: 'Falta de ayuno' }] });
+  const g = U.cotejarDia(MAR, f, {}).gestion;
+  assert.equal(g.suspendidos, 1);
+  assert.equal(g.suspUGCQ + g.suspCondicionales + g.suspNoMayor + g.suspFueraHorario + g.suspOtroAgend, g.suspendidos);
+});
+
+test('Horas: "17:30hrs", "1:30 PM" y "12:15 AM"', () => {
+  assert.equal(U.horaDe('17:30hrs'), '17:30');
+  assert.equal(U.horaDe('17:30 hrs'), '17:30');
+  assert.equal(U.horaDe('8:05'), '08:05');
+  assert.equal(U.horaDe('1:30 PM'), '13:30');
+  assert.equal(U.horaDe('12:15 AM'), '00:15');
+  assert.equal(U.horaDe('17.30'), '17:30');
+  assert.equal(U.horaDe('123:45'), '');
+});
+
+test('Sin tabla: la hora real de quirófano no saca a nadie del % de suspensión', () => {
+  const f = fuentes({ enc: [{ fecha: D_MAR, pab: 'Pabellón 2', nombre: 'A UNO', run: run(11000001), hora: '08:10' }, { fecha: D_MAR, pab: 'Pabellón 2', nombre: 'B DOS', run: run(11000002), hora: '17:40' }],
+    sus: [{ fecha: D_MAR, nombre: 'C TRES', run: run(11000003) }] });
+  const r = U.cotejarDia(MAR, f, { conf });
+  assert.equal(r.conteos.programados, 3);
+  assert.equal(r.conteos.programadosHabiles, 3);
+  assert.equal(r.conteos.pctSuspendidos, 33);
+});
+
+test('Causal: categoría en plural se reconoce; descripción ambigua sin categoría se elige a mano', () => {
+  assert.equal(U.mapearCausal('Pacientes', 'No se presenta').col, col('(Paciente) No se presenta'));
+  assert.equal(U.mapearCausal('Equipo quirúrgico', 'Reemplazo por urgencia').col, col('(Equipo quirúrgico) Reemplazo por urgencia'));
+  assert.equal(U.mapearCausal('Categoría rara', 'No se presenta'), null);
 });

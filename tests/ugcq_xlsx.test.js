@@ -90,3 +90,9 @@ function crearZipPrueba(archivos) {
   const fin = Buffer.alloc(22); fin.writeUInt32LE(0x06054b50, 0); fin.writeUInt16LE(nombres.length, 8); fin.writeUInt16LE(nombres.length, 10); fin.writeUInt32LE(tam, 12); fin.writeUInt32LE(off, 16);
   return new Uint8Array(Buffer.concat([...partes, ...centrales, fin]));
 }
+
+test('dist/Cierre_UGCQ.html está al día con el código (si falla: python3 ugcq_portable.py dist/Cierre_UGCQ.html)', () => {
+  const fs = require('node:fs');
+  const html = execFileSync('python3', ['-c', 'import ugcq_portable,sys; sys.stdout.write(ugcq_portable.armar())'], { cwd: path.join(__dirname, '..'), maxBuffer: 20 * 1024 * 1024 }).toString('utf8');
+  assert.ok(html === fs.readFileSync(path.join(__dirname, '..', 'dist', 'Cierre_UGCQ.html'), 'utf8'), 'la versión portátil publicada no coincide con el código');
+});

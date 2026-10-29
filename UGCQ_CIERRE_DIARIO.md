@@ -6,8 +6,9 @@ Además muestra la **gestión de pabellón**: todo lo ocurrido, aunque no vaya a
 
 Dos formas de usarla, sin depender de Claude:
 
-- **Archivo portátil** `Cierre_UGCQ.html`: se abre con doble clic en Chrome o Edge, **sin internet y sin servidor**.
-  Se descarga desde la página web (botón "⬇ VERSIÓN PORTÁTIL", ruta `/ugcq/portable`) o se arma con `python3 ugcq_portable.py`.
+- **Archivo portátil** `dist/Cierre_UGCQ.html`: se abre con doble clic en Chrome o Edge, **sin internet y sin servidor**.
+  Se descarga desde GitHub (botón "Download raw file"), desde la página web (botón "⬇ VERSIÓN PORTÁTIL", ruta `/ugcq/portable`)
+  o se arma con `python3 ugcq_portable.py dist/Cierre_UGCQ.html` (hay una prueba que avisa si quedó desactualizado).
 - **Página web** `/ugcq` del servidor CancelOS (enlace "▸ CIERRE UGCQ" en la Torre de Control).
 
 > Los archivos se leen **solo en el navegador**: ningún dato de pacientes llega a un servidor.

@@ -297,7 +297,9 @@
   function mapearCausal(categoria, descripcion) {
     const c = clave(categoria), d = clave(descripcion);
     if (!d) return null;
-    const delaCat = CAUSAS.filter(x => x.cat === c);
+    // La categoría de SITGEQ puede venir en plural o con otro largo ("Pacientes", "Equipo Quirúrgico")
+    let delaCat = CAUSAS.filter(x => x.cat === c);
+    if (!delaCat.length && c) delaCat = CAUSAS.filter(x => x.cat && (c.startsWith(x.cat) || x.cat.startsWith(c)));
     const buscar = (pool) => {
       const exacta = pool.find(x => x.desc === d);
       if (exacta) return { causa: exacta, tipo: 'exacta' };
@@ -316,8 +318,11 @@
     };
     let r = delaCat.length ? buscar(delaCat) : null;
     if (r) return { col: r.causa.col, confianza: r.tipo };
-    r = buscar(CAUSAS); // categoría no reconocida o descripción en otra categoría: requiere confirmar
-    return r ? { col: r.causa.col, confianza: 'sugerida' } : null;
+    // Categoría no reconocida: si la descripción existe en más de una categoría, se elige a mano
+    r = buscar(CAUSAS);
+    if (!r) return null;
+    const empate = CAUSAS.filter(x => x.desc === r.causa.desc).length > 1;
+    return empate ? null : { col: r.causa.col, confianza: 'sugerida' };
   }
 
   // ═══════════════════════════════════════════════
@@ -433,7 +438,9 @@
         cma: celdaTexto(g(f, 'cma')),
       });
     }
-    return idsEstables(out, 'e', r => [r.fecha, normRun(r.run) || norm(r.nombre), horaDe(r.hora), clave(r.pabellon), clave(r.intervencion)].join('|'));
+    // El id no usa la hora ni la intervención: SITGEQ las completa durante el día y las decisiones deben sobrevivir al re-export
+    for (const r of out) r.firma = [r.fecha, normRun(r.run) || norm(r.nombre), horaDe(r.hora), clave(r.pabellon), clave(r.intervencion), r.nMayor, r.nMenor, r.nProc].join('|');
+    return idsEstables(out, 'e', r => [r.fecha, normRun(r.run) || norm(r.nombre), clave(r.pabellon), r.tipoCirugia].join('|'));
   }
 
   function leerSuspensiones(aoa, archivo) {
@@ -510,11 +517,17 @@
     ['tipoAnest', 'tipo anest'], ['ges', 'ges'], ['tiempo', 'tiempo ocupacion'],
     ['condicionalidad', 'condicionalidad'], ['agendamiento', 'tipo agendamiento'],
   ];
-  const HORA_RE = /^(\d{1,2})[:.](\d{2})\b/;
+  const HORA_RE = /^(\d{1,2})[:.](\d{2})(?!\d)\s*(?:hrs?\.?\s*)?([ap])?\.?\s*m?\.?/i;
   const CUERPO_RUN = /^\d{1,2}\.?\d{3}\.?\d{3}-?/;
   function horaDe(s) {
-    const m = String(s).match(HORA_RE);
-    return m && Number(m[1]) < 24 && Number(m[2]) < 60 ? m[1].padStart(2, '0') + ':' + m[2] : '';
+    const m = String(s).trim().match(HORA_RE);
+    if (!m) return '';
+    let h = Number(m[1]);
+    const mm = Number(m[2]);
+    const ampm = m[3] ? m[3].toLowerCase() : '';
+    if (ampm === 'p' && h < 12) h += 12;
+    if (ampm === 'a' && h === 12) h = 0;
+    return h < 24 && mm < 60 ? String(h).padStart(2, '0') + ':' + m[2] : '';
   }
   const seccionTexto = (s) => String(s).trim().replace(/^PABELL[ÓO]N/i, 'Pabellón');
 
@@ -817,8 +830,11 @@
     const pacientes = [], porClave = new Map(), porId = new Map();
     const nuevoPaciente = (base) => {
       const p = Object.assign({ encuentros: [], suspensiones: [], avisos: [], obs: '', pabellon: '', hora: '', candidatos: [] }, base);
+      let id = p.id, n = 1;
+      while (porId.has(id)) id = p.id + '#' + (++n);
+      p.id = id;
       pacientes.push(p);
-      porClave.set(p.ident.key, p);
+      if (!porClave.has(p.ident.key)) porClave.set(p.ident.key, p);
       porId.set(p.id, p);
       return p;
     };
@@ -829,10 +845,12 @@
       return ident;
     };
     // Paciente de un registro: vínculo manual, mismo RUN o, si a alguno le falta RUN válido, mismo nombre
+    const vincClave = new Map(); // clave SITGEQ -> paciente elegido a mano
     const enlazar = (reg) => {
       const v = vinc[reg.id];
-      if (v === '_ninguno') return { p: null };
-      if (v && porId.has(v)) return { p: porId.get(v), manual: true };
+      if (v === '_ninguno') { reg.desvinculado = true; return { p: null }; }
+      const destino = v || vincClave.get(reg.ident.key);
+      if (destino && porId.has(destino)) return { p: porId.get(destino), manual: true };
       const p = porClave.get(reg.ident.key);
       if (p) return { p };
       const q = pacientes.find(x => x.origen !== 'suspension' && mismaPersona(reg.ident, x.ident).si);
@@ -879,6 +897,18 @@
       }))
       .sort((a, b) => a.horaN.localeCompare(b.horaN));
     const esMayor = (e) => e.interv === 'MAYOR' || e.interv === '?';
+    // Filas idénticas repetidas en el export: se cuenta la primera
+    const firmasVistas = new Set();
+    for (const e of encuentros) {
+      if (e.firma && firmasVistas.has(e.firma)) e.repetida = true;
+      if (e.firma) firmasVistas.add(e.firma);
+    }
+    const suspensiones = susAll.filter(s => s.fecha === fecha)
+      .map(s => Object.assign({}, s, { ident: identReg(s), avisos: [], causal: mapearCausal(s.categoria, s.descripcion) }));
+    for (const r of encuentros.concat(suspensiones)) {
+      const v = vinc[r.id];
+      if (v && v !== '_ninguno' && !/^X:/.test(r.ident.key)) vincClave.set(r.ident.key, v);
+    }
     for (const e of encuentros) {
       const aj = (ajE[e.id] || {}).clase;
       if (aj !== 'NUEVO_NORMAL' && aj !== 'NUEVO_COND') continue;
@@ -911,10 +941,10 @@
     }
 
     // 3) Suspensiones del día
-    const suspensiones = susAll.filter(s => s.fecha === fecha)
-      .map(s => Object.assign({}, s, { ident: identReg(s), avisos: [], causal: mapearCausal(s.categoria, s.descripcion) }));
     for (const s of suspensiones) {
       let { p, porNombre, manual } = enlazar(s);
+      const yaS = porClave.get(s.ident.key);
+      if (!p && yaS && yaS.origen === 'suspension') p = yaS;
       if (!p) {
         // Suspendido en SITGEQ sin estar en la tabla cargada: se asume que la tabla impresa ya no lo mostraba
         p = nuevoPaciente({
@@ -939,7 +969,7 @@
 
     // 4) Clase automática de las cirugías mayores
     for (const p of pacientes) {
-      const mayores = p.encuentros.filter(esMayor);
+      const mayores = p.encuentros.filter(e => esMayor(e) && !e.repetida);
       // La cirugía del programado: la marcada a mano o la electiva más temprana. Una urgencia solo cuenta
       // como la del programado si no tiene suspensión registrada (si la tiene, lo suspendieron y lo operaron de urgencia)
       const elegibles = mayores.filter(e => e.tipoCirugia !== 'URG' || !p.suspensiones.length);
@@ -960,6 +990,11 @@
     }
     const agregadosVistos = new Set();
     for (const e of encuentros) {
+      if (e.repetida) {
+        e.claseAuto = 'NO_CONTAR';
+        e.avisos.push('Fila repetida en el export (igual a otra): no se suma. Si es otra cirugía, cámbiala');
+        continue;
+      }
       if (e.claseAuto) continue;
       if (!esMayor(e)) { e.claseAuto = 'NO_MAYOR'; continue; }
       if (e.tipoCirugia === 'URG') { e.claseAuto = 'URG'; continue; }
@@ -1003,6 +1038,9 @@
       const sus = p.suspensiones[0];
       const realizada = p.encuentros.some(e => e.claseFinal === 'PROG');
       const soloNoMayores = p.encuentros.length > 0 && p.encuentros.every(e => !esMayor(e));
+      const realizadaAuto = p.encuentros.some(e => e.claseAuto === 'PROG');
+      const estadoAuto = realizadaAuto ? 'REALIZADA' : sus ? 'SUSPENDIDA' : soloNoMayores ? 'NO_MAYOR'
+        : p.agend === 'CONDICIONAL' ? 'NO_REALIZADA' : 'SIN_REGISTRO';
       let estado, origen = 'manual';
       if (p.ajuste === 'NO_CONTAR' || p.ajuste === 'REALIZADA' || p.ajuste === 'SUSPENDIDA') estado = p.ajuste;
       else {
@@ -1015,28 +1053,29 @@
       }
       p.estado = estado;
       p.estadoOrigen = origen;
-      // Decisión manual contra un registro de cirugía de SITGEQ: hay que confirmarla
-      p.conflicto = origen === 'manual' && estado !== 'REALIZADA' && p.encuentros.some(e => e.claseAuto === 'PROG');
-      if (origen === 'manual' && estado === 'REALIZADA' && p.encuentros.some(esMayor) && !realizada) {
-        p.avisos.push('Tiene una cirugía en SITGEQ marcada con otro tipo: revisa que no se cuente dos veces');
-      }
+      p.estadoAuto = estadoAuto;
+      // Una decisión manual que contradice lo que SITGEQ registra (cirugía, suspensión o menor/procedimiento) hay que confirmarla
+      p.conflicto = origen === 'manual' && estado !== estadoAuto && ['REALIZADA', 'SUSPENDIDA', 'NO_MAYOR'].includes(estadoAuto);
 
-      // ¿Es cirugía mayor? Lo registrado manda; sin registro se asume mayor
+      // ¿Es cirugía mayor? Lo registrado manda (también con decisión manual); sin registro se asume mayor
       const intervSus = sus ? sus.interv : '?';
-      p.esMayor = origen === 'manual' ? estado !== 'NO_CONTAR'
+      p.esMayor = estado === 'NO_CONTAR' ? false
         : estado === 'NO_MAYOR' ? false
         : estado === 'SUSPENDIDA' ? intervSus === 'MAYOR' || intervSus === '?'
         : true;
-      p.habil = enHorarioHabil(fecha, p.hora, op);
+      // La hora que manda es la programada en la tabla; sin tabla (o agregado a mano) no se conoce
+      p.habil = p.origen === 'tabla' ? enHorarioHabil(fecha, p.hora, op) : (diaHabil(fecha, op) ? null : false);
       const habil = p.habil !== false;
       p.cuenta = estado !== 'NO_CONTAR' && p.esMayor && (p.agend === 'NORMAL' || p.agend === 'CONDICIONAL');
       // Suspensión UGCQ/MINSAL: cirugía mayor electiva directa (no condicional), programada en horario hábil
       p.suspUGCQ = p.cuenta && estado === 'SUSPENDIDA' && p.agend === 'NORMAL' && habil;
-      p.motivoNoUGCQ = estado !== 'SUSPENDIDA' || p.suspUGCQ ? ''
-        : p.agend === 'CONDICIONAL' ? 'condicional'
-        : !p.esMayor ? (sus && sus.intervTxt ? sus.intervTxt.toLowerCase() : 'no es cirugía mayor')
-        : p.agend !== 'NORMAL' ? 'agendamiento no electivo'
-        : 'fuera de horario hábil';
+      p.motivoCod = estado !== 'SUSPENDIDA' || p.suspUGCQ ? ''
+        : p.agend === 'CONDICIONAL' ? 'CONDICIONAL'
+        : !p.esMayor ? 'NO_MAYOR'
+        : p.agend !== 'NORMAL' ? 'NO_ELECTIVO'
+        : 'FUERA_HORARIO';
+      p.motivoNoUGCQ = { '': '', CONDICIONAL: 'condicional', NO_ELECTIVO: 'agendamiento no electivo', FUERA_HORARIO: 'fuera de horario hábil',
+        NO_MAYOR: sus && sus.intervTxt ? sus.intervTxt.toLowerCase() : 'no es cirugía mayor' }[p.motivoCod];
 
       if (estado === 'NO_MAYOR') p.avisos.push('Registrado en SITGEQ como cirugía menor o procedimiento: no suma a programados Cx Mayor');
       if (p.motivoNoUGCQ) p.avisos.push(`Suspensión que no va a UGCQ (${p.motivoNoUGCQ}): queda en gestión de pabellón`);
@@ -1077,7 +1116,9 @@
     const pendientes = [];
     for (const p of pacientes) {
       if (p.conflicto && !(ajP[p.id] || {}).confirmado) {
-        pendientes.push({ tipo: 'conflicto', pacienteId: p.id, texto: `Lo marcaste "${p.estado === 'NO_CONTAR' ? 'No contar' : 'Suspendida'}", pero SITGEQ registra su cirugía ese día: confirma o vuelve a automático` });
+        const dice = { REALIZADA: 'su cirugía', SUSPENDIDA: 'su suspensión', NO_MAYOR: 'una cirugía menor o procedimiento' }[p.estadoAuto];
+        const marcaste = { NO_CONTAR: 'No contar', SUSPENDIDA: 'Suspendida', REALIZADA: 'Realizada' }[p.estado];
+        pendientes.push({ tipo: 'conflicto', pacienteId: p.id, texto: `Lo marcaste "${marcaste}", pero SITGEQ registra ${dice} ese día: confirma o vuelve a automático` });
       }
       if (!p.cuenta) continue;
       if (p.agend === 'CONDICIONAL') {
@@ -1121,9 +1162,22 @@
       pendientes.unshift({ tipo: 'fuente', clave: 'sinEncuentros', accion: 'Confirmo: no hubo cirugías',
         texto: cargado('encuentros') ? 'El export de encuentros no trae cirugías de este día' : 'Falta el export de encuentros quirúrgicos (lo realizado)' });
     }
-    if (!cargado('suspensiones') && !conf.sinSuspensiones) {
+    if (!suspensiones.length && !conf.sinSuspensiones) {
       pendientes.unshift({ tipo: 'fuente', clave: 'sinSuspensiones', accion: 'Confirmo: no hubo suspensiones',
-        texto: 'Falta el informe de suspensiones del día' });
+        texto: cargado('suspensiones') ? 'Los informes de suspensiones cargados no traen este día' : 'Falta el informe de suspensiones del día' });
+    }
+    // Decisiones guardadas que ya no calzan con ningún registro (p. ej., se cargó un export distinto)
+    const idsDia = new Set(encuentros.map(e => e.id).concat(suspensiones.map(s => s.id)));
+    const idsPac = new Set(pacientes.map(p => p.id));
+    const desc = ajustes.desc || {};
+    for (const [tipo, mapa, existe] of [['enc', ajE, (id) => idsDia.has(id)], ['vinc', vinc, (id) => idsDia.has(id)], ['pac', ajP, (id) => idsPac.has(id)]]) {
+      for (const id of Object.keys(mapa)) {
+        if (existe(id)) continue;
+        const a = mapa[id];
+        if (!a || (tipo === 'enc' && !a.clase) || (tipo === 'pac' && !a.estado && !a.agend && a.causalCol == null)) continue;
+        pendientes.push({ tipo: 'huerfana', clave: tipo + ':' + id, accion: 'Descartar esa decisión',
+          texto: `Una decisión manual ya no calza con ningún registro del día${desc[id] ? ' (' + desc[id] + ')' : ''}: revisa y vuelve a decidir si corresponde` });
+      }
     }
     const clavePab = (s) => { const m = norm(s).match(/\d+/); return m ? m[0] : clave(s); };
     if (conTabla) {
@@ -1186,15 +1240,17 @@
       operados: vivos.filter(p => p.estado === 'REALIZADA').length,
       suspendidos: susp.length,
       suspUGCQ: c.suspendidos,
-      suspCondicionales: susp.filter(p => p.motivoNoUGCQ === 'condicional').length,
-      suspNoMayor: susp.filter(p => !p.esMayor).length,
-      suspFueraHorario: susp.filter(p => p.motivoNoUGCQ === 'fuera de horario hábil').length,
-      suspOtroAgend: susp.filter(p => p.motivoNoUGCQ === 'agendamiento no electivo').length,
+      suspCondicionales: susp.filter(p => p.motivoCod === 'CONDICIONAL').length,
+      suspNoMayor: susp.filter(p => p.motivoCod === 'NO_MAYOR').length,
+      suspFueraHorario: susp.filter(p => p.motivoCod === 'FUERA_HORARIO').length,
+      suspOtroAgend: susp.filter(p => p.motivoCod === 'NO_ELECTIVO').length,
       condNoOperados: vivos.filter(p => p.estado === 'NO_REALIZADA').length,
       menorOProcedimiento: vivos.filter(p => p.estado === 'NO_MAYOR').length,
       sinRegistro: vivos.filter(p => p.estado === 'SIN_REGISTRO').length,
       pctSuspension: vivos.length ? Math.round(susp.length * 1000 / vivos.length) / 10 : 0,
       causales: [...causalesTodas.entries()].map(([causal, n]) => ({ causal, n })).sort((a, b) => b.n - a.n),
+      // Mismas causales por columna UGCQ ('sin' = sin equivalente): sin texto libre de SITGEQ
+      causalesCol: susp.reduce((m, p) => { const k = p.causalCol != null ? String(p.causalCol) : 'sin'; m[k] = (m[k] || 0) + 1; return m; }, {}),
       agregadas: c.agregadas, urgencias: c.urgencias, codigosMenores: c.menores, codigosProcedimientos: c.procedimientos,
       anestesias: encuentros.filter(e => e.claseFinal !== 'NO_CONTAR').reduce((s, e) => s + e.anestesias, 0),
       cirugiasRegistradas: encuentros.filter(e => e.claseFinal !== 'NO_CONTAR').length,
@@ -1257,7 +1313,7 @@
     norm, clave, normRun, runValido, fmtRun, identidad, similitudNombre,
     parseFecha, fmtFecha, semanaUGCQ, mapearCausal,
     detectarTipoPlanilla, leerEncuentros, leerSuspensiones, leerUGCQ, parsearTablaPDF,
-    horaTexto, mismaPersona, nombresEquivalentes, distanciaRun, cotejarDia, filaUGCQ, compararFilas,
+    horaTexto, horaDe, mismaPersona, nombresEquivalentes, distanciaRun, cotejarDia, filaUGCQ, compararFilas,
     FERIADOS_CL, OPCIONES_DEF, diaHabil, enHorarioHabil,
   };
   root.UGCQ = api;

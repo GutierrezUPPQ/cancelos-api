@@ -219,7 +219,7 @@ test('Cotejo: RUN válidos distintos con el mismo nombre no se enlazan', () => {
     encuentros: { cargado: true, filas: [{ id: 'e1', fecha: DIA, run: '9876543-3', nombre: 'JUAN PEREZ SOTO', tipoCirugia: 'ELECT', tipoCirugiaTxt: 'Electivo Normal', interv: 'MAYOR', hora: '09:00' }] },
     suspensiones: { cargado: true, filas: [] },
   };
-  const r = U.cotejarDia(DIA, f, {});
+  const r = U.cotejarDia(DIA, f, { conf: { sinSuspensiones: true } });
   assert.equal(r.conteos.progRealizadas, 0);
   assert.equal(r.conteos.agregadas, 1);
   assert.equal(r.pendientes.length, 1);
@@ -235,7 +235,7 @@ test('Sin tabla: pendiente hasta confirmar; luego lo programado se reconstruye d
   const r = U.cotejarDia('2026-03-18', fuentes, {});
   assert.equal(r.conTabla, false);
   assert.ok(r.pendientes.some(x => x.clave === 'sinTabla'));
-  const r2 = U.cotejarDia('2026-03-18', fuentes, { conf: { sinTabla: true } });
+  const r2 = U.cotejarDia('2026-03-18', fuentes, { conf: { sinTabla: true, sinSuspensiones: true } });
   assert.equal(r2.pendientes.length, 0);
   assert.equal(r2.conteos.programados, 1);
   assert.equal(r2.conteos.progRealizadas, 1);
